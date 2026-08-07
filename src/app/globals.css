@@ -181,6 +181,11 @@
     @apply border-border outline-ring/50;
   }
 
+  html {
+    /* Dynamic font size set by Settings — default 16px */
+    font-size: var(--mgza-font-size, 16px);
+  }
+
   body {
     @apply bg-background text-foreground;
     -webkit-font-smoothing: antialiased;

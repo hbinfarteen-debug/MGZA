@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { useGameStore, type GameScreen } from '@/store/game-store';
+import { useGameStore, type GameScreen, type FontSize } from '@/store/game-store';
+import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -21,6 +22,7 @@ import {
   Users, Zap, Droplets, ShieldAlert, Vote, ChevronRight, Play,
   Skull, Settings, Clock, TrendingUp, AlertTriangle, Flame,
   ChevronLeft, Menu, Gamepad2, X, Heart, Star, Trophy, Check, Lightbulb, Info,
+  Sun, Moon, Type,
 } from 'lucide-react';
 import { MONTH_NAMES } from '@/lib/game/constants';
 
@@ -303,6 +305,17 @@ const GAME_TIPS: Record<string, GameTip> = {
     strategy: 'Allocate budget to your campaign fund in the months leading up to the election.',
     icon: 'DollarSign',
   },
+};
+
+// ═══════════════════════════════════════════════════════
+// FONT SIZE MAP — Maps size setting to CSS root variable
+// ═══════════════════════════════════════════════════════
+
+const FONT_SIZE_MAP: Record<FontSize, string> = {
+  small: '14px',
+  medium: '16px',
+  large: '18px',
+  xlarge: '20px',
 };
 
 // ═══════════════════════════════════════════════════════
@@ -1449,7 +1462,27 @@ function GameOverScreen() {
 // ═══════════════════════════════════════════════════════
 
 function StartScreen() {
-  const { startNewGame, setShowNewGameDialog } = useGameStore();
+  const { startNewGame, setShowNewGameDialog, fontSize, darkMode, setDarkMode, setFontSize } = useGameStore();
+  const { setTheme } = useTheme();
+  const [showStartSettings, setShowStartSettings] = useState(false);
+  const mountedRef = useRef(false);
+
+  // Mark as mounted and sync dark mode from store to next-themes (one-way)
+  useEffect(() => {
+    mountedRef.current = true;
+    setTheme(darkMode ? 'dark' : 'light');
+  }, []);
+
+  // Sync dark mode changes after mount
+  useEffect(() => {
+    if (!mountedRef.current) return;
+    setTheme(darkMode ? 'dark' : 'light');
+  }, [darkMode, setTheme]);
+
+  // Apply font size via CSS custom property
+  useEffect(() => {
+    document.documentElement.style.setProperty('--mgza-font-size', FONT_SIZE_MAP[fontSize]);
+  }, [fontSize]);
 
   return (
     <div className="flex flex-col min-h-[80vh] bg-gradient-to-b from-[#2E8B37]/5 via-background to-background">
@@ -1459,6 +1492,62 @@ function StartScreen() {
         <div className="w-full h-1" style={{ backgroundColor: '#FFFFFF' }} />
         <div className="w-full h-1" style={{ backgroundColor: '#CC2936' }} />
       </div>
+
+      {/* Settings bar */}
+      <div className="flex justify-end p-2">
+        <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => setShowStartSettings(!showStartSettings)}>
+          <Settings className="h-3.5 w-3.5 mr-1.5" /> Settings
+        </Button>
+      </div>
+
+      {/* Inline Settings Panel */}
+      {showStartSettings && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          exit={{ opacity: 0, height: 0 }}
+          className="mx-auto max-w-md w-full px-4 mb-4"
+        >
+          <div className="bg-card border border-border rounded-lg p-4 space-y-4">
+            {/* Dark Mode */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {darkMode ? <Moon className="h-4 w-4 text-indigo-400" /> : <Sun className="h-4 w-4 text-amber-500" />}
+                <span className="text-sm font-medium">Dark Mode</span>
+              </div>
+              <Switch checked={darkMode} onCheckedChange={setDarkMode} />
+            </div>
+
+            {/* Text Size */}
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Type className="h-4 w-4 text-amber-500" />
+                <span className="text-sm font-medium">Text Size</span>
+              </div>
+              <div className="grid grid-cols-4 gap-2">
+                {(['small', 'medium', 'large', 'xlarge'] as FontSize[]).map((size) => (
+                  <button
+                    key={size}
+                    onClick={() => setFontSize(size)}
+                    className={`rounded-lg border p-2 text-center transition-all ${
+                      fontSize === size
+                        ? 'border-amber-500 bg-amber-500/10 ring-1 ring-amber-500'
+                        : 'border-border bg-card hover:border-amber-500/50'
+                    }`}
+                  >
+                    <span className={`block font-bold leading-none ${
+                      size === 'small' ? 'text-xs' : size === 'medium' ? 'text-sm' : size === 'large' ? 'text-base' : 'text-lg'
+                    }`}>
+                      Aa
+                    </span>
+                    <span className="text-[10px] text-muted-foreground mt-1 block capitalize">{size}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       <div className="flex-1 flex items-center justify-center">
         <motion.div
@@ -1751,6 +1840,78 @@ function MinisterReplacementDialog() {
 }
 
 // ═══════════════════════════════════════════════════════
+// SETTINGS DIALOG
+// ═══════════════════════════════════════════════════════
+
+function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const { fontSize, setFontSize, darkMode, setDarkMode } = useGameStore();
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Settings className="h-4 w-4 text-amber-500" /> Settings
+          </DialogTitle>
+          <DialogDescription>Customize your game experience.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-5 py-4">
+          {/* Dark Mode Toggle */}
+          <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-card">
+            <div className="flex items-center gap-3">
+              <div className={`flex items-center justify-center w-8 h-8 rounded-md ${darkMode ? 'bg-indigo-500/15 text-indigo-400' : 'bg-amber-500/15 text-amber-500'}`}>
+                {darkMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+              </div>
+              <div>
+                <p className="text-sm font-medium">Dark Mode</p>
+                <p className="text-[10px] text-muted-foreground">Switch between light and dark theme</p>
+              </div>
+            </div>
+            <Switch checked={darkMode} onCheckedChange={setDarkMode} />
+          </div>
+
+          {/* Text Size */}
+          <div className="p-3 rounded-lg border border-border bg-card">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex items-center justify-center w-8 h-8 rounded-md bg-amber-500/15 text-amber-500">
+                <Type className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Text Size</p>
+                <p className="text-[10px] text-muted-foreground">Choose text size that is comfortable for you</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              {(['small', 'medium', 'large', 'xlarge'] as FontSize[]).map((size) => (
+                <button
+                  key={size}
+                  onClick={() => setFontSize(size)}
+                  className={`rounded-lg border p-2 text-center transition-all ${
+                    fontSize === size
+                      ? 'border-amber-500 bg-amber-500/10 ring-1 ring-amber-500'
+                      : 'border-border bg-card hover:border-amber-500/50'
+                  }`}
+                >
+                  <span className={`block font-bold leading-none ${
+                    size === 'small' ? 'text-xs' : size === 'medium' ? 'text-sm' : size === 'large' ? 'text-base' : 'text-lg'
+                  }`}>
+                    Aa
+                  </span>
+                  <span className="text-[10px] text-muted-foreground mt-1 block capitalize">{size}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="secondary" onClick={() => onOpenChange(false)}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
 // SHARED UI COMPONENTS
 // ═══════════════════════════════════════════════════════
 
@@ -1835,9 +1996,29 @@ const NAV_ITEMS: { id: GameScreen; label: string; icon: React.ReactNode }[] = [
 // ═══════════════════════════════════════════════════════
 
 export default function GamePage() {
-  const { gameState, currentScreen, setScreen, endTurn, isProcessingTurn, showNewGameDialog, setShowNewGameDialog, resetGame, enableTips, setEnableTips } = useGameStore();
+  const { gameState, currentScreen, setScreen, endTurn, isProcessingTurn, showNewGameDialog, setShowNewGameDialog, resetGame, enableTips, setEnableTips, fontSize, darkMode, setDarkMode } = useGameStore();
+  const { setTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showLog, setShowLog] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const mountedRef = useRef(false);
+
+  // Mark as mounted and sync dark mode from store to next-themes (one-way)
+  useEffect(() => {
+    mountedRef.current = true;
+    setTheme(darkMode ? 'dark' : 'light');
+  }, []);
+
+  // Sync dark mode changes after mount
+  useEffect(() => {
+    if (!mountedRef.current) return;
+    setTheme(darkMode ? 'dark' : 'light');
+  }, [darkMode, setTheme]);
+
+  // Apply font size via CSS custom property
+  useEffect(() => {
+    document.documentElement.style.setProperty('--mgza-font-size', FONT_SIZE_MAP[fontSize]);
+  }, [fontSize]);
 
   // Start Screen
   if (currentScreen === 'start') {
@@ -1907,7 +2088,12 @@ export default function GamePage() {
             )}
 
             {/* Game Log Toggle */}
-            <Button variant="ghost" size="sm" className="text-[10px] h-7 px-2" onClick={() => setShowLog(!showLog)}>
+            <Button variant="ghost" size="sm" className="text-[10px] h-7 px-2" onClick={() => setShowLog(!showLog)} title="Game Log">
+              <Newspaper className="h-3 w-3" />
+            </Button>
+
+            {/* Settings */}
+            <Button variant="ghost" size="sm" className="text-[10px] h-7 px-2" onClick={() => setShowSettings(true)} title="Settings">
               <Settings className="h-3 w-3" />
             </Button>
 
@@ -1987,6 +2173,9 @@ export default function GamePage() {
                 </div>
                 <Switch checked={enableTips} onCheckedChange={setEnableTips} className="scale-75" />
               </div>
+              <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground" onClick={() => setShowSettings(true)}>
+                <Settings className="h-3 w-3 mr-1" /> Settings
+              </Button>
               <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground" onClick={() => { resetGame(); setShowNewGameDialog(true); }}>
                 <Gamepad2 className="h-3 w-3 mr-1" /> New Game
               </Button>
@@ -2067,6 +2256,7 @@ export default function GamePage() {
       <EventModal />
       <MinisterReplacementDialog />
       <NewGameDialog open={showNewGameDialog} onOpenChange={setShowNewGameDialog} />
+      <SettingsDialog open={showSettings} onOpenChange={setShowSettings} />
     </div>
   );
 }

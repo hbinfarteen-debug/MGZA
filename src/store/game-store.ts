@@ -43,6 +43,8 @@ interface ReplacementDialogState {
   candidates: ReplacementCandidate[];
 }
 
+export type FontSize = 'small' | 'medium' | 'large' | 'xlarge';
+
 interface GameStore {
   // State
   gameState: GameState | null;
@@ -55,6 +57,8 @@ interface GameStore {
   showNewGameDialog: boolean;
   enableTips: boolean;
   showReplacementDialog: ReplacementDialogState | null;
+  fontSize: FontSize;
+  darkMode: boolean;
 
   // Actions
   startNewGame: (name: string, partyName: string, difficulty: 'easy' | 'normal' | 'hard') => void;
@@ -74,6 +78,8 @@ interface GameStore {
   setShowNewGameDialog: (show: boolean) => void;
   setEnableTips: (enable: boolean) => void;
   setShowReplacementDialog: (state: ReplacementDialogState | null) => void;
+  setFontSize: (size: FontSize) => void;
+  setDarkMode: (dark: boolean) => void;
 }
 
 export const useGameStore = create<GameStore>()(
@@ -89,6 +95,8 @@ export const useGameStore = create<GameStore>()(
       showNewGameDialog: false,
       enableTips: true,
       showReplacementDialog: null,
+      fontSize: 'medium' as FontSize,
+      darkMode: false,
 
       startNewGame: (name, partyName, difficulty) => {
         const state = createInitialGameState(difficulty);
@@ -285,6 +293,8 @@ export const useGameStore = create<GameStore>()(
       setShowNewGameDialog: (show) => set({ showNewGameDialog: show }),
       setEnableTips: (enable) => set({ enableTips: enable }),
       setShowReplacementDialog: (state) => set({ showReplacementDialog: state }),
+      setFontSize: (size) => set({ fontSize: size }),
+      setDarkMode: (dark) => set({ darkMode: dark }),
     }),
     {
       name: 'mgza-game-store',
@@ -293,6 +303,8 @@ export const useGameStore = create<GameStore>()(
         historicalData: state.historicalData,
         availableProjects: state.availableProjects,
         enableTips: state.enableTips,
+        fontSize: state.fontSize,
+        darkMode: state.darkMode,
       }),
     }
   )
