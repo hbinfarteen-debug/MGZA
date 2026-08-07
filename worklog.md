@@ -90,3 +90,45 @@ Stage Summary:
 - Core gameplay loop (end turn → events → choices → resolution) works correctly
 - No console errors, no runtime errors
 - All navigation, data display, and interactive elements verified
+
+---
+Task ID: 2
+Agent: Main Agent
+Task: Implement hover tip cards system for the game
+
+Work Log:
+- Added `enableTips: boolean` state to game store (Zustand, persisted in localStorage)
+- Added `setEnableTips` action to game store
+- Created `GAME_TIPS` data object with 28 contextual tips covering all 11 screens:
+  - Global tips: End Turn, Popularity, GDP, Inflation, Satisfaction, Load Shedding
+  - Dashboard: Economic Indicators, Infrastructure, GDP Trend, Popularity Trend
+  - Budget: Budget Overview, Budget Sliders, Allocate Button
+  - Infrastructure: Projects, Approve Project
+  - Politics: Parliament, Factions, Legitimacy
+  - Ministers: Cabinet, Fire Minister
+  - Energy: Energy Overview, Load Shedding Stages, Hydroelectric
+  - Water: Water System, Dam Levels
+  - Map: Provinces, Province Support
+  - Events: Pending Events
+  - News: News Feed
+  - Elections: Election Countdown, Campaign Fund
+- Built `HoverTip` component with:
+  - Animated entrance/exit (Framer Motion: fade + slide + scale)
+  - Positioned above the hovered element
+  - Lightbulb icon + title + TIP badge header
+  - Description paragraph
+  - Strategy advice with Info icon
+  - Arrow pointing down to the element
+  - Screen-aware filtering (only shows tips relevant to current screen)
+  - Respects `enableTips` flag
+- Added "Enable Hover Tips" toggle switch in NewGameDialog (with Lightbulb icon)
+- Added "Tips" toggle switch in the sidebar footer (always accessible during gameplay)
+- Wrapped key interactive elements with HoverTip across all screens
+- Verified: tips show on hover, disappear when tips disabled, toggle persists
+
+Stage Summary:
+- Full tip card system implemented and working
+- 28 contextual strategy tips across all game screens
+- Toggle available in both New Game Dialog and sidebar
+- Tips persist across page reloads (localStorage)
+- Browser verified: tips appear on hover over End Turn, Fire buttons, minister cards, etc.

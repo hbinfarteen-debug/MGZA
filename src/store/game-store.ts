@@ -34,6 +34,7 @@ interface GameStore {
   showEventModal: GameEvent | null;
   availableProjects: InfrastructureProject[];
   showNewGameDialog: boolean;
+  enableTips: boolean;
 
   // Actions
   startNewGame: (name: string, partyName: string, difficulty: 'easy' | 'normal' | 'hard') => void;
@@ -50,6 +51,7 @@ interface GameStore {
   dismissEvent: () => void;
   resetGame: () => void;
   setShowNewGameDialog: (show: boolean) => void;
+  setEnableTips: (enable: boolean) => void;
 }
 
 export const useGameStore = create<GameStore>()(
@@ -63,6 +65,7 @@ export const useGameStore = create<GameStore>()(
       showEventModal: null,
       availableProjects: [],
       showNewGameDialog: false,
+      enableTips: true,
 
       startNewGame: (name, partyName, difficulty) => {
         const state = createInitialGameState(difficulty);
@@ -212,6 +215,7 @@ export const useGameStore = create<GameStore>()(
       dismissEvent: () => set({ showEventModal: null }),
       resetGame: () => set({ gameState: null, currentScreen: 'start', historicalData: [], availableProjects: [] }),
       setShowNewGameDialog: (show) => set({ showNewGameDialog: show }),
+      setEnableTips: (enable) => set({ enableTips: enable }),
     }),
     {
       name: 'mgza-game-store',
@@ -219,6 +223,7 @@ export const useGameStore = create<GameStore>()(
         gameState: state.gameState,
         historicalData: state.historicalData,
         availableProjects: state.availableProjects,
+        enableTips: state.enableTips,
       }),
     }
   )

@@ -14,14 +14,356 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, DollarSign, Building2, Landmark, Newspaper, Map,
   Users, Zap, Droplets, ShieldAlert, Vote, ChevronRight, Play,
   Skull, Settings, Clock, TrendingUp, AlertTriangle, Flame,
-  ChevronLeft, Menu, Gamepad2, X, Heart, Star, Trophy, Check,
+  ChevronLeft, Menu, Gamepad2, X, Heart, Star, Trophy, Check, Lightbulb, Info,
 } from 'lucide-react';
 import { MONTH_NAMES } from '@/lib/game/constants';
+
+// ═══════════════════════════════════════════════════════
+// TIP SYSTEM — Contextual hover tip cards
+// ═══════════════════════════════════════════════════════
+
+interface GameTip {
+  id: string;
+  screen?: GameScreen;
+  title: string;
+  description: string;
+  strategy: string;
+  icon?: string;
+}
+
+const GAME_TIPS: Record<string, GameTip> = {
+  // ── Global / Header ──
+  end_turn: {
+    id: 'end_turn',
+    title: 'End Turn',
+    description: 'Advances time by one month. All simulators run: economy, population, infrastructure, energy, water, corruption, and more.',
+    strategy: 'Before ending a turn, check your budget allocation and any pending events. Unresolved events can escalate!',
+    icon: 'ChevronRight',
+  },
+  popularity: {
+    id: 'popularity',
+    title: 'Popularity',
+    description: 'Your approval rating among citizens. High popularity helps in elections and reduces political risk.',
+    strategy: 'Balance populist policies with long-term investment. Ignoring citizen needs for too long will cost you votes.',
+    icon: 'Heart',
+  },
+  gdp: {
+    id: 'gdp',
+    title: 'GDP Growth',
+    description: 'The rate of economic expansion. Higher GDP means more tax revenue and happier citizens.',
+    strategy: 'Invest in infrastructure, mining, and agriculture. Over-taxation and corruption slow GDP growth.',
+    icon: 'TrendingUp',
+  },
+  inflation: {
+    id: 'inflation',
+    title: 'Inflation Rate',
+    description: 'Rising prices erode purchasing power. High inflation makes citizens unhappy and destabilizes the economy.',
+    strategy: 'Control money supply, invest in agriculture to increase food supply, and avoid excessive deficit spending.',
+    icon: 'Flame',
+  },
+  satisfaction: {
+    id: 'satisfaction',
+    title: 'Citizen Satisfaction',
+    description: 'Overall happiness of your citizens across all services and economic conditions.',
+    strategy: 'A balanced approach to all sectors works best. Don\'t neglect water, energy, or healthcare.',
+    icon: 'Star',
+  },
+  load_shedding: {
+    id: 'load_shedding',
+    title: 'Load Shedding Hours',
+    description: 'Daily hours of scheduled power cuts. Citizens hate load shedding — it hurts businesses and daily life.',
+    strategy: 'Invest in new power generation (solar, wind) and maintain existing infrastructure to reduce load shedding.',
+    icon: 'Zap',
+  },
+
+  // ── Dashboard ──
+  dashboard_economic: {
+    id: 'dashboard_economic',
+    screen: 'dashboard',
+    title: 'Economic Indicators',
+    description: 'Key metrics showing the health of Zimbabwe\'s economy: GDP, inflation, unemployment, and trade balance.',
+    strategy: 'Watch GDP growth and inflation closely. A recession with high inflation is the most dangerous combination.',
+    icon: 'TrendingUp',
+  },
+  dashboard_infrastructure: {
+    id: 'dashboard_infrastructure',
+    screen: 'dashboard',
+    title: 'Infrastructure Health',
+    description: 'Overall condition of roads, bridges, water systems, power grid, and telecommunications.',
+    strategy: 'Approve infrastructure projects regularly. Neglected infrastructure decays faster than you think.',
+    icon: 'Building2',
+  },
+  dashboard_gdp_trend: {
+    id: 'dashboard_gdp_trend',
+    screen: 'dashboard',
+    title: 'GDP Trend',
+    description: 'Historical GDP growth over recent turns. Look for patterns — sustained decline needs urgent action.',
+    strategy: 'If GDP is dropping for 3+ consecutive months, increase investment in growth sectors immediately.',
+    icon: 'TrendingUp',
+  },
+  dashboard_popularity_trend: {
+    id: 'dashboard_popularity_trend',
+    screen: 'dashboard',
+    title: 'Popularity Trend',
+    description: 'Your approval rating over time. This is the single most important metric for re-election.',
+    strategy: 'Popularity below 30% is danger territory — you may face a no-confidence vote or coup risk.',
+    icon: 'Heart',
+  },
+
+  // ── Budget ──
+  budget_overview: {
+    id: 'budget_overview',
+    screen: 'budget',
+    title: 'National Budget',
+    description: 'Zimbabwe\'s annual budget allocation across 17 categories. Revenue comes from taxes, mining, and exports.',
+    strategy: 'Balance spending between essential services and growth investment. Running a deficit increases debt.',
+    icon: 'DollarSign',
+  },
+  budget_sliders: {
+    id: 'budget_sliders',
+    screen: 'budget',
+    title: 'Budget Allocation',
+    description: 'Drag sliders to re-allocate funds between categories. Changes take effect after you click "Allocate Budget".',
+    strategy: 'Don\'t starve any one sector. Underfunded healthcare or water leads to crises that cost more to fix later.',
+    icon: 'DollarSign',
+  },
+  allocate_button: {
+    id: 'allocate_button',
+    screen: 'budget',
+    title: 'Allocate Budget',
+    description: 'Locks in your budget choices for this turn. Revenue is collected and spending is distributed.',
+    strategy: 'Review your deficit/surplus before allocating. A small deficit is OK, but persistent deficits spiral into debt crisis.',
+    icon: 'Check',
+  },
+
+  // ── Infrastructure ──
+  infrastructure_projects: {
+    id: 'infrastructure_projects',
+    screen: 'infrastructure',
+    title: 'Infrastructure Projects',
+    description: 'Proposed development projects. Each has a cost, duration, and expected impact on provinces.',
+    strategy: 'Prioritize projects in provinces with lowest satisfaction. Roads and power projects have the widest impact.',
+    icon: 'Building2',
+  },
+  approve_project: {
+    id: 'approve_project',
+    screen: 'infrastructure',
+    title: 'Approve Project',
+    description: 'Starts construction on a project. Costs are deducted from the budget and the project runs for its stated duration.',
+    strategy: 'Only approve projects you can afford. Too many concurrent projects stretch resources thin.',
+    icon: 'Check',
+  },
+
+  // ── Politics ──
+  parliament: {
+    id: 'parliament',
+    screen: 'politics',
+    title: 'Parliament',
+    description: 'Your parliamentary majority determines how easily you can pass legislation. A strong majority gives you more power.',
+    strategy: 'Keep your majority above 50%. If opposition gains ground, political risk increases significantly.',
+    icon: 'Landmark',
+  },
+  factions: {
+    id: 'factions',
+    screen: 'politics',
+    title: 'Political Factions',
+    description: 'Power groups within your party. Each faction has its own agenda and influence level.',
+    strategy: 'Keep factions satisfied by allocating budget to their preferred sectors. Angry factions can destabilize your government.',
+    icon: 'Users',
+  },
+  legitimacy: {
+    id: 'legitimacy',
+    screen: 'politics',
+    title: 'Government Legitimacy',
+    description: 'How legitimate citizens perceive your government. Low legitimacy leads to protests and reduced cooperation.',
+    strategy: 'Fight corruption, deliver on promises, and handle crises transparently to maintain legitimacy.',
+    icon: 'ShieldAlert',
+  },
+
+  // ── Ministers ──
+  ministers_cabinet: {
+    id: 'ministers_cabinet',
+    screen: 'ministers',
+    title: 'Cabinet Ministers',
+    description: 'Your 12 ministers each manage a government portfolio. Their competence affects how well their sector performs.',
+    strategy: 'Fire corrupt or incompetent ministers promptly. Good ministers boost sector performance by up to 15%.',
+    icon: 'Users',
+  },
+  fire_minister: {
+    id: 'fire_minister',
+    screen: 'ministers',
+    title: 'Fire Minister',
+    description: 'Removes a minister from their position. This may anger their faction and reduce your political influence.',
+    strategy: 'Only fire ministers with very low loyalty or very high corruption. A replacement will appear eventually.',
+    icon: 'X',
+  },
+
+  // ── Energy ──
+  energy_overview: {
+    id: 'energy_overview',
+    screen: 'energy',
+    title: 'Energy Sector',
+    description: 'Zimbabwe\'s power generation mix: hydroelectric, coal, solar, wind, diesel, and imports.',
+    strategy: 'Diversify energy sources. Over-reliance on hydro (Kariba) is risky during droughts.',
+    icon: 'Zap',
+  },
+  load_shedding_screen: {
+    id: 'load_shedding_screen',
+    screen: 'energy',
+    title: 'Load Shedding Stages',
+    description: 'Higher stages mean more power cuts. Stage 1 = minor, Stage 8 = severe (12+ hours/day).',
+    strategy: 'Invest in new generation capacity and maintain existing plants to prevent load shedding increases.',
+    icon: 'Zap',
+  },
+  hydroelectric: {
+    id: 'hydroelectric',
+    screen: 'energy',
+    title: 'Kariba Dam (Hydroelectric)',
+    description: 'Zimbabwe\'s largest power source. Output depends on water levels which fluctuate with rainfall.',
+    strategy: 'During drought years, ensure alternative power sources are online. Budget for dam maintenance.',
+    icon: 'Droplets',
+  },
+
+  // ── Water ──
+  water_overview: {
+    id: 'water_overview',
+    screen: 'water',
+    title: 'Water System',
+    description: 'Clean water access, treatment capacity, and dam levels across all provinces.',
+    strategy: 'Invest in water treatment and distribution. Water crises cause disease outbreaks and mass discontent.',
+    icon: 'Droplets',
+  },
+  dam_levels: {
+    id: 'dam_levels',
+    screen: 'water',
+    title: 'Dam Levels',
+    description: 'Water reserves in major dams. Low levels affect both water supply and hydroelectric power.',
+    strategy: 'Monitor dam levels closely during dry season. Budget for water infrastructure before crisis hits.',
+    icon: 'Droplets',
+  },
+
+  // ── Map ──
+  province_overview: {
+    id: 'province_overview',
+    screen: 'map',
+    title: 'Provinces',
+    description: 'Zimbabwe\'s 10 provinces, each with unique demographics, infrastructure, and political leanings.',
+    strategy: 'Click a province to see detailed stats. Focus development on provinces with lowest satisfaction first.',
+    icon: 'Map',
+  },
+  province_support: {
+    id: 'province_support',
+    screen: 'map',
+    title: 'Province Support',
+    description: 'How much each province supports your government. Critical for election predictions.',
+    strategy: 'Provinces with low support are at risk of opposition gains. Target infrastructure projects there.',
+    icon: 'Vote',
+  },
+
+  // ── Events ──
+  events_pending: {
+    id: 'events_pending',
+    screen: 'events',
+    title: 'Pending Events',
+    description: 'Crisis situations requiring your immediate decision. Events have time-sensitive consequences.',
+    strategy: 'Always resolve events promptly. Ignoring events makes them worse and can cascade into multiple crises.',
+    icon: 'AlertTriangle',
+  },
+
+  // ── News ──
+  news_feed: {
+    id: 'news_feed',
+    screen: 'news',
+    title: 'National News',
+    description: 'Generated news articles reflecting the state of Zimbabwe. News affects public opinion.',
+    strategy: 'Good news boosts popularity, bad news hurts it. The news is influenced by your actual performance.',
+    icon: 'Newspaper',
+  },
+
+  // ── Elections ──
+  election_countdown: {
+    id: 'election_countdown',
+    screen: 'elections',
+    title: 'Election Countdown',
+    description: 'Time remaining until the next national election. Prepare your campaign early!',
+    strategy: 'Start boosting popularity at least 6 months before elections. Last-minute changes are rarely enough.',
+    icon: 'Vote',
+  },
+  campaign_fund: {
+    id: 'campaign_fund',
+    screen: 'elections',
+    title: 'Campaign Fund',
+    description: 'Money available for election campaigning. More funds = better voter outreach.',
+    strategy: 'Allocate budget to your campaign fund in the months leading up to the election.',
+    icon: 'DollarSign',
+  },
+};
+
+// ═══════════════════════════════════════════════════════
+// HOVER TIP COMPONENT
+// ═══════════════════════════════════════════════════════
+
+function HoverTip({ tipId, children, screenId }: { tipId: string; children: React.ReactNode; screenId?: GameScreen }) {
+  const { enableTips, currentScreen } = useGameStore();
+  const [show, setShow] = useState(false);
+  const tip = GAME_TIPS[tipId];
+
+  if (!enableTips || !tip) return <>{children}</>;
+
+  // Optionally filter by screen
+  if (tip.screen && tip.screen !== screenId && tip.screen !== currentScreen) return <>{children}</>;
+
+  return (
+    <div
+      className="relative inline-flex"
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => setShow(false)}
+    >
+      {children}
+      <AnimatePresence>
+        {show && (
+          <motion.div
+            initial={{ opacity: 0, y: 6, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 6, scale: 0.95 }}
+            transition={{ duration: 0.15, ease: 'easeOut' }}
+            className="absolute z-[100] bottom-full left-1/2 -translate-x-1/2 mb-2 w-72 sm:w-80 pointer-events-none"
+          >
+            <div className="bg-popover border border-border rounded-lg shadow-xl p-3.5 text-left">
+              {/* Header */}
+              <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center justify-center w-6 h-6 rounded-md bg-amber-500/15 text-amber-500 shrink-0">
+                  <Lightbulb className="h-3.5 w-3.5" />
+                </div>
+                <h4 className="text-xs font-bold text-foreground">{tip.title}</h4>
+                <Badge variant="secondary" className="text-[8px] px-1.5 py-0 ml-auto bg-amber-500/10 text-amber-600 border-amber-500/20">TIP</Badge>
+              </div>
+              {/* Description */}
+              <p className="text-[11px] text-muted-foreground leading-relaxed mb-2">{tip.description}</p>
+              {/* Strategy */}
+              <div className="border-t border-border/50 pt-2">
+                <div className="flex items-start gap-1.5">
+                  <Info className="h-3 w-3 text-amber-500 mt-0.5 shrink-0" />
+                  <p className="text-[10px] text-amber-600 font-medium leading-relaxed">{tip.strategy}</p>
+                </div>
+              </div>
+            </div>
+            {/* Arrow */}
+            <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px">
+              <div className="w-2 h-2 bg-popover border-r border-b border-border rotate-45" />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 // ═══════════════════════════════════════════════════════
 // DASHBOARD
@@ -41,30 +383,30 @@ function DashboardScreen() {
     <div className="space-y-6">
       {/* Player Status Bar */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label="Popularity" value={`${player.popularity.toFixed(0)}%`} icon={<Heart className="h-4 w-4" />} color={player.popularity > 50 ? 'text-green-500' : player.popularity > 30 ? 'text-yellow-500' : 'text-red-500'} />
-        <StatCard label="GDP Growth" value={`${economic.gdpGrowth.toFixed(1)}%`} icon={<TrendingUp className="h-4 w-4" />} color={economic.gdpGrowth > 3 ? 'text-green-500' : economic.gdpGrowth > 0 ? 'text-yellow-500' : 'text-red-500'} />
-        <StatCard label="Inflation" value={`${economic.inflation.toFixed(1)}%`} icon={<Flame className="h-4 w-4" />} color={economic.inflation < 15 ? 'text-green-500' : economic.inflation < 30 ? 'text-yellow-500' : 'text-red-500'} />
-        <StatCard label="Satisfaction" value={`${citizenSatisfaction.overall.toFixed(0)}%`} icon={<Star className="h-4 w-4" />} color={citizenSatisfaction.overall > 50 ? 'text-green-500' : citizenSatisfaction.overall > 30 ? 'text-yellow-500' : 'text-red-500'} />
+        <HoverTip tipId="popularity"><div><StatCard label="Popularity" value={`${player.popularity.toFixed(0)}%`} icon={<Heart className="h-4 w-4" />} color={player.popularity > 50 ? 'text-green-500' : player.popularity > 30 ? 'text-yellow-500' : 'text-red-500'} /></div></HoverTip>
+        <HoverTip tipId="gdp"><div><StatCard label="GDP Growth" value={`${economic.gdpGrowth.toFixed(1)}%`} icon={<TrendingUp className="h-4 w-4" />} color={economic.gdpGrowth > 3 ? 'text-green-500' : economic.gdpGrowth > 0 ? 'text-yellow-500' : 'text-red-500'} /></div></HoverTip>
+        <HoverTip tipId="inflation"><div><StatCard label="Inflation" value={`${economic.inflation.toFixed(1)}%`} icon={<Flame className="h-4 w-4" />} color={economic.inflation < 15 ? 'text-green-500' : economic.inflation < 30 ? 'text-yellow-500' : 'text-red-500'} /></div></HoverTip>
+        <HoverTip tipId="satisfaction"><div><StatCard label="Satisfaction" value={`${citizenSatisfaction.overall.toFixed(0)}%`} icon={<Star className="h-4 w-4" />} color={citizenSatisfaction.overall > 50 ? 'text-green-500' : citizenSatisfaction.overall > 30 ? 'text-yellow-500' : 'text-red-500'} /></div></HoverTip>
       </div>
 
       {/* Key Metrics Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard title="ECONOMIC INDICATORS" items={[
+        <HoverTip tipId="dashboard_economic" screenId="dashboard"><div><MetricCard title="ECONOMIC INDICATORS" items={[
           { label: 'GDP', value: `$${economic.gdp.toFixed(1)}B` },
           { label: 'Unemployment', value: `${economic.unemploymentRate.toFixed(1)}%` },
           { label: 'Exchange Rate', value: `${economic.exchangeRate.toLocaleString()} ZWL/USD` },
           { label: 'Debt/GDP', value: `${economic.debtToGdp.toFixed(0)}%` },
           { label: 'Investor Confidence', value: `${economic.investorConfidence.toFixed(0)}` },
           { label: 'Informal Economy', value: `${economic.informalEconomySize.toFixed(0)}%` },
-        ]} />
-        <MetricCard title="INFRASTRUCTURE" items={[
+        ]} /></div></HoverTip>
+        <HoverTip tipId="dashboard_infrastructure" screenId="dashboard"><div><MetricCard title="INFRASTRUCTURE" items={[
           { label: 'Road Quality', value: `${infrastructure.roadQuality.toFixed(0)}/100` },
           { label: 'Water Reliability', value: `${infrastructure.waterReliability.toFixed(0)}/100` },
           { label: 'Electricity', value: `${infrastructure.electricityAvailability.toFixed(0)}/100` },
           { label: 'Internet', value: `${infrastructure.internetPenetration.toFixed(0)}%` },
           { label: 'Load Shedding', value: `${energy.loadSheddingHoursPerDay.toFixed(1)} hrs/day` },
           { label: 'Housing Backlog', value: `${(infrastructure.housingBacklog / 1000).toFixed(0)}K units` },
-        ]} />
+        ]} /></div></HoverTip>
         <MetricCard title="SOCIAL INDICATORS" items={[
           { label: 'Population', value: `${(national.population / 1e6).toFixed(1)}M` },
           { label: 'Literacy', value: `${national.literacyRate.toFixed(0)}%` },
@@ -73,31 +415,31 @@ function DashboardScreen() {
           { label: 'Youth Unemployment', value: `${economic.youthUnemployment.toFixed(0)}%` },
           { label: 'Schools', value: `${gameState.publicServices.schools.toFixed(0)}/100` },
         ]} />
-        <MetricCard title="GOVERNANCE" items={[
+        <HoverTip tipId="legitimacy" screenId="dashboard"><div><MetricCard title="GOVERNANCE" items={[
           { label: 'Corruption Index', value: `${corruption.nationalLevel.toFixed(0)}/100` },
           { label: 'Legitimacy', value: `${player.legitimacy.toFixed(0)}/100` },
           { label: 'Parliament Seats', value: `${gameState.parliament.rulingPartySeats}/${gameState.parliament.totalSeats}` },
           { label: 'Dam Level', value: `${energy.damLevel.toFixed(0)}%` },
           { label: 'Water Reservoirs', value: `${water.reservoirLevels.toFixed(0)}%` },
           { label: 'Funds Lost to Corruption', value: `$${corruption.fundsLostToCorruption.toFixed(0)}M/mo` },
-        ]} />
+        ]} /></div></HoverTip>
       </div>
 
       {/* Quick Trends */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* GDP Trend */}
-        <TrendCard
+        <HoverTip tipId="dashboard_gdp_trend" screenId="dashboard"><div><TrendCard
           title="GDP TREND"
           data={recentHistory.map(h => ({ label: `${h.month}/${h.year.toString().slice(2)}`, value: h.gdp }))}
           color="#4CAF50"
           formatValue={(v) => `$${v.toFixed(1)}B`}
-        />
-        <TrendCard
+        /></div></HoverTip>
+        <HoverTip tipId="dashboard_popularity_trend" screenId="dashboard"><div><TrendCard
           title="POPULARITY TREND"
           data={recentHistory.map(h => ({ label: `${h.month}/${h.year.toString().slice(2)}`, value: h.popularity }))}
           color={player.popularity > 50 ? '#4CAF50' : '#f44336'}
           formatValue={(v) => `${v.toFixed(0)}%`}
-        />
+        /></div></HoverTip>
       </div>
 
       {/* Active Items */}
@@ -211,21 +553,21 @@ function BudgetScreen() {
   return (
     <div className="space-y-6">
       {/* Budget Summary */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <HoverTip tipId="budget_overview" screenId="budget"><div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label="Revenue" value={`$${budget.totalRevenue.toLocaleString()}M`} icon={<DollarSign className="h-4 w-4" />} color="text-green-500" />
         <StatCard label="Allocated" value={`$${totalAllocated.toLocaleString()}M`} icon={<DollarSign className="h-4 w-4" />} color={deficit > 0 ? 'text-red-500' : 'text-green-500'} />
         <StatCard label="Deficit" value={`$${deficit.toLocaleString()}M`} icon={<AlertTriangle className="h-4 w-4" />} color={deficit > 0 ? 'text-red-500' : 'text-green-500'} />
         <StatCard label="GDP" value={`$${economic.gdp.toFixed(1)}B`} icon={<TrendingUp className="h-4 w-4" />} color={economic.gdpGrowth > 0 ? 'text-green-500' : 'text-red-500'} />
-      </div>
+      </div></HoverTip>
 
       <div className="flex justify-end">
-        <Button onClick={handleAllocate} size="sm" className="bg-amber-600 hover:bg-amber-700">
+        <HoverTip tipId="allocate_button" screenId="budget"><Button onClick={handleAllocate} size="sm" className="bg-amber-600 hover:bg-amber-700">
           <Check className="h-4 w-4 mr-1" /> Allocate Budget
-        </Button>
+        </Button></HoverTip>
       </div>
 
       {/* Budget Items */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <HoverTip tipId="budget_sliders" screenId="budget"><div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {budget.items.map((item) => {
           const pct = (localBudget[item.category] || 0) / budget.totalRevenue * 100;
           const meetsMin = (localBudget[item.category] || 0) >= item.minimumRequired;
@@ -265,14 +607,13 @@ function BudgetScreen() {
             </div>
           );
         })}
-      </div>
+      </div></HoverTip>
     </div>
   );
 }
 
 // ═══════════════════════════════════════════════════════
 // INFRASTRUCTURE SCREEN
-// ═══════════════════════════════════════════════════════
 
 function InfrastructureScreen() {
   const { gameState, approveProject, availableProjects } = useGameStore();
@@ -463,7 +804,7 @@ function MinistersScreen() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <HoverTip tipId="ministers_cabinet" screenId="ministers"><div>
         <h3 className="text-sm font-bold uppercase tracking-wider mb-3 flex items-center gap-2">
           <Users className="h-4 w-4" /> Active Cabinet ({activeMinisters.length})
         </h3>
@@ -475,9 +816,9 @@ function MinistersScreen() {
                   <h4 className="text-sm font-bold">{minister.name}</h4>
                   <Badge variant="secondary" className="text-[10px] mt-1">{minister.portfolio}</Badge>
                 </div>
-                <Button size="sm" variant="destructive" className="text-[10px] px-2 py-0 h-6" onClick={() => fireMinister(minister.id)}>
+                <HoverTip tipId="fire_minister" screenId="ministers"><Button size="sm" variant="destructive" className="text-[10px] px-2 py-0 h-6" onClick={() => fireMinister(minister.id)}>
                   Fire
-                </Button>
+                </Button></HoverTip>
               </div>
               <div className="grid grid-cols-2 gap-2 mt-3">
                 <MiniStat label="Competence" value={minister.competence} />
@@ -489,7 +830,7 @@ function MinistersScreen() {
             </div>
           ))}
         </div>
-      </div>
+      </div></HoverTip>
 
       {inactiveMinisters.length > 0 && (
         <div>
@@ -521,15 +862,15 @@ function EnergyScreen() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <HoverTip tipId="energy_overview" screenId="energy"><div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label="Demand" value={`${energy.totalDemand.toLocaleString()} MW`} icon={<Zap className="h-4 w-4" />} color="text-amber-500" />
         <StatCard label="Supply" value={`${energy.totalSupply.toLocaleString()} MW`} icon={<Zap className="h-4 w-4" />} color={energy.totalSupply >= energy.totalDemand ? 'text-green-500' : 'text-red-500'} />
         <StatCard label="Deficit" value={`${energy.deficit.toLocaleString()} MW`} icon={<AlertTriangle className="h-4 w-4" />} color={energy.deficit > 0 ? 'text-red-500' : 'text-green-500'} />
         <StatCard label="Load Shedding" value={`${energy.loadSheddingHoursPerDay.toFixed(1)} hrs/day`} icon={<Clock className="h-4 w-4" />} color={energy.loadSheddingHoursPerDay < 4 ? 'text-green-500' : energy.loadSheddingHoursPerDay < 8 ? 'text-yellow-500' : 'text-red-500'} />
-      </div>
+      </div></HoverTip>
 
       {/* Load Shedding Stages */}
-      <div className="bg-card border border-border rounded-lg p-4">
+      <HoverTip tipId="load_shedding_screen" screenId="energy"><div className="bg-card border border-border rounded-lg p-4">
         <h3 className="text-sm font-bold uppercase tracking-wider mb-3">LOAD SHEDDING STAGE: {energy.loadSheddingStage}</h3>
         <div className="flex gap-1 mb-2">
           {[0,1,2,3,4,5,6,7,8].map(stage => (
@@ -551,7 +892,7 @@ function EnergyScreen() {
           {energy.loadSheddingStage >= 3 && energy.loadSheddingStage < 6 && ' — Businesses severely affected'}
           {energy.loadSheddingStage < 3 && ' — Managed load shedding'}
         </p>
-      </div>
+      </div></HoverTip>
 
       {/* Power Sources */}
       <div>
@@ -683,7 +1024,7 @@ function EventsScreen() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <HoverTip tipId="events_pending" screenId="events"><div>
         <h3 className="text-sm font-bold uppercase tracking-wider mb-3 flex items-center gap-2">
           <AlertTriangle className="h-4 w-4 text-red-500" /> Pending Events ({unresolvedEvents.length})
         </h3>
@@ -708,7 +1049,7 @@ function EventsScreen() {
             </div>
           ))}
         </div>
-      </div>
+      </div></HoverTip>
 
       <Separator />
 
@@ -742,7 +1083,7 @@ function MapScreen() {
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Province Grid Map */}
-        <div className="lg:col-span-2">
+        <HoverTip tipId="province_overview" screenId="map"><div className="lg:col-span-2">
           <div className="bg-card border border-border rounded-lg p-4">
             <h3 className="text-sm font-bold uppercase tracking-wider mb-4">PROVINCES</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 gap-3">
@@ -772,10 +1113,10 @@ function MapScreen() {
               ))}
             </div>
           </div>
-        </div>
+        </div></HoverTip>
 
         {/* Province Details */}
-        <div className="bg-card border border-border rounded-lg p-4">
+        <HoverTip tipId="province_support" screenId="map"><div className="bg-card border border-border rounded-lg p-4">
           <h3 className="text-sm font-bold uppercase tracking-wider mb-3">PROVINCE COMPARISON</h3>
           <ScrollArea className="h-[600px]">
             <div className="space-y-3">
@@ -796,7 +1137,7 @@ function MapScreen() {
               ))}
             </div>
           </ScrollArea>
-        </div>
+        </div></HoverTip>
       </div>
     </div>
   );
@@ -812,9 +1153,9 @@ function NewsScreen() {
 
   return (
     <div className="space-y-4">
-      <h3 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
+      <HoverTip tipId="news_feed" screenId="news"><h3 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
         <Newspaper className="h-4 w-4 text-amber-500" /> National News Feed
-      </h3>
+      </h3></HoverTip>
       <div className="space-y-3">
         {gameState.newsHistory.map((article) => (
           <div key={article.id} className="bg-card border border-border rounded-lg p-4">
@@ -850,12 +1191,12 @@ function ElectionsScreen() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <HoverTip tipId="election_countdown" screenId="elections"><div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label="Election Type" value={election.type.charAt(0).toUpperCase() + election.type.slice(1)} color="text-amber-500" />
         <StatCard label="Election Date" value={`${MONTH_NAMES[election.month - 1]} ${election.year}`} color="text-foreground" />
         <StatCard label="Turns Until" value={`${turnsUntilElection}`} color={turnsUntilElection < 12 ? 'text-red-500' : 'text-green-500'} />
         <StatCard label="Current Polls" value={`${election.polls[election.polls.length - 1]?.playerPercent.toFixed(0) || 48}%`} color={election.polls[election.polls.length - 1]?.playerPercent > 50 ? 'text-green-500' : 'text-yellow-500'} />
-      </div>
+      </div></HoverTip>
 
       <div className="bg-card border border-border rounded-lg p-6">
         <h3 className="text-lg font-bold uppercase tracking-wider mb-4">Campaign Status</h3>
@@ -1014,7 +1355,7 @@ function StartScreen() {
 // ═══════════════════════════════════════════════════════
 
 function NewGameDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
-  const { startNewGame } = useGameStore();
+  const { startNewGame, enableTips, setEnableTips } = useGameStore();
   const [name, setName] = useState('Comrade Leader');
   const [partyName, setPartyName] = useState('Zimbabwe Peoples Party');
   const [difficulty, setDifficulty] = useState<'easy' | 'normal' | 'hard'>('normal');
@@ -1057,6 +1398,18 @@ function NewGameDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o
                 </SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-card">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-8 h-8 rounded-md bg-amber-500/15 text-amber-500">
+                <Lightbulb className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Enable Hover Tips</p>
+                <p className="text-[10px] text-muted-foreground">Show strategy tips when hovering over game elements</p>
+              </div>
+            </div>
+            <Switch checked={enableTips} onCheckedChange={setEnableTips} />
           </div>
         </div>
         <DialogFooter>
@@ -1222,7 +1575,7 @@ const NAV_ITEMS: { id: GameScreen; label: string; icon: React.ReactNode }[] = [
 // ═══════════════════════════════════════════════════════
 
 export default function GamePage() {
-  const { gameState, currentScreen, setScreen, endTurn, isProcessingTurn, showNewGameDialog, setShowNewGameDialog, resetGame } = useGameStore();
+  const { gameState, currentScreen, setScreen, endTurn, isProcessingTurn, showNewGameDialog, setShowNewGameDialog, resetGame, enableTips, setEnableTips } = useGameStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showLog, setShowLog] = useState(false);
 
@@ -1299,16 +1652,18 @@ export default function GamePage() {
             </Button>
 
             {/* End Turn Button */}
-            <Button
-              size="sm"
-              onClick={endTurn}
-              disabled={isProcessingTurn}
-              className="bg-amber-600 hover:bg-amber-700 text-xs font-bold px-4"
-            >
-              <ChevronRight className="h-4 w-4 mr-1" />
-              <span className="hidden sm:inline">End Turn</span>
-              <span className="sm:hidden">End</span>
-            </Button>
+            <HoverTip tipId="end_turn">
+              <Button
+                size="sm"
+                onClick={endTurn}
+                disabled={isProcessingTurn}
+                className="bg-amber-600 hover:bg-amber-700 text-xs font-bold px-4"
+              >
+                <ChevronRight className="h-4 w-4 mr-1" />
+                <span className="hidden sm:inline">End Turn</span>
+                <span className="sm:hidden">End</span>
+              </Button>
+            </HoverTip>
           </div>
         </div>
       </header>
@@ -1364,7 +1719,14 @@ export default function GamePage() {
               </nav>
             </ScrollArea>
 
-            <div className="p-3 border-t border-border">
+            <div className="p-3 border-t border-border space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Lightbulb className="h-3 w-3 text-amber-500" />
+                  <span className="text-[10px] text-muted-foreground">Tips</span>
+                </div>
+                <Switch checked={enableTips} onCheckedChange={setEnableTips} className="scale-75" />
+              </div>
               <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground" onClick={() => { resetGame(); setShowNewGameDialog(true); }}>
                 <Gamepad2 className="h-3 w-3 mr-1" /> New Game
               </Button>
