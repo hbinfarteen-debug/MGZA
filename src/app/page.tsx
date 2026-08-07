@@ -3,6 +3,8 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useGameStore, type GameScreen, type FontSize } from '@/store/game-store';
 import { useTheme } from 'next-themes';
+import { useTranslation } from '@/hooks/useTranslation';
+import { LANGUAGE_NAMES, LANGUAGE_FLAGS } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -22,7 +24,7 @@ import {
   Users, Zap, Droplets, ShieldAlert, Vote, ChevronRight, Play,
   Skull, Settings, Clock, TrendingUp, AlertTriangle, Flame,
   ChevronLeft, Menu, Gamepad2, X, Heart, Star, Trophy, Check, Lightbulb, Info,
-  Sun, Moon, Type,
+  Sun, Moon, Type, Globe,
 } from 'lucide-react';
 import { MONTH_NAMES } from '@/lib/game/constants';
 
@@ -326,13 +328,16 @@ const FONT_SIZE_MAP: Record<FontSize, string> = {
 
 function HoverTip({ tipId, children, screenId }: { tipId: string; children: React.ReactNode; screenId?: GameScreen }) {
   const { enableTips, currentScreen } = useGameStore();
+  const { getTip } = useTranslation();
   const [show, setShow] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0, arrowSide: 'top' as 'top' | 'bottom' });
-  const tip = GAME_TIPS[tipId];
+  const gameTip = GAME_TIPS[tipId];
+  const isActive = enableTips && gameTip && (!gameTip.screen || gameTip.screen === screenId || gameTip.screen === currentScreen);
+  const tip = getTip(tipId);
   const triggerRef = useRef<HTMLDivElement>(null);
 
   // Check if tip should render at all
-  const isActive = enableTips && tip && (!tip.screen || tip.screen === screenId || tip.screen === currentScreen);
+  // isActive already computed above using gameTip for screen check, tip for display
 
   const updatePosition = useCallback(() => {
     const el = triggerRef.current;
@@ -409,7 +414,6 @@ function HoverTip({ tipId, children, screenId }: { tipId: string; children: Reac
                   <Lightbulb className="h-3.5 w-3.5" />
                 </div>
                 <h4 className="text-xs font-bold text-foreground">{tip.title}</h4>
-                <Badge variant="secondary" className="text-[0.5rem] px-1.5 py-0 ml-auto bg-amber-500/10 text-amber-600 border-amber-500/20">TIP</Badge>
               </div>
               {/* Description */}
               <p className="text-[0.6875rem] text-muted-foreground leading-relaxed mb-2">{tip.description}</p>
@@ -444,6 +448,7 @@ function HoverTip({ tipId, children, screenId }: { tipId: string; children: Reac
 
 function DashboardScreen() {
   const { gameState, historicalData, setScreen } = useGameStore();
+  const { t } = useTranslation();
   if (!gameState) return null;
 
   const { player, economic, energy, water, infrastructure, citizenSatisfaction, national, corruption } = gameState;
@@ -456,29 +461,29 @@ function DashboardScreen() {
     <div className="space-y-6">
       {/* Player Status Bar */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <HoverTip tipId="popularity"><div><AnimatedStatCard label="Popularity" value={`${player.popularity.toFixed(0)}%`} numericValue={player.popularity} icon={<Heart className="h-4 w-4" />} color={player.popularity > 50 ? 'text-green-500' : player.popularity > 30 ? 'text-yellow-500' : 'text-red-500'} index={0} /></div></HoverTip>
-        <HoverTip tipId="gdp"><div><AnimatedStatCard label="GDP Growth" value={`${economic.gdpGrowth.toFixed(1)}%`} numericValue={economic.gdpGrowth} icon={<TrendingUp className="h-4 w-4" />} color={economic.gdpGrowth > 3 ? 'text-green-500' : economic.gdpGrowth > 0 ? 'text-yellow-500' : 'text-red-500'} index={1} /></div></HoverTip>
-        <HoverTip tipId="inflation"><div><AnimatedStatCard label="Inflation" value={`${economic.inflation.toFixed(1)}%`} numericValue={economic.inflation} icon={<Flame className="h-4 w-4" />} color={economic.inflation < 15 ? 'text-green-500' : economic.inflation < 30 ? 'text-yellow-500' : 'text-red-500'} index={2} /></div></HoverTip>
-        <HoverTip tipId="satisfaction"><div><AnimatedStatCard label="Satisfaction" value={`${citizenSatisfaction.overall.toFixed(0)}%`} numericValue={citizenSatisfaction.overall} icon={<Star className="h-4 w-4" />} color={citizenSatisfaction.overall > 50 ? 'text-green-500' : citizenSatisfaction.overall > 30 ? 'text-yellow-500' : 'text-red-500'} index={3} /></div></HoverTip>
+        <HoverTip tipId="popularity"><div><AnimatedStatCard label={t('dash.popularity')} value={`${player.popularity.toFixed(0)}%`} numericValue={player.popularity} icon={<Heart className="h-4 w-4" />} color={player.popularity > 50 ? 'text-green-500' : player.popularity > 30 ? 'text-yellow-500' : 'text-red-500'} index={0} /></div></HoverTip>
+        <HoverTip tipId="gdp"><div><AnimatedStatCard label={t('dash.gdpGrowth')} value={`${economic.gdpGrowth.toFixed(1)}%`} numericValue={economic.gdpGrowth} icon={<TrendingUp className="h-4 w-4" />} color={economic.gdpGrowth > 3 ? 'text-green-500' : economic.gdpGrowth > 0 ? 'text-yellow-500' : 'text-red-500'} index={1} /></div></HoverTip>
+        <HoverTip tipId="inflation"><div><AnimatedStatCard label={t('dash.inflation')} value={`${economic.inflation.toFixed(1)}%`} numericValue={economic.inflation} icon={<Flame className="h-4 w-4" />} color={economic.inflation < 15 ? 'text-green-500' : economic.inflation < 30 ? 'text-yellow-500' : 'text-red-500'} index={2} /></div></HoverTip>
+        <HoverTip tipId="satisfaction"><div><AnimatedStatCard label={t('dash.satisfaction')} value={`${citizenSatisfaction.overall.toFixed(0)}%`} numericValue={citizenSatisfaction.overall} icon={<Star className="h-4 w-4" />} color={citizenSatisfaction.overall > 50 ? 'text-green-500' : citizenSatisfaction.overall > 30 ? 'text-yellow-500' : 'text-red-500'} index={3} /></div></HoverTip>
       </div>
 
       {/* Key Metrics Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <HoverTip tipId="dashboard_economic" screenId="dashboard"><div><AnimatedMetricCard title="ECONOMIC INDICATORS" index={0} items={[
-          { label: 'GDP', value: `$${economic.gdp.toFixed(1)}B` },
-          { label: 'Unemployment', value: `${economic.unemploymentRate.toFixed(1)}%` },
-          { label: 'Exchange Rate', value: `${economic.exchangeRate.toLocaleString()} ZWL/USD` },
-          { label: 'Debt/GDP', value: `${economic.debtToGdp.toFixed(0)}%` },
-          { label: 'Investor Confidence', value: `${economic.investorConfidence.toFixed(0)}` },
-          { label: 'Informal Economy', value: `${economic.informalEconomySize.toFixed(0)}%` },
+        <HoverTip tipId="dashboard_economic" screenId="dashboard"><div><AnimatedMetricCard title={t('dash.economicIndicators')} index={0} items={[
+          { label: t('dash.gdp'), value: `$${economic.gdp.toFixed(1)}B` },
+          { label: t('dash.unemployment'), value: `${economic.unemploymentRate.toFixed(1)}%` },
+          { label: t('dash.exchangeRate'), value: `${economic.exchangeRate.toLocaleString()} ZWL/USD` },
+          { label: t('dash.debtGdp'), value: `${economic.debtToGdp.toFixed(0)}%` },
+          { label: t('dash.investorConfidence'), value: `${economic.investorConfidence.toFixed(0)}` },
+          { label: t('dash.informalEconomy'), value: `${economic.informalEconomySize.toFixed(0)}%` },
         ]} /></div></HoverTip>
-        <HoverTip tipId="dashboard_infrastructure" screenId="dashboard"><div><AnimatedMetricCard title="INFRASTRUCTURE" index={1} items={[
-          { label: 'Road Quality', value: `${infrastructure.roadQuality.toFixed(0)}/100` },
-          { label: 'Water Reliability', value: `${infrastructure.waterReliability.toFixed(0)}/100` },
-          { label: 'Electricity', value: `${infrastructure.electricityAvailability.toFixed(0)}/100` },
-          { label: 'Internet', value: `${infrastructure.internetPenetration.toFixed(0)}%` },
-          { label: 'Load Shedding', value: `${energy.loadSheddingHoursPerDay.toFixed(1)} hrs/day` },
-          { label: 'Housing Backlog', value: `${(infrastructure.housingBacklog / 1000).toFixed(0)}K units` },
+        <HoverTip tipId="dashboard_infrastructure" screenId="dashboard"><div><AnimatedMetricCard title={t('dash.infrastructure')} index={1} items={[
+          { label: t('dash.roadQuality'), value: `${infrastructure.roadQuality.toFixed(0)}/100` },
+          { label: t('dash.waterReliability'), value: `${infrastructure.waterReliability.toFixed(0)}/100` },
+          { label: t('dash.electricity'), value: `${infrastructure.electricityAvailability.toFixed(0)}/100` },
+          { label: t('dash.internet'), value: `${infrastructure.internetPenetration.toFixed(0)}%` },
+          { label: t('dash.loadShedding'), value: `${energy.loadSheddingHoursPerDay.toFixed(1)} hrs/day` },
+          { label: t('dash.housingBacklog'), value: `${(infrastructure.housingBacklog / 1000).toFixed(0)}K units` },
         ]} /></div></HoverTip>
         <AnimatedMetricCard title="SOCIAL INDICATORS" index={2} items={[
           { label: 'Population', value: `${(national.population / 1e6).toFixed(1)}M` },
@@ -1254,6 +1259,7 @@ function NewsScreen() {
 
 function ElectionsScreen() {
   const { gameState } = useGameStore();
+  const { t } = useTranslation();
 
   const election = gameState ? gameState.elections[gameState.elections.length - 1] : null;
 
@@ -1413,6 +1419,7 @@ function ElectionsScreen() {
 
 function GameOverScreen() {
   const { gameState, resetGame, setShowNewGameDialog } = useGameStore();
+  const { t } = useTranslation();
   if (!gameState) return null;
 
   const { player, economic, citizenSatisfaction, national } = gameState;
@@ -1433,43 +1440,43 @@ function GameOverScreen() {
         ) : (
           <Skull className="h-16 w-16 text-red-500 mx-auto mb-4" />
         )}
-        <h2 className="text-2xl font-bold mb-2">GAME OVER</h2>
+        <h2 className="text-2xl font-bold mb-2">{t('gameOver.title')}</h2>
         <p className="text-sm text-muted-foreground mb-4">{gameState.gameOverReason}</p>
 
         <div className="grid grid-cols-2 gap-3 mb-6 text-left">
           <div className="bg-muted rounded p-3">
-            <p className="text-[0.625rem] text-muted-foreground">Turns Survived</p>
+            <p className="text-[0.625rem] text-muted-foreground">{t('gameOver.turnsSurvived')}</p>
             <p className="text-lg font-bold">{turnsSurvived}</p>
           </div>
           <div className="bg-muted rounded p-3">
-            <p className="text-[0.625rem] text-muted-foreground">Years in Office</p>
+            <p className="text-[0.625rem] text-muted-foreground">{t('gameOver.yearsInOffice')}</p>
             <p className="text-lg font-bold">{yearsSurvived.toFixed(1)}</p>
           </div>
           <div className="bg-muted rounded p-3">
-            <p className="text-[0.625rem] text-muted-foreground">Final GDP</p>
+            <p className="text-[0.625rem] text-muted-foreground">{t('gameOver.finalGDP')}</p>
             <p className="text-lg font-bold">${economic.gdp.toFixed(1)}B</p>
           </div>
           <div className="bg-muted rounded p-3">
-            <p className="text-[0.625rem] text-muted-foreground">Final Popularity</p>
+            <p className="text-[0.625rem] text-muted-foreground">{t('gameOver.finalPopularity')}</p>
             <p className="text-lg font-bold">{player.popularity.toFixed(0)}%</p>
           </div>
           <div className="bg-muted rounded p-3">
-            <p className="text-[0.625rem] text-muted-foreground">Population</p>
+            <p className="text-[0.625rem] text-muted-foreground">{t('gameOver.population')}</p>
             <p className="text-lg font-bold">{(national.population / 1e6).toFixed(1)}M</p>
           </div>
           <div className="bg-muted rounded p-3">
-            <p className="text-[0.625rem] text-muted-foreground">Satisfaction</p>
+            <p className="text-[0.625rem] text-muted-foreground">{t('gameOver.satisfaction')}</p>
             <p className="text-lg font-bold">{citizenSatisfaction.overall.toFixed(0)}%</p>
           </div>
         </div>
 
         <p className="text-xs text-muted-foreground/70 italic mb-6">
-          &ldquo;Rwendo rweupenyu haruna kudzoka&rdquo; — The journey of life has no return
+          {t('gameOver.proverb')}
         </p>
 
         <div className="flex gap-3">
           <Button onClick={() => { resetGame(); setShowNewGameDialog(true); }} className="flex-1 bg-amber-600 hover:bg-amber-700">
-            <Gamepad2 className="h-4 w-4 mr-2" /> New Game
+            <Gamepad2 className="h-4 w-4 mr-2" /> {t('gameOver.playAgain')}
           </Button>
         </div>
       </motion.div>
@@ -1482,7 +1489,8 @@ function GameOverScreen() {
 // ═══════════════════════════════════════════════════════
 
 function StartScreen() {
-  const { startNewGame, setShowNewGameDialog, fontSize, darkMode, setDarkMode, setFontSize } = useGameStore();
+  const { startNewGame, setShowNewGameDialog, fontSize, darkMode, setDarkMode, setFontSize, language, setLanguage } = useGameStore();
+  const { t } = useTranslation();
   const { setTheme } = useTheme();
   const [showStartSettings, setShowStartSettings] = useState(false);
   const mountedRef = useRef(false);
@@ -1516,7 +1524,7 @@ function StartScreen() {
       {/* Settings bar */}
       <div className="flex justify-end p-2">
         <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => setShowStartSettings(!showStartSettings)}>
-          <Settings className="h-3.5 w-3.5 mr-1.5" /> Settings
+          <Settings className="h-3.5 w-3.5 mr-1.5" /> {t('common.settings')}
         </Button>
       </div>
 
@@ -1529,11 +1537,34 @@ function StartScreen() {
           className="mx-auto max-w-md w-full px-4 mb-4"
         >
           <div className="bg-card border border-border rounded-lg p-4 space-y-4">
+            {/* Language */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Globe className="h-4 w-4 text-amber-500" />
+                <span className="text-sm font-medium">{t('common.language')}</span>
+              </div>
+              <div className="flex gap-1">
+                {(['en', 'sn', 'nd'] as import('@/lib/i18n').Language[]).map((lang) => (
+                  <button
+                    key={lang}
+                    onClick={() => setLanguage(lang)}
+                    className={`px-2 py-1 rounded text-[0.625rem] font-medium transition-all ${
+                      language === lang
+                        ? 'bg-amber-500 text-white'
+                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    }`}
+                  >
+                    {LANGUAGE_FLAGS[lang]} {LANGUAGE_NAMES[lang]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Dark Mode */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {darkMode ? <Moon className="h-4 w-4 text-indigo-400" /> : <Sun className="h-4 w-4 text-amber-500" />}
-                <span className="text-sm font-medium">Dark Mode</span>
+                <span className="text-sm font-medium">{t('common.darkMode')}</span>
               </div>
               <Switch checked={darkMode} onCheckedChange={setDarkMode} />
             </div>
@@ -1542,7 +1573,7 @@ function StartScreen() {
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <Type className="h-4 w-4 text-amber-500" />
-                <span className="text-sm font-medium">Text Size</span>
+                <span className="text-sm font-medium">{t('common.textSize')}</span>
               </div>
               <div className="grid grid-cols-4 gap-2">
                 {(['small', 'medium', 'large', 'xlarge'] as FontSize[]).map((size) => (
@@ -1580,21 +1611,21 @@ function StartScreen() {
             <div className="text-6xl mb-4">🇿🇼</div>
             <h1 className="text-4xl md:text-5xl font-black tracking-tight mb-3">
               <div className="zim-title-shimmer">
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#2E8B37] to-[#E8A817]">MAKE GREAT</span><br />
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#E8A817] to-[#2E8B37]">ZIMBABWE</span><br />
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#2E8B37] to-[#E8A817]">AGAIN</span>
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#2E8B37] to-[#E8A817]">{t('start.title1')}</span><br />
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#E8A817] to-[#2E8B37]">{t('start.title2')}</span><br />
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#2E8B37] to-[#E8A817]">{t('start.title3')}</span>
               </div>
             </h1>
             <p className="text-sm text-muted-foreground font-medium">
-              Political Strategy &amp; Economic Simulation
+              {t('start.subtitle')}
             </p>
             <p className="text-xs text-muted-foreground/70 italic mt-1">
-              &ldquo;Ivhu risina mutsindo hairevi&rdquo; — A tree without roots cannot stand
+              {t('start.proverb')}
             </p>
             <div className="flex items-center justify-center gap-2 mt-3">
-              <Badge variant="secondary">Turn-Based</Badge>
-              <Badge variant="secondary">Strategy</Badge>
-              <Badge variant="secondary">Simulation</Badge>
+              <Badge variant="secondary">{t('common.turnBased')}</Badge>
+              <Badge variant="secondary">{t('common.strategy')}</Badge>
+              <Badge variant="secondary">{t('common.simulation')}</Badge>
             </div>
           </div>
 
@@ -1607,8 +1638,8 @@ function StartScreen() {
               className="bg-card border border-border rounded-lg p-3 text-center shadow-sm"
             >
               <div className="text-2xl mb-1 zim-float">🇿🇼</div>
-              <p className="text-xs font-bold">Lead Zimbabwe</p>
-              <p className="text-[0.625rem] text-muted-foreground mt-0.5">From Councillor to President</p>
+              <p className="text-xs font-bold">{t('start.leadZimbabwe')}</p>
+              <p className="text-[0.625rem] text-muted-foreground mt-0.5">{t('start.leadZimbabweDesc')}</p>
             </motion.div>
             <motion.div
               initial={{ opacity: 0, y: 16 }}
@@ -1617,8 +1648,8 @@ function StartScreen() {
               className="bg-card border border-border rounded-lg p-3 text-center shadow-sm"
             >
               <div className="text-2xl mb-1 zim-float zim-float-delay-1">📊</div>
-              <p className="text-xs font-bold">Manage Economy</p>
-              <p className="text-[0.625rem] text-muted-foreground mt-0.5">Balance budgets &amp; trade</p>
+              <p className="text-xs font-bold">{t('start.manageEconomy')}</p>
+              <p className="text-[0.625rem] text-muted-foreground mt-0.5">{t('start.manageEconomyDesc')}</p>
             </motion.div>
             <motion.div
               initial={{ opacity: 0, y: 16 }}
@@ -1627,16 +1658,13 @@ function StartScreen() {
               className="bg-card border border-border rounded-lg p-3 text-center shadow-sm"
             >
               <div className="text-2xl mb-1 zim-float zim-float-delay-2">🗳️</div>
-              <p className="text-xs font-bold">Win Elections</p>
-              <p className="text-[0.625rem] text-muted-foreground mt-0.5">Secure the people&apos;s mandate</p>
+              <p className="text-xs font-bold">{t('start.winElections')}</p>
+              <p className="text-[0.625rem] text-muted-foreground mt-0.5">{t('start.winElectionsDesc')}</p>
             </motion.div>
           </div>
 
           <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
-            Begin your political career from Councillor to President.
-            Navigate corruption, manage infrastructure, balance budgets,
-            and make impossible decisions that shape the future of millions.
-            There are no perfect choices — only trade-offs.
+            {t('start.description')}
           </p>
 
           <motion.div
@@ -1650,12 +1678,12 @@ function StartScreen() {
               className="bg-[#2E8B37] hover:bg-[#247A2E] text-lg font-bold px-10 py-7 rounded-xl shadow-lg shadow-green-500/20"
               onClick={() => setShowNewGameDialog(true)}
             >
-              <Play className="h-5 w-5 mr-2" /> Start New Game
+              <Play className="h-5 w-5 mr-2" /> {t('start.startNewGame')}
             </Button>
           </motion.div>
 
           <p className="text-[0.625rem] text-muted-foreground/50 mt-6">
-            v1.0 — Made with ❤️ for Zimbabwe
+            {t('start.footer')}
           </p>
         </motion.div>
       </div>
@@ -1669,6 +1697,7 @@ function StartScreen() {
 
 function NewGameDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const { startNewGame, enableTips, setEnableTips } = useGameStore();
+  const { t } = useTranslation();
   const [name, setName] = useState('Comrade Leader');
   const [partyName, setPartyName] = useState('Zimbabwe Peoples Party');
   const [difficulty, setDifficulty] = useState<'easy' | 'normal' | 'hard'>('normal');
@@ -1681,20 +1710,20 @@ function NewGameDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Start New Game</DialogTitle>
-          <DialogDescription>Configure your political career. Every decision matters.</DialogDescription>
+          <DialogTitle>{t('newGame.title')}</DialogTitle>
+          <DialogDescription>{t('newGame.description')}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label>Your Name</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter your name" />
+            <Label>{t('newGame.yourName')}</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('newGame.namePlaceholder')} />
           </div>
           <div className="space-y-2">
-            <Label>Party Name</Label>
-            <Input value={partyName} onChange={(e) => setPartyName(e.target.value)} placeholder="Enter party name" />
+            <Label>{t('newGame.partyName')}</Label>
+            <Input value={partyName} onChange={(e) => setPartyName(e.target.value)} placeholder={t('newGame.partyPlaceholder')} />
           </div>
           <div className="space-y-2">
-            <Label>Difficulty</Label>
+            <Label>{t('newGame.difficulty')}</Label>
             <Select value={difficulty} onValueChange={(v) => setDifficulty(v as any)}>
               <SelectTrigger>
                 <SelectValue />
@@ -1718,8 +1747,8 @@ function NewGameDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o
                 <Lightbulb className="h-4 w-4" />
               </div>
               <div>
-                <p className="text-sm font-medium">Enable Hover Tips</p>
-                <p className="text-[0.625rem] text-muted-foreground">Show strategy tips when hovering over game elements</p>
+                <p className="text-sm font-medium">{t('newGame.enableTips')}</p>
+                <p className="text-[0.625rem] text-muted-foreground">{t('newGame.tipsDesc')}</p>
               </div>
             </div>
             <Switch checked={enableTips} onCheckedChange={setEnableTips} />
@@ -1727,7 +1756,7 @@ function NewGameDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o
         </div>
         <DialogFooter>
           <Button onClick={handleStart} className="bg-amber-600 hover:bg-amber-700">
-            <Play className="h-4 w-4 mr-2" /> Begin Your Journey
+            <Play className="h-4 w-4 mr-2" /> {t('newGame.beginJourney')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1741,6 +1770,7 @@ function NewGameDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o
 
 function EventModal() {
   const { showEventModal, resolveEvent, setShowEventModal } = useGameStore();
+  const { t } = useTranslation();
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
 
   if (!showEventModal || !showEventModal.choices || showEventModal.choices.length === 0) return null;
@@ -1795,7 +1825,7 @@ function EventModal() {
 
         <DialogFooter>
           <Button onClick={handleResolve} disabled={!selectedChoice} className="bg-amber-600 hover:bg-amber-700">
-            Confirm Decision
+            {t('events.confirmDecision')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1888,18 +1918,48 @@ function MinisterReplacementDialog() {
 // ═══════════════════════════════════════════════════════
 
 function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
-  const { fontSize, setFontSize, darkMode, setDarkMode } = useGameStore();
+  const { fontSize, setFontSize, darkMode, setDarkMode, language, setLanguage } = useGameStore();
+  const { t } = useTranslation();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Settings className="h-4 w-4 text-amber-500" /> Settings
+            <Settings className="h-4 w-4 text-amber-500" /> {t('common.settings')}
           </DialogTitle>
-          <DialogDescription>Customize your game experience.</DialogDescription>
+          <DialogDescription>{t('common.languageDesc')}</DialogDescription>
         </DialogHeader>
         <div className="space-y-5 py-4">
+          {/* Language */}
+          <div className="p-3 rounded-lg border border-border bg-card">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex items-center justify-center w-8 h-8 rounded-md bg-amber-500/15 text-amber-500">
+                <Globe className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">{t('common.language')}</p>
+                <p className="text-[0.625rem] text-muted-foreground">{t('common.languageDesc')}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {(['en', 'sn', 'nd'] as import('@/lib/i18n').Language[]).map((lang) => (
+                <button
+                  key={lang}
+                  onClick={() => setLanguage(lang)}
+                  className={`rounded-lg border p-2 text-center transition-all ${
+                    language === lang
+                      ? 'border-amber-500 bg-amber-500/10 ring-1 ring-amber-500'
+                      : 'border-border bg-card hover:border-amber-500/50'
+                  }`}
+                >
+                  <span className="text-lg">{LANGUAGE_FLAGS[lang]}</span>
+                  <span className="text-[0.625rem] text-muted-foreground block mt-0.5">{LANGUAGE_NAMES[lang]}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Dark Mode Toggle */}
           <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-card">
             <div className="flex items-center gap-3">
@@ -1907,8 +1967,8 @@ function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
                 {darkMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
               </div>
               <div>
-                <p className="text-sm font-medium">Dark Mode</p>
-                <p className="text-[0.625rem] text-muted-foreground">Switch between light and dark theme</p>
+                <p className="text-sm font-medium">{t('common.darkMode')}</p>
+                <p className="text-[0.625rem] text-muted-foreground">{t('common.darkModeDesc')}</p>
               </div>
             </div>
             <Switch checked={darkMode} onCheckedChange={setDarkMode} />
@@ -1921,8 +1981,8 @@ function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
                 <Type className="h-4 w-4" />
               </div>
               <div>
-                <p className="text-sm font-medium">Text Size</p>
-                <p className="text-[0.625rem] text-muted-foreground">Choose text size that is comfortable for you</p>
+                <p className="text-sm font-medium">{t('common.textSize')}</p>
+                <p className="text-[0.625rem] text-muted-foreground">{t('common.textSizeDesc')}</p>
               </div>
             </div>
             <div className="grid grid-cols-4 gap-2">
@@ -1948,7 +2008,7 @@ function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
           </div>
         </div>
         <DialogFooter>
-          <Button variant="secondary" onClick={() => onOpenChange(false)}>Close</Button>
+          <Button variant="secondary" onClick={() => onOpenChange(false)}>{t('common.close')}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -2136,34 +2196,31 @@ function TrendCard({ title, data, color, formatValue }: { title: string; data: {
 }
 
 // ═══════════════════════════════════════════════════════
-// NAVIGATION ITEMS
-// ═══════════════════════════════════════════════════════
-
-const NAV_ITEMS: { id: GameScreen; label: string; icon: React.ReactNode }[] = [
-  { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-4 w-4" /> },
-  { id: 'budget', label: 'Budget', icon: <DollarSign className="h-4 w-4" /> },
-  { id: 'infrastructure', label: 'Infrastructure', icon: <Building2 className="h-4 w-4" /> },
-  { id: 'politics', label: 'Politics', icon: <Landmark className="h-4 w-4" /> },
-  { id: 'ministers', label: 'Ministers', icon: <Users className="h-4 w-4" /> },
-  { id: 'energy', label: 'Energy', icon: <Zap className="h-4 w-4" /> },
-  { id: 'water', label: 'Water', icon: <Droplets className="h-4 w-4" /> },
-  { id: 'map', label: 'Map', icon: <Map className="h-4 w-4" /> },
-  { id: 'events', label: 'Events', icon: <AlertTriangle className="h-4 w-4" /> },
-  { id: 'news', label: 'News', icon: <Newspaper className="h-4 w-4" /> },
-  { id: 'elections', label: 'Elections', icon: <Vote className="h-4 w-4" /> },
-];
-
-// ═══════════════════════════════════════════════════════
 // MAIN GAME PAGE
 // ═══════════════════════════════════════════════════════
 
 export default function GamePage() {
   const { gameState, currentScreen, setScreen, endTurn, isProcessingTurn, showNewGameDialog, setShowNewGameDialog, resetGame, enableTips, setEnableTips, fontSize, darkMode, setDarkMode } = useGameStore();
+  const { t } = useTranslation();
   const { setTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showLog, setShowLog] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const mountedRef = useRef(false);
+
+  const NAV_ITEMS = [
+    { id: 'dashboard' as GameScreen, label: t('nav.dashboard'), icon: <LayoutDashboard className="h-4 w-4" /> },
+    { id: 'budget' as GameScreen, label: t('nav.budget'), icon: <DollarSign className="h-4 w-4" /> },
+    { id: 'infrastructure' as GameScreen, label: t('nav.infrastructure'), icon: <Building2 className="h-4 w-4" /> },
+    { id: 'politics' as GameScreen, label: t('nav.politics'), icon: <Landmark className="h-4 w-4" /> },
+    { id: 'ministers' as GameScreen, label: t('nav.ministers'), icon: <Users className="h-4 w-4" /> },
+    { id: 'energy' as GameScreen, label: t('nav.energy'), icon: <Zap className="h-4 w-4" /> },
+    { id: 'water' as GameScreen, label: t('nav.water'), icon: <Droplets className="h-4 w-4" /> },
+    { id: 'map' as GameScreen, label: t('nav.map'), icon: <Map className="h-4 w-4" /> },
+    { id: 'events' as GameScreen, label: t('nav.events'), icon: <AlertTriangle className="h-4 w-4" /> },
+    { id: 'news' as GameScreen, label: t('nav.news'), icon: <Newspaper className="h-4 w-4" /> },
+    { id: 'elections' as GameScreen, label: t('nav.elections'), icon: <Vote className="h-4 w-4" /> },
+  ];
 
   // Mark as mounted and sync dark mode from store to next-themes (one-way)
   useEffect(() => {
@@ -2185,7 +2242,7 @@ export default function GamePage() {
   // Start Screen
   if (currentScreen === 'start') {
     return (
-      <div className="min-h-screen bg-background flex flex-col">
+      <div className="min-h-screen bg-background flex flex-col zim-force-light">
         <StartScreen />
         <NewGameDialog open={showNewGameDialog} onOpenChange={setShowNewGameDialog} />
       </div>
@@ -2195,7 +2252,7 @@ export default function GamePage() {
   // Game Over Screen
   if (currentScreen === 'game_over' || gameState?.isGameOver) {
     return (
-      <div className="min-h-screen bg-background flex flex-col">
+      <div className="min-h-screen bg-background flex flex-col zim-force-light">
         <GameOverScreen />
       </div>
     );
@@ -2274,8 +2331,8 @@ export default function GamePage() {
                   className="bg-amber-600 hover:bg-amber-700 text-xs font-bold px-4"
                 >
                   <ChevronRight className="h-4 w-4 mr-1" />
-                  <span className="hidden sm:inline">End Turn</span>
-                  <span className="sm:hidden">End</span>
+                  <span className="hidden sm:inline">{t('nav.endTurn')}</span>
+                  <span className="sm:hidden">{t('nav.endTurnShort')}</span>
                 </Button>
               </motion.div>
             </HoverTip>
@@ -2293,7 +2350,7 @@ export default function GamePage() {
         `}>
           <div className="flex flex-col h-full">
             <div className="lg:hidden flex items-center justify-between p-3 border-b border-border">
-              <span className="text-sm font-bold">Navigation</span>
+              <span className="text-sm font-bold">{t('common.settings')}</span>
               <Button variant="ghost" size="sm" className="p-0 h-6 w-6" onClick={() => setSidebarOpen(false)}>
                 <X className="h-4 w-4" />
               </Button>
@@ -2338,15 +2395,15 @@ export default function GamePage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <Lightbulb className="h-3 w-3 text-amber-500" />
-                  <span className="text-[0.625rem] text-muted-foreground">Tips</span>
+                  <span className="text-[0.625rem] text-muted-foreground">{t('common.tips')}</span>
                 </div>
                 <Switch checked={enableTips} onCheckedChange={setEnableTips} className="scale-75" />
               </div>
               <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground" onClick={() => setShowSettings(true)}>
-                <Settings className="h-3 w-3 mr-1" /> Settings
+                <Settings className="h-3 w-3 mr-1" /> {t('common.settings')}
               </Button>
               <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground" onClick={() => { resetGame(); setShowNewGameDialog(true); }}>
-                <Gamepad2 className="h-3 w-3 mr-1" /> New Game
+                <Gamepad2 className="h-3 w-3 mr-1" /> {t('common.newGame')}
               </Button>
             </div>
           </div>
@@ -2391,7 +2448,7 @@ export default function GamePage() {
               className="fixed right-0 top-0 h-full w-72 bg-card border-l border-border z-50 p-4 overflow-auto"
             >
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-bold">Game Log</h3>
+                <h3 className="text-sm font-bold">{t('common.gameLog')}</h3>
                 <Button variant="ghost" size="sm" className="p-0 h-6 w-6" onClick={() => setShowLog(false)}>
                   <X className="h-3 w-3" />
                 </Button>

@@ -1,0 +1,502 @@
+     1→     1→'use client';
+     2→     2→
+     3→     3→import React, { useEffect, useState, useRef, useCallback } from 'react';
+     4→     4→import { useGameStore, type GameScreen, type FontSize } from '@/store/game-store';
+     5→     5→import { useTheme } from 'next-themes';
+     6→     6→import { useTranslation } from '@/hooks/useTranslation';
+     7→     7→import { LANGUAGE_NAMES, LANGUAGE_FLAGS } from '@/lib/i18n';
+     8→     8→import { Button } from '@/components/ui/button';
+     9→     9→import { Badge } from '@/components/ui/badge';
+    10→    10→import { ScrollArea } from '@/components/ui/scroll-area';
+    11→    11→import { Separator } from '@/components/ui/separator';
+    12→    12→import { Input } from '@/components/ui/input';
+    13→    13→import { Label } from '@/components/ui/label';
+    14→    14→import {
+    15→    15→  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+    16→    16→} from '@/components/ui/dialog';
+    17→    17→import {
+    18→    18→  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+    19→    19→} from '@/components/ui/select';
+    20→    20→import { Switch } from '@/components/ui/switch';
+    21→    21→import { motion, AnimatePresence, useSpring, useTransform } from 'framer-motion';
+    22→    22→import {
+    23→    23→  LayoutDashboard, DollarSign, Building2, Landmark, Newspaper, Map,
+    24→    24→  Users, Zap, Droplets, ShieldAlert, Vote, ChevronRight, Play,
+    25→    25→  Skull, Settings, Clock, TrendingUp, AlertTriangle, Flame,
+    26→    26→  ChevronLeft, Menu, Gamepad2, X, Heart, Star, Trophy, Check, Lightbulb, Info,
+    27→    27→  Sun, Moon, Type,
+    28→    28→} from 'lucide-react';
+    29→    29→import { MONTH_NAMES } from '@/lib/game/constants';
+    30→    30→
+    31→    31→// ═══════════════════════════════════════════════════════
+    32→    32→// TIP SYSTEM — Contextual hover tip cards
+    33→    33→// ═══════════════════════════════════════════════════════
+    34→    34→
+    35→    35→interface GameTip {
+    36→    36→  id: string;
+    37→    37→  screen?: GameScreen;
+    38→    38→  title: string;
+    39→    39→  description: string;
+    40→    40→  strategy: string;
+    41→    41→  icon?: string;
+    42→    42→}
+    43→    43→
+    44→    44→const GAME_TIPS: Record<string, GameTip> = {
+    45→    45→  // ── Global / Header ──
+    46→    46→  end_turn: {
+    47→    47→    id: 'end_turn',
+    48→    48→    title: 'End Turn',
+    49→    49→    description: 'Advances time by one month. All simulators run: economy, population, infrastructure, energy, water, corruption, and more.',
+    50→    50→    strategy: 'Before ending a turn, check your budget allocation and any pending events. Unresolved events can escalate!',
+    51→    51→    icon: 'ChevronRight',
+    52→    52→  },
+    53→    53→  popularity: {
+    54→    54→    id: 'popularity',
+    55→    55→    title: 'Popularity',
+    56→    56→    description: 'Your approval rating among citizens. High popularity helps in elections and reduces political risk.',
+    57→    57→    strategy: 'Balance populist policies with long-term investment. Ignoring citizen needs for too long will cost you votes.',
+    58→    58→    icon: 'Heart',
+    59→    59→  },
+    60→    60→  gdp: {
+    61→    61→    id: 'gdp',
+    62→    62→    title: 'GDP Growth',
+    63→    63→    description: 'The rate of economic expansion. Higher GDP means more tax revenue and happier citizens.',
+    64→    64→    strategy: 'Invest in infrastructure, mining, and agriculture. Over-taxation and corruption slow GDP growth.',
+    65→    65→    icon: 'TrendingUp',
+    66→    66→  },
+    67→    67→  inflation: {
+    68→    68→    id: 'inflation',
+    69→    69→    title: 'Inflation Rate',
+    70→    70→    description: 'Rising prices erode purchasing power. High inflation makes citizens unhappy and destabilizes the economy.',
+    71→    71→    strategy: 'Control money supply, invest in agriculture to increase food supply, and avoid excessive deficit spending.',
+    72→    72→    icon: 'Flame',
+    73→    73→  },
+    74→    74→  satisfaction: {
+    75→    75→    id: 'satisfaction',
+    76→    76→    title: 'Citizen Satisfaction',
+    77→    77→    description: 'Overall happiness of your citizens across all services and economic conditions.',
+    78→    78→    strategy: 'A balanced approach to all sectors works best. Don\'t neglect water, energy, or healthcare.',
+    79→    79→    icon: 'Star',
+    80→    80→  },
+    81→    81→  load_shedding: {
+    82→    82→    id: 'load_shedding',
+    83→    83→    title: 'Load Shedding Hours',
+    84→    84→    description: 'Daily hours of scheduled power cuts. Citizens hate load shedding — it hurts businesses and daily life.',
+    85→    85→    strategy: 'Invest in new power generation (solar, wind) and maintain existing infrastructure to reduce load shedding.',
+    86→    86→    icon: 'Zap',
+    87→    87→  },
+    88→    88→
+    89→    89→  // ── Dashboard ──
+    90→    90→  dashboard_economic: {
+    91→    91→    id: 'dashboard_economic',
+    92→    92→    screen: 'dashboard',
+    93→    93→    title: 'Economic Indicators',
+    94→    94→    description: 'Key metrics showing the health of Zimbabwe\'s economy: GDP, inflation, unemployment, and trade balance.',
+    95→    95→    strategy: 'Watch GDP growth and inflation closely. A recession with high inflation is the most dangerous combination.',
+    96→    96→    icon: 'TrendingUp',
+    97→    97→  },
+    98→    98→  dashboard_infrastructure: {
+    99→    99→    id: 'dashboard_infrastructure',
+   100→   100→    screen: 'dashboard',
+   101→   101→    title: 'Infrastructure Health',
+   102→   102→    description: 'Overall condition of roads, bridges, water systems, power grid, and telecommunications.',
+   103→   103→    strategy: 'Approve infrastructure projects regularly. Neglected infrastructure decays faster than you think.',
+   104→   104→    icon: 'Building2',
+   105→   105→  },
+   106→   106→  dashboard_gdp_trend: {
+   107→   107→    id: 'dashboard_gdp_trend',
+   108→   108→    screen: 'dashboard',
+   109→   109→    title: 'GDP Trend',
+   110→   110→    description: 'Historical GDP growth over recent turns. Look for patterns — sustained decline needs urgent action.',
+   111→   111→    strategy: 'If GDP is dropping for 3+ consecutive months, increase investment in growth sectors immediately.',
+   112→   112→    icon: 'TrendingUp',
+   113→   113→  },
+   114→   114→  dashboard_popularity_trend: {
+   115→   115→    id: 'dashboard_popularity_trend',
+   116→   116→    screen: 'dashboard',
+   117→   117→    title: 'Popularity Trend',
+   118→   118→    description: 'Your approval rating over time. This is the single most important metric for re-election.',
+   119→   119→    strategy: 'Popularity below 30% is danger territory — you may face a no-confidence vote or coup risk.',
+   120→   120→    icon: 'Heart',
+   121→   121→  },
+   122→   122→
+   123→   123→  // ── Budget ──
+   124→   124→  budget_overview: {
+   125→   125→    id: 'budget_overview',
+   126→   126→    screen: 'budget',
+   127→   127→    title: 'National Budget',
+   128→   128→    description: 'Zimbabwe\'s annual budget allocation across 17 categories. Revenue comes from taxes, mining, and exports.',
+   129→   129→    strategy: 'Balance spending between essential services and growth investment. Running a deficit increases debt.',
+   130→   130→    icon: 'DollarSign',
+   131→   131→  },
+   132→   132→  budget_sliders: {
+   133→   133→    id: 'budget_sliders',
+   134→   134→    screen: 'budget',
+   135→   135→    title: 'Budget Allocation',
+   136→   136→    description: 'Drag sliders to re-allocate funds between categories. Changes take effect after you click "Allocate Budget".',
+   137→   137→    strategy: 'Don\'t starve any one sector. Underfunded healthcare or water leads to crises that cost more to fix later.',
+   138→   138→    icon: 'DollarSign',
+   139→   139→  },
+   140→   140→  allocate_button: {
+   141→   141→    id: 'allocate_button',
+   142→   142→    screen: 'budget',
+   143→   143→    title: 'Allocate Budget',
+   144→   144→    description: 'Locks in your budget choices for this turn. Revenue is collected and spending is distributed.',
+   145→   145→    strategy: 'Review your deficit/surplus before allocating. A small deficit is OK, but persistent deficits spiral into debt crisis.',
+   146→   146→    icon: 'Check',
+   147→   147→  },
+   148→   148→
+   149→   149→  // ── Infrastructure ──
+   150→   150→  infrastructure_projects: {
+   151→   151→    id: 'infrastructure_projects',
+   152→   152→    screen: 'infrastructure',
+   153→   153→    title: 'Infrastructure Projects',
+   154→   154→    description: 'Proposed development projects. Each has a cost, duration, and expected impact on provinces.',
+   155→   155→    strategy: 'Prioritize projects in provinces with lowest satisfaction. Roads and power projects have the widest impact.',
+   156→   156→    icon: 'Building2',
+   157→   157→  },
+   158→   158→  approve_project: {
+   159→   159→    id: 'approve_project',
+   160→   160→    screen: 'infrastructure',
+   161→   161→    title: 'Approve Project',
+   162→   162→    description: 'Starts construction on a project. Costs are deducted from the budget and the project runs for its stated duration.',
+   163→   163→    strategy: 'Only approve projects you can afford. Too many concurrent projects stretch resources thin.',
+   164→   164→    icon: 'Check',
+   165→   165→  },
+   166→   166→
+   167→   167→  // ── Politics ──
+   168→   168→  parliament: {
+   169→   169→    id: 'parliament',
+   170→   170→    screen: 'politics',
+   171→   171→    title: 'Parliament',
+   172→   172→    description: 'Your parliamentary majority determines how easily you can pass legislation. A strong majority gives you more power.',
+   173→   173→    strategy: 'Keep your majority above 50%. If opposition gains ground, political risk increases significantly.',
+   174→   174→    icon: 'Landmark',
+   175→   175→  },
+   176→   176→  factions: {
+   177→   177→    id: 'factions',
+   178→   178→    screen: 'politics',
+   179→   179→    title: 'Political Factions',
+   180→   180→    description: 'Power groups within your party. Each faction has its own agenda and influence level.',
+   181→   181→    strategy: 'Keep factions satisfied by allocating budget to their preferred sectors. Angry factions can destabilize your government.',
+   182→   182→    icon: 'Users',
+   183→   183→  },
+   184→   184→  legitimacy: {
+   185→   185→    id: 'legitimacy',
+   186→   186→    screen: 'politics',
+   187→   187→    title: 'Government Legitimacy',
+   188→   188→    description: 'How legitimate citizens perceive your government. Low legitimacy leads to protests and reduced cooperation.',
+   189→   189→    strategy: 'Fight corruption, deliver on promises, and handle crises transparently to maintain legitimacy.',
+   190→   190→    icon: 'ShieldAlert',
+   191→   191→  },
+   192→   192→
+   193→   193→  // ── Ministers ──
+   194→   194→  ministers_cabinet: {
+   195→   195→    id: 'ministers_cabinet',
+   196→   196→    screen: 'ministers',
+   197→   197→    title: 'Cabinet Ministers',
+   198→   198→    description: 'Your 12 ministers each manage a government portfolio. Their competence affects how well their sector performs.',
+   199→   199→    strategy: 'Fire corrupt or incompetent ministers promptly. Good ministers boost sector performance by up to 15%.',
+   200→   200→    icon: 'Users',
+   201→   201→  },
+   202→   202→  fire_minister: {
+   203→   203→    id: 'fire_minister',
+   204→   204→    screen: 'ministers',
+   205→   205→    title: 'Fire Minister',
+   206→   206→    description: 'Removes a minister from their position. This may anger their faction and reduce your political influence.',
+   207→   207→    strategy: 'Only fire ministers with very low loyalty or very high corruption. A replacement will appear eventually.',
+   208→   208→    icon: 'X',
+   209→   209→  },
+   210→   210→
+   211→   211→  // ── Energy ──
+   212→   212→  energy_overview: {
+   213→   213→    id: 'energy_overview',
+   214→   214→    screen: 'energy',
+   215→   215→    title: 'Energy Sector',
+   216→   216→    description: 'Zimbabwe\'s power generation mix: hydroelectric, coal, solar, wind, diesel, and imports.',
+   217→   217→    strategy: 'Diversify energy sources. Over-reliance on hydro (Kariba) is risky during droughts.',
+   218→   218→    icon: 'Zap',
+   219→   219→  },
+   220→   220→  load_shedding_screen: {
+   221→   221→    id: 'load_shedding_screen',
+   222→   222→    screen: 'energy',
+   223→   223→    title: 'Load Shedding Stages',
+   224→   224→    description: 'Higher stages mean more power cuts. Stage 1 = minor, Stage 8 = severe (12+ hours/day).',
+   225→   225→    strategy: 'Invest in new generation capacity and maintain existing plants to prevent load shedding increases.',
+   226→   226→    icon: 'Zap',
+   227→   227→  },
+   228→   228→  hydroelectric: {
+   229→   229→    id: 'hydroelectric',
+   230→   230→    screen: 'energy',
+   231→   231→    title: 'Kariba Dam (Hydroelectric)',
+   232→   232→    description: 'Zimbabwe\'s largest power source. Output depends on water levels which fluctuate with rainfall.',
+   233→   233→    strategy: 'During drought years, ensure alternative power sources are online. Budget for dam maintenance.',
+   234→   234→    icon: 'Droplets',
+   235→   235→  },
+   236→   236→
+   237→   237→  // ── Water ──
+   238→   238→  water_overview: {
+   239→   239→    id: 'water_overview',
+   240→   240→    screen: 'water',
+   241→   241→    title: 'Water System',
+   242→   242→    description: 'Clean water access, treatment capacity, and dam levels across all provinces.',
+   243→   243→    strategy: 'Invest in water treatment and distribution. Water crises cause disease outbreaks and mass discontent.',
+   244→   244→    icon: 'Droplets',
+   245→   245→  },
+   246→   246→  dam_levels: {
+   247→   247→    id: 'dam_levels',
+   248→   248→    screen: 'water',
+   249→   249→    title: 'Dam Levels',
+   250→   250→    description: 'Water reserves in major dams. Low levels affect both water supply and hydroelectric power.',
+   251→   251→    strategy: 'Monitor dam levels closely during dry season. Budget for water infrastructure before crisis hits.',
+   252→   252→    icon: 'Droplets',
+   253→   253→  },
+   254→   254→
+   255→   255→  // ── Map ──
+   256→   256→  province_overview: {
+   257→   257→    id: 'province_overview',
+   258→   258→    screen: 'map',
+   259→   259→    title: 'Provinces',
+   260→   260→    description: 'Zimbabwe\'s 10 provinces, each with unique demographics, infrastructure, and political leanings.',
+   261→   261→    strategy: 'Click a province to see detailed stats. Focus development on provinces with lowest satisfaction first.',
+   262→   262→    icon: 'Map',
+   263→   263→  },
+   264→   264→  province_support: {
+   265→   265→    id: 'province_support',
+   266→   266→    screen: 'map',
+   267→   267→    title: 'Province Support',
+   268→   268→    description: 'How much each province supports your government. Critical for election predictions.',
+   269→   269→    strategy: 'Provinces with low support are at risk of opposition gains. Target infrastructure projects there.',
+   270→   270→    icon: 'Vote',
+   271→   271→  },
+   272→   272→
+   273→   273→  // ── Events ──
+   274→   274→  events_pending: {
+   275→   275→    id: 'events_pending',
+   276→   276→    screen: 'events',
+   277→   277→    title: 'Pending Events',
+   278→   278→    description: 'Crisis situations requiring your immediate decision. Events have time-sensitive consequences.',
+   279→   279→    strategy: 'Always resolve events promptly. Ignoring events makes them worse and can cascade into multiple crises.',
+   280→   280→    icon: 'AlertTriangle',
+   281→   281→  },
+   282→   282→
+   283→   283→  // ── News ──
+   284→   284→  news_feed: {
+   285→   285→    id: 'news_feed',
+   286→   286→    screen: 'news',
+   287→   287→    title: 'National News',
+   288→   288→    description: 'Generated news articles reflecting the state of Zimbabwe. News affects public opinion.',
+   289→   289→    strategy: 'Good news boosts popularity, bad news hurts it. The news is influenced by your actual performance.',
+   290→   290→    icon: 'Newspaper',
+   291→   291→  },
+   292→   292→
+   293→   293→  // ── Elections ──
+   294→   294→  election_countdown: {
+   295→   295→    id: 'election_countdown',
+   296→   296→    screen: 'elections',
+   297→   297→    title: 'Election Countdown',
+   298→   298→    description: 'Time remaining until the next national election. Prepare your campaign early!',
+   299→   299→    strategy: 'Start boosting popularity at least 6 months before elections. Last-minute changes are rarely enough.',
+   300→   300→    icon: 'Vote',
+   301→   301→  },
+   302→   302→  campaign_fund: {
+   303→   303→    id: 'campaign_fund',
+   304→   304→    screen: 'elections',
+   305→   305→    title: 'Campaign Fund',
+   306→   306→    description: 'Money available for election campaigning. More funds = better voter outreach.',
+   307→   307→    strategy: 'Allocate budget to your campaign fund in the months leading up to the election.',
+   308→   308→    icon: 'DollarSign',
+   309→   309→  },
+   310→   310→};
+   311→   311→
+   312→   312→// ═══════════════════════════════════════════════════════
+   313→   313→// FONT SIZE MAP — Maps size setting to CSS root variable
+   314→   314→// ═══════════════════════════════════════════════════════
+   315→   315→
+   316→   316→const FONT_SIZE_MAP: Record<FontSize, string> = {
+   317→   317→  small: '14px',
+   318→   318→  medium: '16px',
+   319→   319→  large: '18px',
+   320→   320→  xlarge: '20px',
+   321→   321→};
+   322→   322→
+   323→   323→// ═══════════════════════════════════════════════════════
+   324→   324→// HOVER TIP COMPONENT
+   325→   325→// Uses position:fixed + getBoundingClientRect to escape overflow:auto clipping.
+   326→   326→// Always renders wrapper div to prevent layout shift when toggling.
+   327→   327→// ═══════════════════════════════════════════════════════
+   328→   328→
+   329→   329→function HoverTip({ tipId, children, screenId }: { tipId: string; children: React.ReactNode; screenId?: GameScreen }) {
+   330→   330→  const { enableTips, currentScreen } = useGameStore();
+   331→   331→  const [show, setShow] = useState(false);
+   332→   332→  const [coords, setCoords] = useState({ top: 0, left: 0, arrowSide: 'top' as 'top' | 'bottom' });
+   333→   333→  const tip = GAME_TIPS[tipId];
+   334→   334→  const triggerRef = useRef<HTMLDivElement>(null);
+   335→   335→
+   336→   336→  // Check if tip should render at all
+   337→   337→  const isActive = enableTips && tip && (!tip.screen || tip.screen === screenId || tip.screen === currentScreen);
+   338→   338→
+   339→   339→  const updatePosition = useCallback(() => {
+   340→   340→    const el = triggerRef.current;
+   341→   341→    if (!el) return;
+   342→   342→    const rect = el.getBoundingClientRect();
+   343→   343→    const tipWidth = 320; // w-80 = 20rem = 320px
+   344→   344→    const tipHeight = 180; // approximate
+   345→   345→    const gap = 8;
+   346→   346→    const viewportHeight = window.innerHeight;
+   347→   347→    const viewportWidth = window.innerWidth;
+   348→   348→
+   349→   349→    // Prefer showing above, but flip below if no room
+   350→   350→    const showAbove = rect.top > tipHeight + gap + 50; // 50px buffer for header
+   351→   351→    const arrowSide = showAbove ? 'top' : 'bottom';
+   352→   352→
+   353→   353→    let top: number;
+   354→   354→    if (showAbove) {
+   355→   355→      top = rect.top - tipHeight - gap;
+   356→   356→    } else {
+   357→   357→      top = rect.bottom + gap;
+   358→   358→    }
+   359→   359→
+   360→   360→    // Center horizontally, but clamp to viewport edges
+   361→   361→    let left = rect.left + rect.width / 2 - tipWidth / 2;
+   362→   362→    left = Math.max(8, Math.min(left, viewportWidth - tipWidth - 8));
+   363→   363→
+   364→   364→    setCoords({ top: Math.max(4, top), left, arrowSide });
+   365→   365→  }, []);
+   366→   366→
+   367→   367→  const handleEnter = useCallback(() => {
+   368→   368→    if (!isActive) return;
+   369→   369→    updatePosition();
+   370→   370→    setShow(true);
+   371→   371→  }, [isActive, updatePosition]);
+   372→   372→
+   373→   373→  const handleLeave = useCallback(() => setShow(false), []);
+   374→   374→
+   375→   375→  // Update position on scroll / resize while visible
+   376→   376→  useEffect(() => {
+   377→   377→    if (!show) return;
+   378→   378→    updatePosition();
+   379→   379→    const onScroll = () => updatePosition();
+   380→   380→    const onResize = () => updatePosition();
+   381→   381→    window.addEventListener('scroll', onScroll, true);
+   382→   382→    window.addEventListener('resize', onResize);
+   383→   383→    return () => {
+   384→   384→      window.removeEventListener('scroll', onScroll, true);
+   385→   385→      window.removeEventListener('resize', onResize);
+   386→   386→    };
+   387→   387→  }, [show, updatePosition]);
+   388→   388→
+   389→   389→  return (
+   390→   390→    <div
+   391→   391→      ref={triggerRef}
+   392→   392→      className="contents"
+   393→   393→      onMouseEnter={handleEnter}
+   394→   394→      onMouseLeave={handleLeave}
+   395→   395→    >
+   396→   396→      {children}
+   397→   397→      <AnimatePresence>
+   398→   398→        {show && isActive && (
+   399→   399→          <motion.div
+   400→   400→            initial={{ opacity: 0, scale: 0.92 }}
+   401→   401→            animate={{ opacity: 1, scale: 1 }}
+   402→   402→            exit={{ opacity: 0, scale: 0.92 }}
+   403→   403→            transition={{ duration: 0.12, ease: 'easeOut' }}
+   404→   404→            style={{ position: 'fixed', top: coords.top, left: coords.left, width: 320, zIndex: 9999 }}
+   405→   405→            className="pointer-events-none"
+   406→   406→          >
+   407→   407→            <div className="bg-popover border border-border rounded-lg shadow-xl p-3.5 text-left">
+   408→   408→              {/* Header */}
+   409→   409→              <div className="flex items-center gap-2 mb-2">
+   410→   410→                <div className="flex items-center justify-center w-6 h-6 rounded-md bg-amber-500/15 text-amber-500 shrink-0">
+   411→   411→                  <Lightbulb className="h-3.5 w-3.5" />
+   412→   412→                </div>
+   413→   413→                <h4 className="text-xs font-bold text-foreground">{tip.title}</h4>
+   414→   414→                <Badge variant="secondary" className="text-[0.5rem] px-1.5 py-0 ml-auto bg-amber-500/10 text-amber-600 border-amber-500/20">TIP</Badge>
+   415→   415→              </div>
+   416→   416→              {/* Description */}
+   417→   417→              <p className="text-[0.6875rem] text-muted-foreground leading-relaxed mb-2">{tip.description}</p>
+   418→   418→              {/* Strategy */}
+   419→   419→              <div className="border-t border-border/50 pt-2">
+   420→   420→                <div className="flex items-start gap-1.5">
+   421→   421→                  <Info className="h-3 w-3 text-amber-500 mt-0.5 shrink-0" />
+   422→   422→                  <p className="text-[0.625rem] text-amber-600 font-medium leading-relaxed">{tip.strategy}</p>
+   423→   423→                </div>
+   424→   424→              </div>
+   425→   425→            </div>
+   426→   426→            {/* Arrow */}
+   427→   427→            {coords.arrowSide === 'bottom' ? (
+   428→   428→              <div className="absolute bottom-full left-[var(--arrow-x)] -translate-x-1/2 -mb-px">
+   429→   429→                <div className="w-2 h-2 bg-popover border-l border-t border-border rotate-45" />
+   430→   430→              </div>
+   431→   431→            ) : (
+   432→   432→              <div className="absolute top-full left-[var(--arrow-x)] -translate-x-1/2 -mt-px">
+   433→   433→                <div className="w-2 h-2 bg-popover border-r border-b border-border rotate-45" />
+   434→   434→              </div>
+   435→   435→            )}
+   436→   436→          </motion.div>
+   437→   437→        )}
+   438→   438→      </AnimatePresence>
+   439→   439→    </div>
+   440→   440→  );
+   441→   441→}
+   442→   442→
+   443→   443→// ═══════════════════════════════════════════════════════
+   444→   444→// DASHBOARD
+   445→   445→// ═══════════════════════════════════════════════════════
+   446→   446→
+   447→   447→function DashboardScreen() {
+   448→   448→  const { gameState, historicalData, setScreen } = useGameStore();
+   449→   449→  if (!gameState) return null;
+   450→   450→
+   451→   451→  const { player, economic, energy, water, infrastructure, citizenSatisfaction, national, corruption } = gameState;
+   452→   452→  const recentHistory = historicalData.slice(-12);
+   453→   453→  const recentNews = gameState.newsHistory.slice(0, 5);
+   454→   454→  const activeEvents = gameState.events.filter(e => !e.resolved).slice(0, 3);
+   455→   455→  const activeProjects = gameState.projects.filter(p => p.status === 'in_progress');
+   456→   456→
+   457→   457→  return (
+   458→   458→    <div className="space-y-6">
+   459→   459→      {/* Player Status Bar */}
+   460→   460→      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+   461→   461→        <HoverTip tipId="popularity"><div><AnimatedStatCard label="Popularity" value={`${player.popularity.toFixed(0)}%`} numericValue={player.popularity} icon={<Heart className="h-4 w-4" />} color={player.popularity > 50 ? 'text-green-500' : player.popularity > 30 ? 'text-yellow-500' : 'text-red-500'} index={0} /></div></HoverTip>
+   462→   462→        <HoverTip tipId="gdp"><div><AnimatedStatCard label="GDP Growth" value={`${economic.gdpGrowth.toFixed(1)}%`} numericValue={economic.gdpGrowth} icon={<TrendingUp className="h-4 w-4" />} color={economic.gdpGrowth > 3 ? 'text-green-500' : economic.gdpGrowth > 0 ? 'text-yellow-500' : 'text-red-500'} index={1} /></div></HoverTip>
+   463→   463→        <HoverTip tipId="inflation"><div><AnimatedStatCard label="Inflation" value={`${economic.inflation.toFixed(1)}%`} numericValue={economic.inflation} icon={<Flame className="h-4 w-4" />} color={economic.inflation < 15 ? 'text-green-500' : economic.inflation < 30 ? 'text-yellow-500' : 'text-red-500'} index={2} /></div></HoverTip>
+   464→   464→        <HoverTip tipId="satisfaction"><div><AnimatedStatCard label="Satisfaction" value={`${citizenSatisfaction.overall.toFixed(0)}%`} numericValue={citizenSatisfaction.overall} icon={<Star className="h-4 w-4" />} color={citizenSatisfaction.overall > 50 ? 'text-green-500' : citizenSatisfaction.overall > 30 ? 'text-yellow-500' : 'text-red-500'} index={3} /></div></HoverTip>
+   465→   465→      </div>
+   466→   466→
+   467→   467→      {/* Key Metrics Grid */}
+   468→   468→      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+   469→   469→        <HoverTip tipId="dashboard_economic" screenId="dashboard"><div><AnimatedMetricCard title="ECONOMIC INDICATORS" index={0} items={[
+   470→   470→          { label: 'GDP', value: `$${economic.gdp.toFixed(1)}B` },
+   471→   471→          { label: 'Unemployment', value: `${economic.unemploymentRate.toFixed(1)}%` },
+   472→   472→          { label: 'Exchange Rate', value: `${economic.exchangeRate.toLocaleString()} ZWL/USD` },
+   473→   473→          { label: 'Debt/GDP', value: `${economic.debtToGdp.toFixed(0)}%` },
+   474→   474→          { label: 'Investor Confidence', value: `${economic.investorConfidence.toFixed(0)}` },
+   475→   475→          { label: 'Informal Economy', value: `${economic.informalEconomySize.toFixed(0)}%` },
+   476→   476→        ]} /></div></HoverTip>
+   477→   477→        <HoverTip tipId="dashboard_infrastructure" screenId="dashboard"><div><AnimatedMetricCard title="INFRASTRUCTURE" index={1} items={[
+   478→   478→          { label: 'Road Quality', value: `${infrastructure.roadQuality.toFixed(0)}/100` },
+   479→   479→          { label: 'Water Reliability', value: `${infrastructure.waterReliability.toFixed(0)}/100` },
+   480→   480→          { label: 'Electricity', value: `${infrastructure.electricityAvailability.toFixed(0)}/100` },
+   481→   481→          { label: 'Internet', value: `${infrastructure.internetPenetration.toFixed(0)}%` },
+   482→   482→          { label: 'Load Shedding', value: `${energy.loadSheddingHoursPerDay.toFixed(1)} hrs/day` },
+   483→   483→          { label: 'Housing Backlog', value: `${(infrastructure.housingBacklog / 1000).toFixed(0)}K units` },
+   484→   484→        ]} /></div></HoverTip>
+   485→   485→        <AnimatedMetricCard title="SOCIAL INDICATORS" index={2} items={[
+   486→   486→          { label: 'Population', value: `${(national.population / 1e6).toFixed(1)}M` },
+   487→   487→          { label: 'Literacy', value: `${national.literacyRate.toFixed(0)}%` },
+   488→   488→          { label: 'Life Expectancy', value: `${national.lifeExpectancy.toFixed(0)} yrs` },
+   489→   489→          { label: 'Urban Pop.', value: `${national.urbanPopulation.toFixed(0)}%` },
+   490→   490→          { label: 'Youth Unemployment', value: `${economic.youthUnemployment.toFixed(0)}%` },
+   491→   491→          { label: 'Schools', value: `${gameState.publicServices.schools.toFixed(0)}/100` },
+   492→   492→        ]} />
+   493→   493→        <HoverTip tipId="legitimacy" screenId="dashboard"><div><AnimatedMetricCard title="GOVERNANCE" index={3} items={[
+   494→   494→          { label: 'Corruption Index', value: `${corruption.nationalLevel.toFixed(0)}/100` },
+   495→   495→          { label: 'Legitimacy', value: `${player.legitimacy.toFixed(0)}/100` },
+   496→   496→          { label: 'Parliament Seats', value: `${gameState.parliament.rulingPartySeats}/${gameState.parliament.totalSeats}` },
+   497→   497→          { label: 'Dam Level', value: `${energy.damLevel.toFixed(0)}%` },
+   498→   498→          { label: 'Water Reservoirs', value: `${water.reservoirLevels.toFixed(0)}%` },
+   499→   499→          { label: 'Funds Lost to Corruption', value: `$${corruption.fundsLostToCorruption.toFixed(0)}M/mo` },
+   500→   500→        ]} /></div></HoverTip>
+
+[showing lines 1-500 of 2002; use offset=501 with limit to continue reading]

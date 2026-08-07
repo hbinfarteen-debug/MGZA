@@ -7,6 +7,7 @@ import { persist } from 'zustand/middleware';
 import type { GameState, InfrastructureProject, GameEvent, BudgetItem, Minister, HistoricalDataPoint } from '@/lib/game/types';
 import { createInitialGameState } from '@/lib/game/constants';
 import { simulateTurn, generateAvailableProjects, getHistoricalDataPoint } from '@/lib/game/engine';
+import type { Language } from '@/lib/i18n';
 
 export type GameScreen =
   | 'start'
@@ -59,6 +60,7 @@ interface GameStore {
   showReplacementDialog: ReplacementDialogState | null;
   fontSize: FontSize;
   darkMode: boolean;
+  language: Language;
 
   // Actions
   startNewGame: (name: string, partyName: string, difficulty: 'easy' | 'normal' | 'hard') => void;
@@ -80,6 +82,7 @@ interface GameStore {
   setShowReplacementDialog: (state: ReplacementDialogState | null) => void;
   setFontSize: (size: FontSize) => void;
   setDarkMode: (dark: boolean) => void;
+  setLanguage: (lang: Language) => void;
 }
 
 export const useGameStore = create<GameStore>()(
@@ -97,6 +100,7 @@ export const useGameStore = create<GameStore>()(
       showReplacementDialog: null,
       fontSize: 'medium' as FontSize,
       darkMode: false,
+      language: 'en' as Language,
 
       startNewGame: (name, partyName, difficulty) => {
         const state = createInitialGameState(difficulty);
@@ -295,6 +299,7 @@ export const useGameStore = create<GameStore>()(
       setShowReplacementDialog: (state) => set({ showReplacementDialog: state }),
       setFontSize: (size) => set({ fontSize: size }),
       setDarkMode: (dark) => set({ darkMode: dark }),
+      setLanguage: (lang) => set({ language: lang }),
     }),
     {
       name: 'mgza-game-store',
@@ -305,6 +310,7 @@ export const useGameStore = create<GameStore>()(
         enableTips: state.enableTips,
         fontSize: state.fontSize,
         darkMode: state.darkMode,
+        language: state.language,
       }),
     }
   )

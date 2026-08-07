@@ -543,3 +543,52 @@
 .zim-count-flash {
   animation: zim-count-flash 0.6s ease-out;
 }
+
+/* ── Force light theme on specific containers (start screen) ── */
+.zim-force-light,
+.zim-force-light * {
+  /* Override ALL dark theme CSS variables back to light values */
+  --zim-green:      #2E8B37 !important;
+  --zim-red:        #CC2936 !important;
+  --zim-gold:       #E8A817 !important;
+  --zim-black:      #1A1A1A !important;
+  --zim-white:      #FAFAF7 !important;
+  --zim-amber:      #D4940A !important;
+  --zim-earth:      #5C4033 !important;
+  --zim-sand:       #E8DFC8 !important;
+  --zim-stone:      #B8AFA4 !important;
+  --zim-slate:      #6B6560 !important;
+  --zim-light-green: #E8F5E9 !important;
+  --zim-dark-green:  #1B5E20 !important;
+  --background:     #FAFAF7 !important;
+  --foreground:     #1A1A1A !important;
+  --card:           #FFFFFF !important;
+  --card-foreground: #1A1A1A !important;
+  --popover:        #FFFFFF !important;
+  --popover-foreground: #1A1A1A !important;
+  --primary:        #2E8B37 !important;
+  --primary-foreground: #FFFFFF !important;
+  --secondary:      #F5F0E8 !important;
+  --secondary-foreground: #3D2E1A !important;
+  --muted:          #F2EFEA !important;
+  --muted-foreground: #6B6560 !important;
+  --accent:         #FFF3D4 !important;
+  --accent-foreground: #6B4E00 !important;
+  --destructive:    #CC2936 !important;
+  --border:         #E5E0D8 !important;
+  --input:          #E5E0D8 !important;
+  --ring:           #2E8B37 !important;
+  color-scheme: light;
+}
+
+/* Force-light overrides for dark-specific component styles */
+.zim-force-light .zim-card {
+  background: #FFFFFF !important;
+  border-color: #E5E0D8 !important;
+  box-shadow: 0 1px 3px oklch(0.15 0.02 60 / 8%), 0 4px 12px oklch(0.15 0.02 60 / 5%) !important;
+}
+.zim-force-light .zim-badge {
+  background: linear-gradient(135deg, oklch(0.92 0.06 85 / 100%), oklch(0.90 0.07 85 / 100%)) !important;
+  color: #6B4E00 !important;
+  border-color: oklch(0.85 0.06 85 / 100%) !important;
+}
