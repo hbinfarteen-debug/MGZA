@@ -132,3 +132,39 @@ Stage Summary:
 - Toggle available in both New Game Dialog and sidebar
 - Tips persist across page reloads (localStorage)
 - Browser verified: tips appear on hover over End Turn, Fire buttons, minister cards, etc.
+
+---
+Task ID: 3
+Agent: Main Agent + 2 frontend-styling-expert subagents
+Task: Fix tip card clipping and overhaul UI for Zimbabwean appeal
+
+Work Log:
+- Fixed HoverTip z-index: z-[100] → z-[200] to prevent clipping under header
+- Added `position` prop to HoverTip ('top' | 'bottom', default 'top')
+- End Turn button tip now appears below header (position="bottom") instead of clipping above
+- Arrow and animation flip based on position prop
+- Overhauled globals.css with Zimbabwe national flag color palette:
+  - Green #2E8B37 (primary), Red #CC2936 (destructive), Gold #E8A817 (accent)
+  - Warm off-white background #FAFAF7
+  - Full dark theme with adjusted Zimbabwe colors
+- Redesigned Start Screen:
+  - Zimbabwe flag stripe bar (green/white/red)
+  - Large 🇿🇼 emoji
+  - Gradient text title (green to gold)
+  - Shona proverb subtitle
+  - 3 feature cards (Lead Zimbabwe, Manage Economy, Win Elections)
+  - Prominent green "Start New Game" button
+  - "Made with ❤️ for Zimbabwe" footer
+- Improved StatCard: colored left border, larger text, shadow
+- Improved MetricCard: hover effects, gold top border, tabular numbers
+- Improved TrendCard: gradient bars with fade effect
+- Improved Footer: Zimbabwe green stripe at top
+- Added custom CSS utilities: zim-gradient, zim-card, zim-stat-card, zim-badge, zim-glow
+
+Stage Summary:
+- Tip cards no longer clip under the header
+- Full Zimbabwe flag color theme applied to all components
+- Start screen is patriotic and engaging with cultural elements
+- All screens tested: Dashboard, Budget, Energy, Elections, Ministers, Map
+- Zero lint errors, zero browser errors
+- Game is playable with improved visual design

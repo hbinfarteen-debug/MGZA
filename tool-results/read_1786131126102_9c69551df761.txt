@@ -1,0 +1,1809 @@
+     1→'use client';
+     2→
+     3→import React, { useEffect, useState } from 'react';
+     4→import { useGameStore, type GameScreen } from '@/store/game-store';
+     5→import { Button } from '@/components/ui/button';
+     6→import { Badge } from '@/components/ui/badge';
+     7→import { ScrollArea } from '@/components/ui/scroll-area';
+     8→import { Separator } from '@/components/ui/separator';
+     9→import { Input } from '@/components/ui/input';
+    10→import { Label } from '@/components/ui/label';
+    11→import {
+    12→  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+    13→} from '@/components/ui/dialog';
+    14→import {
+    15→  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+    16→} from '@/components/ui/select';
+    17→import { Switch } from '@/components/ui/switch';
+    18→import { motion, AnimatePresence } from 'framer-motion';
+    19→import {
+    20→  LayoutDashboard, DollarSign, Building2, Landmark, Newspaper, Map,
+    21→  Users, Zap, Droplets, ShieldAlert, Vote, ChevronRight, Play,
+    22→  Skull, Settings, Clock, TrendingUp, AlertTriangle, Flame,
+    23→  ChevronLeft, Menu, Gamepad2, X, Heart, Star, Trophy, Check, Lightbulb, Info,
+    24→} from 'lucide-react';
+    25→import { MONTH_NAMES } from '@/lib/game/constants';
+    26→
+    27→// ═══════════════════════════════════════════════════════
+    28→// TIP SYSTEM — Contextual hover tip cards
+    29→// ═══════════════════════════════════════════════════════
+    30→
+    31→interface GameTip {
+    32→  id: string;
+    33→  screen?: GameScreen;
+    34→  title: string;
+    35→  description: string;
+    36→  strategy: string;
+    37→  icon?: string;
+    38→}
+    39→
+    40→const GAME_TIPS: Record<string, GameTip> = {
+    41→  // ── Global / Header ──
+    42→  end_turn: {
+    43→    id: 'end_turn',
+    44→    title: 'End Turn',
+    45→    description: 'Advances time by one month. All simulators run: economy, population, infrastructure, energy, water, corruption, and more.',
+    46→    strategy: 'Before ending a turn, check your budget allocation and any pending events. Unresolved events can escalate!',
+    47→    icon: 'ChevronRight',
+    48→  },
+    49→  popularity: {
+    50→    id: 'popularity',
+    51→    title: 'Popularity',
+    52→    description: 'Your approval rating among citizens. High popularity helps in elections and reduces political risk.',
+    53→    strategy: 'Balance populist policies with long-term investment. Ignoring citizen needs for too long will cost you votes.',
+    54→    icon: 'Heart',
+    55→  },
+    56→  gdp: {
+    57→    id: 'gdp',
+    58→    title: 'GDP Growth',
+    59→    description: 'The rate of economic expansion. Higher GDP means more tax revenue and happier citizens.',
+    60→    strategy: 'Invest in infrastructure, mining, and agriculture. Over-taxation and corruption slow GDP growth.',
+    61→    icon: 'TrendingUp',
+    62→  },
+    63→  inflation: {
+    64→    id: 'inflation',
+    65→    title: 'Inflation Rate',
+    66→    description: 'Rising prices erode purchasing power. High inflation makes citizens unhappy and destabilizes the economy.',
+    67→    strategy: 'Control money supply, invest in agriculture to increase food supply, and avoid excessive deficit spending.',
+    68→    icon: 'Flame',
+    69→  },
+    70→  satisfaction: {
+    71→    id: 'satisfaction',
+    72→    title: 'Citizen Satisfaction',
+    73→    description: 'Overall happiness of your citizens across all services and economic conditions.',
+    74→    strategy: 'A balanced approach to all sectors works best. Don\'t neglect water, energy, or healthcare.',
+    75→    icon: 'Star',
+    76→  },
+    77→  load_shedding: {
+    78→    id: 'load_shedding',
+    79→    title: 'Load Shedding Hours',
+    80→    description: 'Daily hours of scheduled power cuts. Citizens hate load shedding — it hurts businesses and daily life.',
+    81→    strategy: 'Invest in new power generation (solar, wind) and maintain existing infrastructure to reduce load shedding.',
+    82→    icon: 'Zap',
+    83→  },
+    84→
+    85→  // ── Dashboard ──
+    86→  dashboard_economic: {
+    87→    id: 'dashboard_economic',
+    88→    screen: 'dashboard',
+    89→    title: 'Economic Indicators',
+    90→    description: 'Key metrics showing the health of Zimbabwe\'s economy: GDP, inflation, unemployment, and trade balance.',
+    91→    strategy: 'Watch GDP growth and inflation closely. A recession with high inflation is the most dangerous combination.',
+    92→    icon: 'TrendingUp',
+    93→  },
+    94→  dashboard_infrastructure: {
+    95→    id: 'dashboard_infrastructure',
+    96→    screen: 'dashboard',
+    97→    title: 'Infrastructure Health',
+    98→    description: 'Overall condition of roads, bridges, water systems, power grid, and telecommunications.',
+    99→    strategy: 'Approve infrastructure projects regularly. Neglected infrastructure decays faster than you think.',
+   100→    icon: 'Building2',
+   101→  },
+   102→  dashboard_gdp_trend: {
+   103→    id: 'dashboard_gdp_trend',
+   104→    screen: 'dashboard',
+   105→    title: 'GDP Trend',
+   106→    description: 'Historical GDP growth over recent turns. Look for patterns — sustained decline needs urgent action.',
+   107→    strategy: 'If GDP is dropping for 3+ consecutive months, increase investment in growth sectors immediately.',
+   108→    icon: 'TrendingUp',
+   109→  },
+   110→  dashboard_popularity_trend: {
+   111→    id: 'dashboard_popularity_trend',
+   112→    screen: 'dashboard',
+   113→    title: 'Popularity Trend',
+   114→    description: 'Your approval rating over time. This is the single most important metric for re-election.',
+   115→    strategy: 'Popularity below 30% is danger territory — you may face a no-confidence vote or coup risk.',
+   116→    icon: 'Heart',
+   117→  },
+   118→
+   119→  // ── Budget ──
+   120→  budget_overview: {
+   121→    id: 'budget_overview',
+   122→    screen: 'budget',
+   123→    title: 'National Budget',
+   124→    description: 'Zimbabwe\'s annual budget allocation across 17 categories. Revenue comes from taxes, mining, and exports.',
+   125→    strategy: 'Balance spending between essential services and growth investment. Running a deficit increases debt.',
+   126→    icon: 'DollarSign',
+   127→  },
+   128→  budget_sliders: {
+   129→    id: 'budget_sliders',
+   130→    screen: 'budget',
+   131→    title: 'Budget Allocation',
+   132→    description: 'Drag sliders to re-allocate funds between categories. Changes take effect after you click "Allocate Budget".',
+   133→    strategy: 'Don\'t starve any one sector. Underfunded healthcare or water leads to crises that cost more to fix later.',
+   134→    icon: 'DollarSign',
+   135→  },
+   136→  allocate_button: {
+   137→    id: 'allocate_button',
+   138→    screen: 'budget',
+   139→    title: 'Allocate Budget',
+   140→    description: 'Locks in your budget choices for this turn. Revenue is collected and spending is distributed.',
+   141→    strategy: 'Review your deficit/surplus before allocating. A small deficit is OK, but persistent deficits spiral into debt crisis.',
+   142→    icon: 'Check',
+   143→  },
+   144→
+   145→  // ── Infrastructure ──
+   146→  infrastructure_projects: {
+   147→    id: 'infrastructure_projects',
+   148→    screen: 'infrastructure',
+   149→    title: 'Infrastructure Projects',
+   150→    description: 'Proposed development projects. Each has a cost, duration, and expected impact on provinces.',
+   151→    strategy: 'Prioritize projects in provinces with lowest satisfaction. Roads and power projects have the widest impact.',
+   152→    icon: 'Building2',
+   153→  },
+   154→  approve_project: {
+   155→    id: 'approve_project',
+   156→    screen: 'infrastructure',
+   157→    title: 'Approve Project',
+   158→    description: 'Starts construction on a project. Costs are deducted from the budget and the project runs for its stated duration.',
+   159→    strategy: 'Only approve projects you can afford. Too many concurrent projects stretch resources thin.',
+   160→    icon: 'Check',
+   161→  },
+   162→
+   163→  // ── Politics ──
+   164→  parliament: {
+   165→    id: 'parliament',
+   166→    screen: 'politics',
+   167→    title: 'Parliament',
+   168→    description: 'Your parliamentary majority determines how easily you can pass legislation. A strong majority gives you more power.',
+   169→    strategy: 'Keep your majority above 50%. If opposition gains ground, political risk increases significantly.',
+   170→    icon: 'Landmark',
+   171→  },
+   172→  factions: {
+   173→    id: 'factions',
+   174→    screen: 'politics',
+   175→    title: 'Political Factions',
+   176→    description: 'Power groups within your party. Each faction has its own agenda and influence level.',
+   177→    strategy: 'Keep factions satisfied by allocating budget to their preferred sectors. Angry factions can destabilize your government.',
+   178→    icon: 'Users',
+   179→  },
+   180→  legitimacy: {
+   181→    id: 'legitimacy',
+   182→    screen: 'politics',
+   183→    title: 'Government Legitimacy',
+   184→    description: 'How legitimate citizens perceive your government. Low legitimacy leads to protests and reduced cooperation.',
+   185→    strategy: 'Fight corruption, deliver on promises, and handle crises transparently to maintain legitimacy.',
+   186→    icon: 'ShieldAlert',
+   187→  },
+   188→
+   189→  // ── Ministers ──
+   190→  ministers_cabinet: {
+   191→    id: 'ministers_cabinet',
+   192→    screen: 'ministers',
+   193→    title: 'Cabinet Ministers',
+   194→    description: 'Your 12 ministers each manage a government portfolio. Their competence affects how well their sector performs.',
+   195→    strategy: 'Fire corrupt or incompetent ministers promptly. Good ministers boost sector performance by up to 15%.',
+   196→    icon: 'Users',
+   197→  },
+   198→  fire_minister: {
+   199→    id: 'fire_minister',
+   200→    screen: 'ministers',
+   201→    title: 'Fire Minister',
+   202→    description: 'Removes a minister from their position. This may anger their faction and reduce your political influence.',
+   203→    strategy: 'Only fire ministers with very low loyalty or very high corruption. A replacement will appear eventually.',
+   204→    icon: 'X',
+   205→  },
+   206→
+   207→  // ── Energy ──
+   208→  energy_overview: {
+   209→    id: 'energy_overview',
+   210→    screen: 'energy',
+   211→    title: 'Energy Sector',
+   212→    description: 'Zimbabwe\'s power generation mix: hydroelectric, coal, solar, wind, diesel, and imports.',
+   213→    strategy: 'Diversify energy sources. Over-reliance on hydro (Kariba) is risky during droughts.',
+   214→    icon: 'Zap',
+   215→  },
+   216→  load_shedding_screen: {
+   217→    id: 'load_shedding_screen',
+   218→    screen: 'energy',
+   219→    title: 'Load Shedding Stages',
+   220→    description: 'Higher stages mean more power cuts. Stage 1 = minor, Stage 8 = severe (12+ hours/day).',
+   221→    strategy: 'Invest in new generation capacity and maintain existing plants to prevent load shedding increases.',
+   222→    icon: 'Zap',
+   223→  },
+   224→  hydroelectric: {
+   225→    id: 'hydroelectric',
+   226→    screen: 'energy',
+   227→    title: 'Kariba Dam (Hydroelectric)',
+   228→    description: 'Zimbabwe\'s largest power source. Output depends on water levels which fluctuate with rainfall.',
+   229→    strategy: 'During drought years, ensure alternative power sources are online. Budget for dam maintenance.',
+   230→    icon: 'Droplets',
+   231→  },
+   232→
+   233→  // ── Water ──
+   234→  water_overview: {
+   235→    id: 'water_overview',
+   236→    screen: 'water',
+   237→    title: 'Water System',
+   238→    description: 'Clean water access, treatment capacity, and dam levels across all provinces.',
+   239→    strategy: 'Invest in water treatment and distribution. Water crises cause disease outbreaks and mass discontent.',
+   240→    icon: 'Droplets',
+   241→  },
+   242→  dam_levels: {
+   243→    id: 'dam_levels',
+   244→    screen: 'water',
+   245→    title: 'Dam Levels',
+   246→    description: 'Water reserves in major dams. Low levels affect both water supply and hydroelectric power.',
+   247→    strategy: 'Monitor dam levels closely during dry season. Budget for water infrastructure before crisis hits.',
+   248→    icon: 'Droplets',
+   249→  },
+   250→
+   251→  // ── Map ──
+   252→  province_overview: {
+   253→    id: 'province_overview',
+   254→    screen: 'map',
+   255→    title: 'Provinces',
+   256→    description: 'Zimbabwe\'s 10 provinces, each with unique demographics, infrastructure, and political leanings.',
+   257→    strategy: 'Click a province to see detailed stats. Focus development on provinces with lowest satisfaction first.',
+   258→    icon: 'Map',
+   259→  },
+   260→  province_support: {
+   261→    id: 'province_support',
+   262→    screen: 'map',
+   263→    title: 'Province Support',
+   264→    description: 'How much each province supports your government. Critical for election predictions.',
+   265→    strategy: 'Provinces with low support are at risk of opposition gains. Target infrastructure projects there.',
+   266→    icon: 'Vote',
+   267→  },
+   268→
+   269→  // ── Events ──
+   270→  events_pending: {
+   271→    id: 'events_pending',
+   272→    screen: 'events',
+   273→    title: 'Pending Events',
+   274→    description: 'Crisis situations requiring your immediate decision. Events have time-sensitive consequences.',
+   275→    strategy: 'Always resolve events promptly. Ignoring events makes them worse and can cascade into multiple crises.',
+   276→    icon: 'AlertTriangle',
+   277→  },
+   278→
+   279→  // ── News ──
+   280→  news_feed: {
+   281→    id: 'news_feed',
+   282→    screen: 'news',
+   283→    title: 'National News',
+   284→    description: 'Generated news articles reflecting the state of Zimbabwe. News affects public opinion.',
+   285→    strategy: 'Good news boosts popularity, bad news hurts it. The news is influenced by your actual performance.',
+   286→    icon: 'Newspaper',
+   287→  },
+   288→
+   289→  // ── Elections ──
+   290→  election_countdown: {
+   291→    id: 'election_countdown',
+   292→    screen: 'elections',
+   293→    title: 'Election Countdown',
+   294→    description: 'Time remaining until the next national election. Prepare your campaign early!',
+   295→    strategy: 'Start boosting popularity at least 6 months before elections. Last-minute changes are rarely enough.',
+   296→    icon: 'Vote',
+   297→  },
+   298→  campaign_fund: {
+   299→    id: 'campaign_fund',
+   300→    screen: 'elections',
+   301→    title: 'Campaign Fund',
+   302→    description: 'Money available for election campaigning. More funds = better voter outreach.',
+   303→    strategy: 'Allocate budget to your campaign fund in the months leading up to the election.',
+   304→    icon: 'DollarSign',
+   305→  },
+   306→};
+   307→
+   308→// ═══════════════════════════════════════════════════════
+   309→// HOVER TIP COMPONENT
+   310→// ═══════════════════════════════════════════════════════
+   311→
+   312→function HoverTip({ tipId, children, screenId }: { tipId: string; children: React.ReactNode; screenId?: GameScreen }) {
+   313→  const { enableTips, currentScreen } = useGameStore();
+   314→  const [show, setShow] = useState(false);
+   315→  const tip = GAME_TIPS[tipId];
+   316→
+   317→  if (!enableTips || !tip) return <>{children}</>;
+   318→
+   319→  // Optionally filter by screen
+   320→  if (tip.screen && tip.screen !== screenId && tip.screen !== currentScreen) return <>{children}</>;
+   321→
+   322→  return (
+   323→    <div
+   324→      className="relative inline-flex"
+   325→      onMouseEnter={() => setShow(true)}
+   326→      onMouseLeave={() => setShow(false)}
+   327→    >
+   328→      {children}
+   329→      <AnimatePresence>
+   330→        {show && (
+   331→          <motion.div
+   332→            initial={{ opacity: 0, y: 6, scale: 0.95 }}
+   333→            animate={{ opacity: 1, y: 0, scale: 1 }}
+   334→            exit={{ opacity: 0, y: 6, scale: 0.95 }}
+   335→            transition={{ duration: 0.15, ease: 'easeOut' }}
+   336→            className="absolute z-[100] bottom-full left-1/2 -translate-x-1/2 mb-2 w-72 sm:w-80 pointer-events-none"
+   337→          >
+   338→            <div className="bg-popover border border-border rounded-lg shadow-xl p-3.5 text-left">
+   339→              {/* Header */}
+   340→              <div className="flex items-center gap-2 mb-2">
+   341→                <div className="flex items-center justify-center w-6 h-6 rounded-md bg-amber-500/15 text-amber-500 shrink-0">
+   342→                  <Lightbulb className="h-3.5 w-3.5" />
+   343→                </div>
+   344→                <h4 className="text-xs font-bold text-foreground">{tip.title}</h4>
+   345→                <Badge variant="secondary" className="text-[8px] px-1.5 py-0 ml-auto bg-amber-500/10 text-amber-600 border-amber-500/20">TIP</Badge>
+   346→              </div>
+   347→              {/* Description */}
+   348→              <p className="text-[11px] text-muted-foreground leading-relaxed mb-2">{tip.description}</p>
+   349→              {/* Strategy */}
+   350→              <div className="border-t border-border/50 pt-2">
+   351→                <div className="flex items-start gap-1.5">
+   352→                  <Info className="h-3 w-3 text-amber-500 mt-0.5 shrink-0" />
+   353→                  <p className="text-[10px] text-amber-600 font-medium leading-relaxed">{tip.strategy}</p>
+   354→                </div>
+   355→              </div>
+   356→            </div>
+   357→            {/* Arrow */}
+   358→            <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px">
+   359→              <div className="w-2 h-2 bg-popover border-r border-b border-border rotate-45" />
+   360→            </div>
+   361→          </motion.div>
+   362→        )}
+   363→      </AnimatePresence>
+   364→    </div>
+   365→  );
+   366→}
+   367→
+   368→// ═══════════════════════════════════════════════════════
+   369→// DASHBOARD
+   370→// ═══════════════════════════════════════════════════════
+   371→
+   372→function DashboardScreen() {
+   373→  const { gameState, historicalData, setScreen } = useGameStore();
+   374→  if (!gameState) return null;
+   375→
+   376→  const { player, economic, energy, water, infrastructure, citizenSatisfaction, national, corruption } = gameState;
+   377→  const recentHistory = historicalData.slice(-12);
+   378→  const recentNews = gameState.newsHistory.slice(0, 5);
+   379→  const activeEvents = gameState.events.filter(e => !e.resolved).slice(0, 3);
+   380→  const activeProjects = gameState.projects.filter(p => p.status === 'in_progress');
+   381→
+   382→  return (
+   383→    <div className="space-y-6">
+   384→      {/* Player Status Bar */}
+   385→      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+   386→        <HoverTip tipId="popularity"><div><StatCard label="Popularity" value={`${player.popularity.toFixed(0)}%`} icon={<Heart className="h-4 w-4" />} color={player.popularity > 50 ? 'text-green-500' : player.popularity > 30 ? 'text-yellow-500' : 'text-red-500'} /></div></HoverTip>
+   387→        <HoverTip tipId="gdp"><div><StatCard label="GDP Growth" value={`${economic.gdpGrowth.toFixed(1)}%`} icon={<TrendingUp className="h-4 w-4" />} color={economic.gdpGrowth > 3 ? 'text-green-500' : economic.gdpGrowth > 0 ? 'text-yellow-500' : 'text-red-500'} /></div></HoverTip>
+   388→        <HoverTip tipId="inflation"><div><StatCard label="Inflation" value={`${economic.inflation.toFixed(1)}%`} icon={<Flame className="h-4 w-4" />} color={economic.inflation < 15 ? 'text-green-500' : economic.inflation < 30 ? 'text-yellow-500' : 'text-red-500'} /></div></HoverTip>
+   389→        <HoverTip tipId="satisfaction"><div><StatCard label="Satisfaction" value={`${citizenSatisfaction.overall.toFixed(0)}%`} icon={<Star className="h-4 w-4" />} color={citizenSatisfaction.overall > 50 ? 'text-green-500' : citizenSatisfaction.overall > 30 ? 'text-yellow-500' : 'text-red-500'} /></div></HoverTip>
+   390→      </div>
+   391→
+   392→      {/* Key Metrics Grid */}
+   393→      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+   394→        <HoverTip tipId="dashboard_economic" screenId="dashboard"><div><MetricCard title="ECONOMIC INDICATORS" items={[
+   395→          { label: 'GDP', value: `$${economic.gdp.toFixed(1)}B` },
+   396→          { label: 'Unemployment', value: `${economic.unemploymentRate.toFixed(1)}%` },
+   397→          { label: 'Exchange Rate', value: `${economic.exchangeRate.toLocaleString()} ZWL/USD` },
+   398→          { label: 'Debt/GDP', value: `${economic.debtToGdp.toFixed(0)}%` },
+   399→          { label: 'Investor Confidence', value: `${economic.investorConfidence.toFixed(0)}` },
+   400→          { label: 'Informal Economy', value: `${economic.informalEconomySize.toFixed(0)}%` },
+   401→        ]} /></div></HoverTip>
+   402→        <HoverTip tipId="dashboard_infrastructure" screenId="dashboard"><div><MetricCard title="INFRASTRUCTURE" items={[
+   403→          { label: 'Road Quality', value: `${infrastructure.roadQuality.toFixed(0)}/100` },
+   404→          { label: 'Water Reliability', value: `${infrastructure.waterReliability.toFixed(0)}/100` },
+   405→          { label: 'Electricity', value: `${infrastructure.electricityAvailability.toFixed(0)}/100` },
+   406→          { label: 'Internet', value: `${infrastructure.internetPenetration.toFixed(0)}%` },
+   407→          { label: 'Load Shedding', value: `${energy.loadSheddingHoursPerDay.toFixed(1)} hrs/day` },
+   408→          { label: 'Housing Backlog', value: `${(infrastructure.housingBacklog / 1000).toFixed(0)}K units` },
+   409→        ]} /></div></HoverTip>
+   410→        <MetricCard title="SOCIAL INDICATORS" items={[
+   411→          { label: 'Population', value: `${(national.population / 1e6).toFixed(1)}M` },
+   412→          { label: 'Literacy', value: `${national.literacyRate.toFixed(0)}%` },
+   413→          { label: 'Life Expectancy', value: `${national.lifeExpectancy.toFixed(0)} yrs` },
+   414→          { label: 'Urban Pop.', value: `${national.urbanPopulation.toFixed(0)}%` },
+   415→          { label: 'Youth Unemployment', value: `${economic.youthUnemployment.toFixed(0)}%` },
+   416→          { label: 'Schools', value: `${gameState.publicServices.schools.toFixed(0)}/100` },
+   417→        ]} />
+   418→        <HoverTip tipId="legitimacy" screenId="dashboard"><div><MetricCard title="GOVERNANCE" items={[
+   419→          { label: 'Corruption Index', value: `${corruption.nationalLevel.toFixed(0)}/100` },
+   420→          { label: 'Legitimacy', value: `${player.legitimacy.toFixed(0)}/100` },
+   421→          { label: 'Parliament Seats', value: `${gameState.parliament.rulingPartySeats}/${gameState.parliament.totalSeats}` },
+   422→          { label: 'Dam Level', value: `${energy.damLevel.toFixed(0)}%` },
+   423→          { label: 'Water Reservoirs', value: `${water.reservoirLevels.toFixed(0)}%` },
+   424→          { label: 'Funds Lost to Corruption', value: `$${corruption.fundsLostToCorruption.toFixed(0)}M/mo` },
+   425→        ]} /></div></HoverTip>
+   426→      </div>
+   427→
+   428→      {/* Quick Trends */}
+   429→      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+   430→        {/* GDP Trend */}
+   431→        <HoverTip tipId="dashboard_gdp_trend" screenId="dashboard"><div><TrendCard
+   432→          title="GDP TREND"
+   433→          data={recentHistory.map(h => ({ label: `${h.month}/${h.year.toString().slice(2)}`, value: h.gdp }))}
+   434→          color="#4CAF50"
+   435→          formatValue={(v) => `$${v.toFixed(1)}B`}
+   436→        /></div></HoverTip>
+   437→        <HoverTip tipId="dashboard_popularity_trend" screenId="dashboard"><div><TrendCard
+   438→          title="POPULARITY TREND"
+   439→          data={recentHistory.map(h => ({ label: `${h.month}/${h.year.toString().slice(2)}`, value: h.popularity }))}
+   440→          color={player.popularity > 50 ? '#4CAF50' : '#f44336'}
+   441→          formatValue={(v) => `${v.toFixed(0)}%`}
+   442→        /></div></HoverTip>
+   443→      </div>
+   444→
+   445→      {/* Active Items */}
+   446→      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+   447→        {/* Recent News */}
+   448→        <div className="bg-card border border-border rounded-lg p-4">
+   449→          <div className="flex items-center gap-2 mb-3">
+   450→            <Newspaper className="h-4 w-4 text-amber-500" />
+   451→            <h3 className="text-sm font-bold uppercase tracking-wider">Latest News</h3>
+   452→          </div>
+   453→          <ScrollArea className="h-[200px]">
+   454→            <div className="space-y-3">
+   455→              {recentNews.map((article) => (
+   456→                <div key={article.id} className="pb-3 border-b border-border/50 last:border-0">
+   457→                  <div className="flex items-center gap-2 mb-1">
+   458→                    <Badge variant={article.isBreaking ? 'destructive' : article.sentiment === 'positive' ? 'default' : article.sentiment === 'negative' ? 'destructive' : 'secondary'} className="text-[10px] px-1.5 py-0">
+   459→                      {article.isBreaking ? 'BREAKING' : article.category}
+   460→                    </Badge>
+   461→                  </div>
+   462→                  <p className="text-sm font-medium">{article.headline}</p>
+   463→                  <p className="text-xs text-muted-foreground mt-1">{article.subheadline}</p>
+   464→                </div>
+   465→              ))}
+   466→            </div>
+   467→          </ScrollArea>
+   468→        </div>
+   469→
+   470→        {/* Active Events */}
+   471→        <div className="bg-card border border-border rounded-lg p-4">
+   472→          <div className="flex items-center gap-2 mb-3">
+   473→            <AlertTriangle className="h-4 w-4 text-red-500" />
+   474→            <h3 className="text-sm font-bold uppercase tracking-wider">Active Events</h3>
+   475→          </div>
+   476→          <ScrollArea className="h-[200px]">
+   477→            <div className="space-y-3">
+   478→              {activeEvents.length === 0 ? (
+   479→                <p className="text-sm text-muted-foreground">No active events this month.</p>
+   480→              ) : activeEvents.map((event) => (
+   481→                <div key={event.id} className="pb-3 border-b border-border/50 last:border-0">
+   482→                  <Badge variant={event.severity === 'crisis' ? 'destructive' : event.severity === 'major' ? 'default' : 'secondary'} className="text-[10px] px-1.5 py-0 mb-1">
+   483→                    {event.severity.toUpperCase()}
+   484→                  </Badge>
+   485→                  <p className="text-sm font-medium">{event.title}</p>
+   486→                  <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{event.description}</p>
+   487→                </div>
+   488→              ))}
+   489→            </div>
+   490→          </ScrollArea>
+   491→        </div>
+   492→
+   493→        {/* Active Projects */}
+   494→        <div className="bg-card border border-border rounded-lg p-4">
+   495→          <div className="flex items-center gap-2 mb-3">
+   496→            <Building2 className="h-4 w-4 text-blue-500" />
+   497→            <h3 className="text-sm font-bold uppercase tracking-wider">Active Projects</h3>
+   498→          </div>
+   499→          <ScrollArea className="h-[200px]">
+   500→            <div className="space-y-3">
+   501→              {activeProjects.length === 0 ? (
+   502→                <p className="text-sm text-muted-foreground">No active projects. Visit Infrastructure to start new projects.</p>
+   503→              ) : activeProjects.slice(0, 5).map((project) => (
+   504→                <div key={project.id} className="pb-3 border-b border-border/50 last:border-0">
+   505→                  <p className="text-sm font-medium">{project.name}</p>
+   506→                  <div className="mt-1 flex items-center gap-2">
+   507→                    <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+   508→                      <div className="h-full bg-amber-500 rounded-full" style={{ width: `${project.progress}%` }} />
+   509→                    </div>
+   510→                    <span className="text-xs text-muted-foreground">{project.progress.toFixed(0)}%</span>
+   511→                  </div>
+   512→                </div>
+   513→              ))}
+   514→            </div>
+   515→          </ScrollArea>
+   516→        </div>
+   517→      </div>
+   518→    </div>
+   519→  );
+   520→}
+   521→
+   522→// ═══════════════════════════════════════════════════════
+   523→// BUDGET SCREEN
+   524→// ═══════════════════════════════════════════════════════
+   525→
+   526→function BudgetScreen() {
+   527→  const { gameState, updateBudget, allocateBudget } = useGameStore();
+   528→  const [localBudget, setLocalBudget] = useState<Record<string, number>>(() => {
+   529→    if (!gameState) return {};
+   530→    return Object.fromEntries(gameState.budget.items.map(i => [i.category, i.allocated]));
+   531→  });
+   532→
+   533→  // Sync when game state changes (but not via setState in effect body)
+   534→  const lastTurn = gameState?.player.turn ?? 0;
+   535→  const [prevTurn, setPrevTurn] = useState(lastTurn);
+   536→  if (lastTurn !== prevTurn && gameState) {
+   537→    setPrevTurn(lastTurn);
+   538→    const map = Object.fromEntries(gameState.budget.items.map(i => [i.category, i.allocated]));
+   539→    setLocalBudget(map);
+   540→  }
+   541→
+   542→  if (!gameState) return null;
+   543→  const { budget, economic } = gameState;
+   544→  const totalAllocated = Object.values(localBudget).reduce((s, v) => s + v, 0);
+   545→  const deficit = totalAllocated - budget.totalRevenue;
+   546→  const revenuePerCategory = budget.totalRevenue / budget.items.length;
+   547→
+   548→  const handleAllocate = () => {
+   549→    Object.entries(localBudget).forEach(([cat, amt]) => updateBudget(cat, amt));
+   550→    allocateBudget();
+   551→  };
+   552→
+   553→  return (
+   554→    <div className="space-y-6">
+   555→      {/* Budget Summary */}
+   556→      <HoverTip tipId="budget_overview" screenId="budget"><div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+   557→        <StatCard label="Revenue" value={`$${budget.totalRevenue.toLocaleString()}M`} icon={<DollarSign className="h-4 w-4" />} color="text-green-500" />
+   558→        <StatCard label="Allocated" value={`$${totalAllocated.toLocaleString()}M`} icon={<DollarSign className="h-4 w-4" />} color={deficit > 0 ? 'text-red-500' : 'text-green-500'} />
+   559→        <StatCard label="Deficit" value={`$${deficit.toLocaleString()}M`} icon={<AlertTriangle className="h-4 w-4" />} color={deficit > 0 ? 'text-red-500' : 'text-green-500'} />
+   560→        <StatCard label="GDP" value={`$${economic.gdp.toFixed(1)}B`} icon={<TrendingUp className="h-4 w-4" />} color={economic.gdpGrowth > 0 ? 'text-green-500' : 'text-red-500'} />
+   561→      </div></HoverTip>
+   562→
+   563→      <div className="flex justify-end">
+   564→        <HoverTip tipId="allocate_button" screenId="budget"><Button onClick={handleAllocate} size="sm" className="bg-amber-600 hover:bg-amber-700">
+   565→          <Check className="h-4 w-4 mr-1" /> Allocate Budget
+   566→        </Button></HoverTip>
+   567→      </div>
+   568→
+   569→      {/* Budget Items */}
+   570→      <HoverTip tipId="budget_sliders" screenId="budget"><div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+   571→        {budget.items.map((item) => {
+   572→          const pct = (localBudget[item.category] || 0) / budget.totalRevenue * 100;
+   573→          const meetsMin = (localBudget[item.category] || 0) >= item.minimumRequired;
+   574→          return (
+   575→            <div key={item.category} className="bg-card border border-border rounded-lg p-4">
+   576→              <div className="flex items-center justify-between mb-2">
+   577→                <div className="flex items-center gap-2">
+   578→                  <span className="text-lg">{item.icon}</span>
+   579→                  <div>
+   580→                    <h4 className="text-sm font-bold">{item.displayName}</h4>
+   581→                    <p className="text-[10px] text-muted-foreground">Min: ${item.minimumRequired}M | Rec: ${item.recommended}M</p>
+   582→                  </div>
+   583→                </div>
+   584→                <div className="text-right">
+   585→                  <span className={`text-sm font-bold ${!meetsMin ? 'text-red-500' : ''}`}>
+   586→                    ${localBudget[item.category]?.toLocaleString() || 0}M
+   587→                  </span>
+   588→                  <p className="text-[10px] text-muted-foreground">{pct.toFixed(1)}%</p>
+   589→                </div>
+   590→              </div>
+   591→              <div className="mb-1">
+   592→                <input
+   593→                  type="range"
+   594→                  min={0}
+   595→                  max={2000}
+   596→                  step={10}
+   597→                  value={localBudget[item.category] || 0}
+   598→                  onChange={(e) => setLocalBudget(prev => ({ ...prev, [item.category]: Number(e.target.value) }))}
+   599→                  className="w-full h-2 bg-muted rounded-full appearance-none cursor-pointer accent-amber-500"
+   600→                />
+   601→              </div>
+   602→              <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+   603→                <span>Efficiency: {item.efficiency}%</span>
+   604→                <span>Corruption: {item.corruptionLeakage}%</span>
+   605→                {!meetsMin && <Badge variant="destructive" className="text-[9px] px-1">Below Min</Badge>}
+   606→              </div>
+   607→            </div>
+   608→          );
+   609→        })}
+   610→      </div></HoverTip>
+   611→    </div>
+   612→  );
+   613→}
+   614→
+   615→// ═══════════════════════════════════════════════════════
+   616→// INFRASTRUCTURE SCREEN
+   617→
+   618→function InfrastructureScreen() {
+   619→  const { gameState, approveProject, availableProjects } = useGameStore();
+   620→  if (!gameState) return null;
+   621→
+   622→  const activeProjects = gameState.projects.filter(p => p.status === 'in_progress');
+   623→  const completedProjects = gameState.projects.filter(p => p.status === 'completed').slice(-5);
+   624→
+   625→  return (
+   626→    <div className="space-y-6">
+   627→      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+   628→        <StatCard label="Active Projects" value={`${activeProjects.length}`} icon={<Building2 className="h-4 w-4" />} color="text-amber-500" />
+   629→        <StatCard label="Completed" value={`${gameState.projects.filter(p => p.status === 'completed').length}`} icon={<Trophy className="h-4 w-4" />} color="text-green-500" />
+   630→        <StatCard label="Total Invested" value={`$${gameState.projects.reduce((s, p) => s + p.cost, 0).toLocaleString()}M`} icon={<DollarSign className="h-4 w-4" />} color="text-blue-500" />
+   631→        <StatCard label="Jobs Created" value={`${gameState.projects.reduce((s, p) => s + p.employmentCreated, 0).toLocaleString()}`} icon={<Users className="h-4 w-4" />} color="text-green-500" />
+   632→      </div>
+   633→
+   634→      {/* Available Projects */}
+   635→      <div>
+   636→        <h3 className="text-sm font-bold uppercase tracking-wider mb-3 flex items-center gap-2">
+   637→          <Building2 className="h-4 w-4" /> Available Projects
+   638→        </h3>
+   639→        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+   640→          {availableProjects.map((project) => (
+   641→            <div key={project.id} className="bg-card border border-border rounded-lg p-4">
+   642→              <div className="flex items-start justify-between mb-2">
+   643→                <div>
+   644→                  <h4 className="text-sm font-bold">{project.name}</h4>
+   645→                  <Badge variant="secondary" className="text-[10px] mt-1">{project.category}</Badge>
+   646→                </div>
+   647→                <Button size="sm" onClick={() => approveProject(project.id)} className="bg-amber-600 hover:bg-amber-700 text-xs">
+   648→                  Approve
+   649→                </Button>
+   650→              </div>
+   651→              <p className="text-xs text-muted-foreground mb-3">{project.description}</p>
+   652→              <div className="grid grid-cols-3 gap-2 text-xs">
+   653→                <div><span className="text-muted-foreground">Cost:</span> <span className="font-bold">${project.cost}M</span></div>
+   654→                <div><span className="text-muted-foreground">Time:</span> <span className="font-bold">{project.completionTime} mo</span></div>
+   655→                <div><span className="text-muted-foreground">Jobs:</span> <span className="font-bold">{project.employmentCreated.toLocaleString()}</span></div>
+   656→              </div>
+   657→              <div className="flex gap-3 mt-2 text-[10px] text-muted-foreground">
+   658→                <span>Popularity: {project.politicalPopularity > 0 ? '+' : ''}{project.politicalPopularity}</span>
+   659→                <span>Economic: {project.economicImpact > 0 ? '+' : ''}{project.economicImpact}</span>
+   660→                <span>Corruption Risk: {project.corruptionRisk}%</span>
+   661→              </div>
+   662→            </div>
+   663→          ))}
+   664→        </div>
+   665→      </div>
+   666→
+   667→      {/* Active Projects */}
+   668→      <div>
+   669→        <h3 className="text-sm font-bold uppercase tracking-wider mb-3 flex items-center gap-2">
+   670→          <Clock className="h-4 w-4" /> In Progress
+   671→        </h3>
+   672→        <div className="space-y-2">
+   673→          {activeProjects.length === 0 ? (
+   674→            <p className="text-sm text-muted-foreground">No projects currently in progress.</p>
+   675→          ) : activeProjects.map((project) => (
+   676→            <div key={project.id} className="bg-card border border-border rounded-lg p-4">
+   677→              <div className="flex items-center justify-between">
+   678→                <div className="flex-1">
+   679→                  <h4 className="text-sm font-bold">{project.name}</h4>
+   680→                  <p className="text-xs text-muted-foreground">{project.province}</p>
+   681→                </div>
+   682→                <div className="w-32">
+   683→                  <div className="flex items-center justify-between text-xs mb-1">
+   684→                    <span>{project.progress.toFixed(0)}%</span>
+   685→                    <span>{project.completionTime - Math.floor(project.progress / (100 / project.completionTime))} mo left</span>
+   686→                  </div>
+   687→                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+   688→                    <div className="h-full bg-amber-500 rounded-full transition-all" style={{ width: `${project.progress}%` }} />
+   689→                  </div>
+   690→                </div>
+   691→              </div>
+   692→            </div>
+   693→          ))}
+   694→        </div>
+   695→      </div>
+   696→    </div>
+   697→  );
+   698→}
+   699→
+   700→// ═══════════════════════════════════════════════════════
+   701→// POLITICS SCREEN
+   702→// ═══════════════════════════════════════════════════════
+   703→
+   704→function PoliticsScreen() {
+   705→  const { gameState } = useGameStore();
+   706→  if (!gameState) return null;
+   707→
+   708→  const { parliament, factions, bills, player } = gameState;
+   709→
+   710→  return (
+   711→    <div className="space-y-6">
+   712→      {/* Parliament Overview */}
+   713→      <div className="bg-card border border-border rounded-lg p-6">
+   714→        <h3 className="text-lg font-bold uppercase tracking-wider mb-4 flex items-center gap-2">
+   715→          <Landmark className="h-5 w-5 text-amber-500" /> Parliament
+   716→        </h3>
+   717→        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+   718→          <StatCard label="Total Seats" value={`${parliament.totalSeats}`} color="text-foreground" />
+   719→          <StatCard label="Ruling Party" value={`${parliament.rulingPartySeats}`} color="text-amber-500" />
+   720→          <StatCard label="Opposition" value={`${parliament.oppositionSeats}`} color="text-red-500" />
+   721→          <StatCard label="Public Support" value={`${parliament.publicSupportForGovernment.toFixed(0)}%`} color={parliament.publicSupportForGovernment > 50 ? 'text-green-500' : 'text-red-500'} />
+   722→          <StatCard label="MP Satisfaction" value={`${parliament.mpSatisfaction.toFixed(0)}%`} color="text-blue-500" />
+   723→        </div>
+   724→
+   725→        {/* Parliament Seat Visualization */}
+   726→        <div className="flex h-8 rounded-lg overflow-hidden gap-0.5">
+   727→          <div className="bg-amber-500 rounded-l-md flex items-center justify-center" style={{ width: `${parliament.rulingPartySeats / parliament.totalSeats * 100}%` }}>
+   728→            <span className="text-[10px] font-bold text-black">{parliament.rulingPartySeats}</span>
+   729→          </div>
+   730→          <div className="bg-red-500 flex items-center justify-center" style={{ width: `${parliament.oppositionSeats / parliament.totalSeats * 100}%` }}>
+   731→            <span className="text-[10px] font-bold">{parliament.oppositionSeats}</span>
+   732→          </div>
+   733→          <div className="bg-gray-400 rounded-r-md flex items-center justify-center" style={{ width: `${parliament.independentSeats / parliament.totalSeats * 100}%` }}>
+   734→            <span className="text-[10px] font-bold">{parliament.independentSeats}</span>
+   735→          </div>
+   736→        </div>
+   737→        <div className="flex gap-4 mt-2 text-[10px] text-muted-foreground">
+   738→          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500" /> Ruling Party</span>
+   739→          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" /> Opposition</span>
+   740→          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gray-400" /> Independent</span>
+   741→        </div>
+   742→      </div>
+   743→
+   744→      {/* Factions */}
+   745→      <div>
+   746→        <h3 className="text-sm font-bold uppercase tracking-wider mb-3 flex items-center gap-2">
+   747→          <ShieldAlert className="h-4 w-4" /> Political Factions
+   748→        </h3>
+   749→        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+   750→          {factions.map((faction) => (
+   751→            <div key={faction.id} className="bg-card border border-border rounded-lg p-4">
+   752→              <div className="flex items-center justify-between mb-2">
+   753→                <h4 className="text-sm font-bold">{faction.name}</h4>
+   754→                <Badge variant={
+   755→                  faction.stance === 'ally' ? 'default' :
+   756→                  faction.stance === 'neutral' ? 'secondary' :
+   757→                  faction.stance === 'opponent' ? 'destructive' : 'destructive'
+   758→                }>
+   759→                  {faction.stance.toUpperCase()}
+   760→                </Badge>
+   761→              </div>
+   762→              <p className="text-xs text-muted-foreground mb-2">{faction.ideology}</p>
+   763→              <p className="text-[10px] text-muted-foreground">Leader: {faction.leaderName}</p>
+   764→              <div className="mt-2">
+   765→                <div className="flex items-center justify-between text-xs mb-1">
+   766→                  <span>Support</span>
+   767→                  <span>{faction.supportLevel.toFixed(0)}%</span>
+   768→                </div>
+   769→                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+   770→                  <div
+   771→                    className="h-full rounded-full"
+   772→                    style={{
+   773→                      width: `${faction.supportLevel}%`,
+   774→                      backgroundColor: faction.stance === 'ally' ? '#4CAF50' : faction.stance === 'neutral' ? '#FF9800' : '#f44336',
+   775→                    }}
+   776→                  />
+   777→                </div>
+   778→              </div>
+   779→              <div className="mt-2 space-y-1">
+   780→                {faction.demands.map((demand, i) => (
+   781→                  <div key={i} className="text-[10px] text-muted-foreground flex items-center gap-1">
+   782→                    <ChevronRight className="h-2 w-2" /> {demand}
+   783→                  </div>
+   784→                ))}
+   785→              </div>
+   786→            </div>
+   787→          ))}
+   788→        </div>
+   789→      </div>
+   790→    </div>
+   791→  );
+   792→}
+   793→
+   794→// ═══════════════════════════════════════════════════════
+   795→// MINISTERS SCREEN
+   796→// ═══════════════════════════════════════════════════════
+   797→
+   798→function MinistersScreen() {
+   799→  const { gameState, fireMinister } = useGameStore();
+   800→  if (!gameState) return null;
+   801→
+   802→  const activeMinisters = gameState.ministers.filter(m => m.isActive);
+   803→  const inactiveMinisters = gameState.ministers.filter(m => !m.isActive);
+   804→
+   805→  return (
+   806→    <div className="space-y-6">
+   807→      <HoverTip tipId="ministers_cabinet" screenId="ministers"><div>
+   808→        <h3 className="text-sm font-bold uppercase tracking-wider mb-3 flex items-center gap-2">
+   809→          <Users className="h-4 w-4" /> Active Cabinet ({activeMinisters.length})
+   810→        </h3>
+   811→        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+   812→          {activeMinisters.map((minister) => (
+   813→            <div key={minister.id} className="bg-card border border-border rounded-lg p-4">
+   814→              <div className="flex items-start justify-between mb-2">
+   815→                <div>
+   816→                  <h4 className="text-sm font-bold">{minister.name}</h4>
+   817→                  <Badge variant="secondary" className="text-[10px] mt-1">{minister.portfolio}</Badge>
+   818→                </div>
+   819→                <HoverTip tipId="fire_minister" screenId="ministers"><Button size="sm" variant="destructive" className="text-[10px] px-2 py-0 h-6" onClick={() => fireMinister(minister.id)}>
+   820→                  Fire
+   821→                </Button></HoverTip>
+   822→              </div>
+   823→              <div className="grid grid-cols-2 gap-2 mt-3">
+   824→                <MiniStat label="Competence" value={minister.competence} />
+   825→                <MiniStat label="Loyalty" value={minister.loyalty} />
+   826→                <MiniStat label="Corruption" value={minister.corruption} inverted />
+   827→                <MiniStat label="Popularity" value={minister.popularity} />
+   828→              </div>
+   829→              <p className="text-[10px] text-muted-foreground mt-2">Faction: {minister.faction} | Age: {minister.age}</p>
+   830→            </div>
+   831→          ))}
+   832→        </div>
+   833→      </div></HoverTip>
+   834→
+   835→      {inactiveMinisters.length > 0 && (
+   836→        <div>
+   837→          <h3 className="text-sm font-bold uppercase tracking-wider mb-3 text-muted-foreground">Dismissed Ministers</h3>
+   838→          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+   839→            {inactiveMinisters.map((minister) => (
+   840→              <div key={minister.id} className="bg-card border border-border/50 rounded-lg p-4 opacity-50">
+   841→                <h4 className="text-sm font-bold">{minister.name} — {minister.portfolio}</h4>
+   842→                <p className="text-[10px] text-muted-foreground">Previously dismissed</p>
+   843→              </div>
+   844→            ))}
+   845→          </div>
+   846→        </div>
+   847→      )}
+   848→    </div>
+   849→  );
+   850→}
+   851→
+   852→// ═══════════════════════════════════════════════════════
+   853→// ENERGY SCREEN
+   854→// ═══════════════════════════════════════════════════════
+   855→
+   856→function EnergyScreen() {
+   857→  const { gameState } = useGameStore();
+   858→  if (!gameState) return null;
+   859→
+   860→  const { energy } = gameState;
+   861→  const totalOutput = Object.values(energy.sources).reduce((s, src) => s + src.output, 0);
+   862→
+   863→  return (
+   864→    <div className="space-y-6">
+   865→      <HoverTip tipId="energy_overview" screenId="energy"><div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+   866→        <StatCard label="Demand" value={`${energy.totalDemand.toLocaleString()} MW`} icon={<Zap className="h-4 w-4" />} color="text-amber-500" />
+   867→        <StatCard label="Supply" value={`${energy.totalSupply.toLocaleString()} MW`} icon={<Zap className="h-4 w-4" />} color={energy.totalSupply >= energy.totalDemand ? 'text-green-500' : 'text-red-500'} />
+   868→        <StatCard label="Deficit" value={`${energy.deficit.toLocaleString()} MW`} icon={<AlertTriangle className="h-4 w-4" />} color={energy.deficit > 0 ? 'text-red-500' : 'text-green-500'} />
+   869→        <StatCard label="Load Shedding" value={`${energy.loadSheddingHoursPerDay.toFixed(1)} hrs/day`} icon={<Clock className="h-4 w-4" />} color={energy.loadSheddingHoursPerDay < 4 ? 'text-green-500' : energy.loadSheddingHoursPerDay < 8 ? 'text-yellow-500' : 'text-red-500'} />
+   870→      </div></HoverTip>
+   871→
+   872→      {/* Load Shedding Stages */}
+   873→      <HoverTip tipId="load_shedding_screen" screenId="energy"><div className="bg-card border border-border rounded-lg p-4">
+   874→        <h3 className="text-sm font-bold uppercase tracking-wider mb-3">LOAD SHEDDING STAGE: {energy.loadSheddingStage}</h3>
+   875→        <div className="flex gap-1 mb-2">
+   876→          {[0,1,2,3,4,5,6,7,8].map(stage => (
+   877→            <div
+   878→              key={stage}
+   879→              className={`flex-1 h-8 rounded flex items-center justify-center text-[10px] font-bold ${
+   880→                stage <= energy.loadSheddingStage
+   881→                  ? stage <= 2 ? 'bg-green-500/80 text-white' : stage <= 5 ? 'bg-yellow-500/80 text-black' : 'bg-red-500/80 text-white'
+   882→                  : 'bg-muted text-muted-foreground'
+   883→              }`}
+   884→            >
+   885→              S{stage}
+   886→            </div>
+   887→          ))}
+   888→        </div>
+   889→        <p className="text-xs text-muted-foreground">
+   890→          Stage {energy.loadSheddingStage}: {energy.loadSheddingHoursPerDay.toFixed(0)} hours of load shedding per day
+   891→          {energy.loadSheddingStage >= 6 && ' — CRITICAL: Major economic disruption'}
+   892→          {energy.loadSheddingStage >= 3 && energy.loadSheddingStage < 6 && ' — Businesses severely affected'}
+   893→          {energy.loadSheddingStage < 3 && ' — Managed load shedding'}
+   894→        </p>
+   895→      </div></HoverTip>
+   896→
+   897→      {/* Power Sources */}
+   898→      <div>
+   899→        <h3 className="text-sm font-bold uppercase tracking-wider mb-3">Power Sources</h3>
+   900→        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+   901→          {Object.entries(energy.sources).map(([source, data]) => (
+   902→            <div key={source} className="bg-card border border-border rounded-lg p-4">
+   903→              <div className="flex items-center justify-between mb-2">
+   904→                <h4 className="text-sm font-bold capitalize">{source.replace('_', ' ')}</h4>
+   905→                <span className="text-sm font-bold">{data.output.toLocaleString()} / {data.capacity.toLocaleString()} MW</span>
+   906→              </div>
+   907→              <div className="h-2 bg-muted rounded-full overflow-hidden mb-2">
+   908→                <div
+   909→                  className={`h-full rounded-full ${data.output / data.capacity > 0.7 ? 'bg-green-500' : data.output / data.capacity > 0.4 ? 'bg-yellow-500' : 'bg-red-500'}`}
+   910→                  style={{ width: `${(data.output / data.capacity) * 100}%` }}
+   911→                />
+   912→              </div>
+   913→              <div className="grid grid-cols-3 gap-2 text-[10px] text-muted-foreground">
+   914→                <span>Reliability: {data.reliability}%</span>
+   915→                <span>Cost: ${data.costPerMW}/MW</span>
+   916→                <span>Env: {data.environmentalImpact}/100</span>
+   917→              </div>
+   918→            </div>
+   919→          ))}
+   920→        </div>
+   921→      </div>
+   922→
+   923→      {/* Dam Levels */}
+   924→      <div className="bg-card border border-border rounded-lg p-4">
+   925→        <h3 className="text-sm font-bold uppercase tracking-wider mb-2">Hydroelectric System</h3>
+   926→        <div className="grid grid-cols-3 gap-3">
+   927→          <MiniStat label="Dam Level" value={energy.damLevel} suffix="%" />
+   928→          <MiniStat label="Rainfall Index" value={energy.rainfallIndex} suffix="%" />
+   929→          <MiniStat label="Maintenance Backlog" value={energy.maintenanceBacklog} suffix="%" inverted />
+   930→        </div>
+   931→        <div className="mt-3">
+   932→          <div className="flex items-center justify-between text-xs mb-1">
+   933→            <span>Renewable Energy</span>
+   934→            <span>{energy.renewablePercentage.toFixed(1)}%</span>
+   935→          </div>
+   936→          <div className="h-2 bg-muted rounded-full overflow-hidden">
+   937→            <div className="h-full bg-green-500 rounded-full" style={{ width: `${energy.renewablePercentage}%` }} />
+   938→          </div>
+   939→        </div>
+   940→      </div>
+   941→    </div>
+   942→  );
+   943→}
+   944→
+   945→// ═══════════════════════════════════════════════════════
+   946→// WATER SCREEN
+   947→// ═══════════════════════════════════════════════════════
+   948→
+   949→function WaterScreen() {
+   950→  const { gameState } = useGameStore();
+   951→  if (!gameState) return null;
+   952→
+   953→  const { water } = gameState;
+   954→
+   955→  return (
+   956→    <div className="space-y-6">
+   957→      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+   958→        <StatCard label="Demand" value={`${water.totalDemand.toLocaleString()} ML/day`} icon={<Droplets className="h-4 w-4" />} color="text-blue-500" />
+   959→        <StatCard label="Supply" value={`${water.totalSupply.toLocaleString()} ML/day`} icon={<Droplets className="h-4 w-4" />} color={water.totalSupply >= water.totalDemand ? 'text-green-500' : 'text-red-500'} />
+   960→        <StatCard label="Reservoir" value={`${water.reservoirLevels.toFixed(0)}%`} icon={<Droplets className="h-4 w-4" />} color={water.reservoirLevels > 50 ? 'text-green-500' : water.reservoirLevels > 25 ? 'text-yellow-500' : 'text-red-500'} />
+   961→        <StatCard label="Urban Access" value={`${water.urbanAccess.toFixed(0)}%`} icon={<Users className="h-4 w-4" />} color={water.urbanAccess > 70 ? 'text-green-500' : 'text-yellow-500'} />
+   962→      </div>
+   963→
+   964→      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+   965→        <div className="bg-card border border-border rounded-lg p-4">
+   966→          <h3 className="text-sm font-bold uppercase tracking-wider mb-3">Water Quality</h3>
+   967→          <div className="h-4 bg-muted rounded-full overflow-hidden mb-2">
+   968→            <div
+   969→              className={`h-full rounded-full ${water.waterQuality > 60 ? 'bg-green-500' : water.waterQuality > 40 ? 'bg-yellow-500' : 'bg-red-500'}`}
+   970→              style={{ width: `${water.waterQuality}%` }}
+   971→            />
+   972→          </div>
+   973→          <div className="grid grid-cols-2 gap-3 mt-3">
+   974→            <MiniStat label="Treatment Capacity" value={water.treatmentCapacity} suffix="%" />
+   975→            <MiniStat label="Pipeline Condition" value={water.pipelineCondition} suffix="%" />
+   976→            <MiniStat label="Leakage Rate" value={water.leakageRate} suffix="%" inverted />
+   977→            <MiniStat label="Sewer Condition" value={water.sewerCondition} suffix="%" inverted />
+   978→          </div>
+   979→        </div>
+   980→
+   981→        <div className="bg-card border border-border rounded-lg p-4">
+   982→          <h3 className="text-sm font-bold uppercase tracking-wider mb-3">Access & Risk</h3>
+   983→          <div className="space-y-3">
+   984→            <div>
+   985→              <div className="flex items-center justify-between text-xs mb-1">
+   986→                <span>Urban Access</span><span>{water.urbanAccess.toFixed(0)}%</span>
+   987→              </div>
+   988→              <div className="h-2 bg-muted rounded-full overflow-hidden">
+   989→                <div className="h-full bg-blue-500 rounded-full" style={{ width: `${water.urbanAccess}%` }} />
+   990→              </div>
+   991→            </div>
+   992→            <div>
+   993→              <div className="flex items-center justify-between text-xs mb-1">
+   994→                <span>Rural Access</span><span>{water.ruralAccess.toFixed(0)}%</span>
+   995→              </div>
+   996→              <div className="h-2 bg-muted rounded-full overflow-hidden">
+   997→                <div className="h-full bg-cyan-500 rounded-full" style={{ width: `${water.ruralAccess}%` }} />
+   998→              </div>
+   999→            </div>
+  1000→            <Separator />
+  1001→            <div className="grid grid-cols-2 gap-3">
+  1002→              <MiniStat label="Drought Risk" value={water.droughtRisk} suffix="%" inverted />
+  1003→              <MiniStat label="Flooding Risk" value={water.floodingRisk} suffix="%" inverted />
+  1004→              <MiniStat label="Boreholes" value={water.boreholeCount} />
+  1005→              <MiniStat label="Deficit" value={water.deficit} suffix=" ML/day" inverted />
+  1006→            </div>
+  1007→          </div>
+  1008→        </div>
+  1009→      </div>
+  1010→    </div>
+  1011→  );
+  1012→}
+  1013→
+  1014→// ═══════════════════════════════════════════════════════
+  1015→// EVENTS SCREEN
+  1016→// ═══════════════════════════════════════════════════════
+  1017→
+  1018→function EventsScreen() {
+  1019→  const { gameState, setShowEventModal } = useGameStore();
+  1020→  if (!gameState) return null;
+  1021→
+  1022→  const unresolvedEvents = gameState.events.filter(e => !e.resolved);
+  1023→  const resolvedEvents = gameState.events.filter(e => e.resolved).slice(-10).reverse();
+  1024→
+  1025→  return (
+  1026→    <div className="space-y-6">
+  1027→      <HoverTip tipId="events_pending" screenId="events"><div>
+  1028→        <h3 className="text-sm font-bold uppercase tracking-wider mb-3 flex items-center gap-2">
+  1029→          <AlertTriangle className="h-4 w-4 text-red-500" /> Pending Events ({unresolvedEvents.length})
+  1030→        </h3>
+  1031→        <div className="space-y-3">
+  1032→          {unresolvedEvents.length === 0 ? (
+  1033→            <p className="text-sm text-muted-foreground">No pending events. End turn to see what happens next.</p>
+  1034→          ) : unresolvedEvents.map((event) => (
+  1035→            <div key={event.id} className="bg-card border border-red-500/30 rounded-lg p-4">
+  1036→              <div className="flex items-center gap-2 mb-2">
+  1037→                <Badge variant={event.severity === 'crisis' ? 'destructive' : event.severity === 'major' ? 'default' : 'secondary'}>
+  1038→                  {event.severity.toUpperCase()}
+  1039→                </Badge>
+  1040→                <Badge variant="secondary" className="text-[10px]">{event.category}</Badge>
+  1041→              </div>
+  1042→              <h4 className="text-sm font-bold mb-1">{event.title}</h4>
+  1043→              <p className="text-xs text-muted-foreground mb-3">{event.description}</p>
+  1044→              {event.choices && event.choices.length > 0 && (
+  1045→                <Button size="sm" onClick={() => setShowEventModal(event)} className="bg-amber-600 hover:bg-amber-700">
+  1046→                  Make Decision
+  1047→                </Button>
+  1048→              )}
+  1049→            </div>
+  1050→          ))}
+  1051→        </div>
+  1052→      </div></HoverTip>
+  1053→
+  1054→      <Separator />
+  1055→
+  1056→      <div>
+  1057→        <h3 className="text-sm font-bold uppercase tracking-wider mb-3 text-muted-foreground">Resolved Events</h3>
+  1058→        <div className="space-y-2">
+  1059→          {resolvedEvents.map((event) => (
+  1060→            <div key={event.id} className="bg-card border border-border/50 rounded-lg p-3 opacity-70">
+  1061→              <div className="flex items-center gap-2">
+  1062→                <Check className="h-3 w-3 text-green-500" />
+  1063→                <span className="text-xs font-medium">{event.title}</span>
+  1064→                <span className="text-[10px] text-muted-foreground">{MONTH_NAMES[event.month - 1]} {event.year}</span>
+  1065→              </div>
+  1066→            </div>
+  1067→          ))}
+  1068→        </div>
+  1069→      </div>
+  1070→    </div>
+  1071→  );
+  1072→}
+  1073→
+  1074→// ═══════════════════════════════════════════════════════
+  1075→// MAP SCREEN
+  1076→// ═══════════════════════════════════════════════════════
+  1077→
+  1078→function MapScreen() {
+  1079→  const { gameState, selectProvince } = useGameStore();
+  1080→  if (!gameState) return null;
+  1081→
+  1082→  return (
+  1083→    <div className="space-y-6">
+  1084→      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+  1085→        {/* Province Grid Map */}
+  1086→        <HoverTip tipId="province_overview" screenId="map"><div className="lg:col-span-2">
+  1087→          <div className="bg-card border border-border rounded-lg p-4">
+  1088→            <h3 className="text-sm font-bold uppercase tracking-wider mb-4">PROVINCES</h3>
+  1089→            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 gap-3">
+  1090→              {gameState.provinces.map((province) => (
+  1091→                <button
+  1092→                  key={province.id}
+  1093→                  onClick={() => selectProvince(province.id)}
+  1094→                  className="bg-muted hover:bg-muted/80 border border-border rounded-lg p-4 text-left transition-colors"
+  1095→                >
+  1096→                  <h4 className="text-sm font-bold">{province.name}</h4>
+  1097→                  <div className="grid grid-cols-2 gap-2 mt-2 text-[10px]">
+  1098→                    <span>Pop: {(province.population / 1e6).toFixed(1)}M</span>
+  1099→                    <span>Urban: {province.urbanization.toFixed(0)}%</span>
+  1100→                    <span>Support: {province.politicalSupport.toFixed(0)}%</span>
+  1101→                    <span>Happy: {province.satisfactionIndex.toFixed(0)}%</span>
+  1102→                  </div>
+  1103→                  <div className="mt-2 h-1.5 bg-background rounded-full overflow-hidden">
+  1104→                    <div
+  1105→                      className="h-full rounded-full"
+  1106→                      style={{
+  1107→                        width: `${province.satisfactionIndex}%`,
+  1108→                        backgroundColor: province.satisfactionIndex > 50 ? '#4CAF50' : province.satisfactionIndex > 30 ? '#FF9800' : '#f44336',
+  1109→                      }}
+  1110→                    />
+  1111→                  </div>
+  1112→                </button>
+  1113→              ))}
+  1114→            </div>
+  1115→          </div>
+  1116→        </div></HoverTip>
+  1117→
+  1118→        {/* Province Details */}
+  1119→        <HoverTip tipId="province_support" screenId="map"><div className="bg-card border border-border rounded-lg p-4">
+  1120→          <h3 className="text-sm font-bold uppercase tracking-wider mb-3">PROVINCE COMPARISON</h3>
+  1121→          <ScrollArea className="h-[600px]">
+  1122→            <div className="space-y-3">
+  1123→              {gameState.provinces.map((province) => (
+  1124→                <div key={province.id} className="pb-3 border-b border-border/50 last:border-0">
+  1125→                  <h4 className="text-xs font-bold mb-1">{province.name}</h4>
+  1126→                  <div className="grid grid-cols-2 gap-1 text-[10px] text-muted-foreground">
+  1127→                    <span>Health: {province.healthIndex.toFixed(0)}</span>
+  1128→                    <span>Education: {province.educationIndex.toFixed(0)}</span>
+  1129→                    <span>Infrastructure: {province.infrastructureIndex.toFixed(0)}</span>
+  1130→                    <span>Safety: {province.safetyIndex.toFixed(0)}</span>
+  1131→                    <span>Poverty: {province.povertyRate.toFixed(0)}%</span>
+  1132→                    <span>Unemployment: {province.unemploymentRate.toFixed(0)}%</span>
+  1133→                    <span>Agri: {province.agriculturalOutput}</span>
+  1134→                    <span>Mining: {province.miningOutput}</span>
+  1135→                  </div>
+  1136→                </div>
+  1137→              ))}
+  1138→            </div>
+  1139→          </ScrollArea>
+  1140→        </div></HoverTip>
+  1141→      </div>
+  1142→    </div>
+  1143→  );
+  1144→}
+  1145→
+  1146→// ═══════════════════════════════════════════════════════
+  1147→// NEWS SCREEN
+  1148→// ═══════════════════════════════════════════════════════
+  1149→
+  1150→function NewsScreen() {
+  1151→  const { gameState } = useGameStore();
+  1152→  if (!gameState) return null;
+  1153→
+  1154→  return (
+  1155→    <div className="space-y-4">
+  1156→      <HoverTip tipId="news_feed" screenId="news"><h3 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
+  1157→        <Newspaper className="h-4 w-4 text-amber-500" /> National News Feed
+  1158→      </h3></HoverTip>
+  1159→      <div className="space-y-3">
+  1160→        {gameState.newsHistory.map((article) => (
+  1161→          <div key={article.id} className="bg-card border border-border rounded-lg p-4">
+  1162→            <div className="flex items-center gap-2 mb-2">
+  1163→              <Badge variant={article.isBreaking ? 'destructive' : article.sentiment === 'positive' ? 'default' : article.sentiment === 'negative' ? 'destructive' : 'secondary'} className="text-[10px]">
+  1164→                {article.isBreaking ? 'BREAKING' : article.sentiment.toUpperCase()}
+  1165→              </Badge>
+  1166→              <span className="text-[10px] text-muted-foreground">{MONTH_NAMES[article.month - 1]} {article.year}</span>
+  1167→            </div>
+  1168→            <h4 className="text-sm font-bold mb-1">{article.headline}</h4>
+  1169→            <p className="text-xs text-muted-foreground">{article.subheadline}</p>
+  1170→            <p className="text-xs text-muted-foreground mt-2 line-clamp-3">{article.body}</p>
+  1171→          </div>
+  1172→        ))}
+  1173→      </div>
+  1174→    </div>
+  1175→  );
+  1176→}
+  1177→
+  1178→// ═══════════════════════════════════════════════════════
+  1179→// ELECTIONS SCREEN
+  1180→// ═══════════════════════════════════════════════════════
+  1181→
+  1182→function ElectionsScreen() {
+  1183→  const { gameState } = useGameStore();
+  1184→  if (!gameState) return null;
+  1185→
+  1186→  const election = gameState.elections[0];
+  1187→  if (!election) return null;
+  1188→
+  1189→  const monthsUntilElection = ((election.year - gameState.player.year) * 12 + election.month - gameState.player.month);
+  1190→  const turnsUntilElection = Math.max(0, monthsUntilElection);
+  1191→
+  1192→  return (
+  1193→    <div className="space-y-6">
+  1194→      <HoverTip tipId="election_countdown" screenId="elections"><div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+  1195→        <StatCard label="Election Type" value={election.type.charAt(0).toUpperCase() + election.type.slice(1)} color="text-amber-500" />
+  1196→        <StatCard label="Election Date" value={`${MONTH_NAMES[election.month - 1]} ${election.year}`} color="text-foreground" />
+  1197→        <StatCard label="Turns Until" value={`${turnsUntilElection}`} color={turnsUntilElection < 12 ? 'text-red-500' : 'text-green-500'} />
+  1198→        <StatCard label="Current Polls" value={`${election.polls[election.polls.length - 1]?.playerPercent.toFixed(0) || 48}%`} color={election.polls[election.polls.length - 1]?.playerPercent > 50 ? 'text-green-500' : 'text-yellow-500'} />
+  1199→      </div></HoverTip>
+  1200→
+  1201→      <div className="bg-card border border-border rounded-lg p-6">
+  1202→        <h3 className="text-lg font-bold uppercase tracking-wider mb-4">Campaign Status</h3>
+  1203→        <p className="text-sm text-muted-foreground mb-4">
+  1204→          {turnsUntilElection > 24 ? 'The next election is still far away. Focus on governance to build popularity.' :
+  1205→           turnsUntilElection > 12 ? 'Election season approaches. Start planning your campaign strategy.' :
+  1206→           turnsUntilElection > 6 ? 'Campaign time! Start holding rallies and announcing your manifesto.' :
+  1207→           'The election is imminent! Final push for votes.'}
+  1208→        </p>
+  1209→
+  1210→        {/* Polls Chart */}
+  1211→        <div className="h-40 flex items-end gap-2 mb-4">
+  1212→          {election.polls.map((poll, i) => (
+  1213→            <div key={i} className="flex-1 flex flex-col gap-0.5">
+  1214→              <div className="flex gap-0.5 items-end h-32">
+  1215→                <div className="flex-1 bg-amber-500 rounded-t" style={{ height: `${poll.playerPercent}%` }} />
+  1216→                <div className="flex-1 bg-red-500 rounded-t" style={{ height: `${poll.opponentPercent}%` }} />
+  1217→              </div>
+  1218→              <span className="text-[8px] text-center text-muted-foreground">T{poll.turn}</span>
+  1219→            </div>
+  1220→          ))}
+  1221→        </div>
+  1222→
+  1223→        {/* Historical Results */}
+  1224→        {election.historicalResults && (
+  1225→          <div>
+  1226→            <h4 className="text-sm font-bold mb-2">Historical Election Results</h4>
+  1227→            <div className="space-y-2">
+  1228→              {election.historicalResults.map((result, i) => (
+  1229→                <div key={i} className="flex items-center gap-3">
+  1230→                  <span className="text-xs w-12">{result.year}</span>
+  1231→                  <div className="flex-1 flex h-4 rounded overflow-hidden">
+  1232→                    <div className="bg-amber-500 flex items-center justify-center" style={{ width: `${result.playerParty}%` }}>
+  1233→                      <span className="text-[8px] font-bold">{result.playerParty}%</span>
+  1234→                    </div>
+  1235→                    <div className="bg-red-500 flex items-center justify-center" style={{ width: `${result.opposition}%` }}>
+  1236→                      <span className="text-[8px] font-bold">{result.opposition}%</span>
+  1237→                    </div>
+  1238→                  </div>
+  1239→                </div>
+  1240→              ))}
+  1241→            </div>
+  1242→          </div>
+  1243→        )}
+  1244→      </div>
+  1245→    </div>
+  1246→  );
+  1247→}
+  1248→
+  1249→// ═══════════════════════════════════════════════════════
+  1250→// GAME OVER SCREEN
+  1251→// ═══════════════════════════════════════════════════════
+  1252→
+  1253→function GameOverScreen() {
+  1254→  const { gameState, resetGame, setShowNewGameDialog } = useGameStore();
+  1255→  if (!gameState) return null;
+  1256→
+  1257→  const { player, economic, citizenSatisfaction, national, infrastructure } = gameState;
+  1258→
+  1259→  const turnsSurvived = player.turn;
+  1260→  const yearsSurvived = turnsSurvived / 12;
+  1261→
+  1262→  return (
+  1263→    <div className="flex items-center justify-center min-h-[60vh]">
+  1264→      <motion.div
+  1265→        initial={{ opacity: 0, scale: 0.9 }}
+  1266→        animate={{ opacity: 1, scale: 1 }}
+  1267→        className="bg-card border border-red-500/30 rounded-lg p-8 max-w-lg text-center"
+  1268→      >
+  1269→        <Skull className="h-16 w-16 text-red-500 mx-auto mb-4" />
+  1270→        <h2 className="text-2xl font-bold mb-2">GAME OVER</h2>
+  1271→        <p className="text-sm text-muted-foreground mb-4">{gameState.gameOverReason}</p>
+  1272→
+  1273→        <div className="grid grid-cols-2 gap-3 mb-6 text-left">
+  1274→          <div className="bg-muted rounded p-3">
+  1275→            <p className="text-[10px] text-muted-foreground">Turns Survived</p>
+  1276→            <p className="text-lg font-bold">{turnsSurvived}</p>
+  1277→          </div>
+  1278→          <div className="bg-muted rounded p-3">
+  1279→            <p className="text-[10px] text-muted-foreground">Years in Office</p>
+  1280→            <p className="text-lg font-bold">{yearsSurvived.toFixed(1)}</p>
+  1281→          </div>
+  1282→          <div className="bg-muted rounded p-3">
+  1283→            <p className="text-[10px] text-muted-foreground">Final GDP</p>
+  1284→            <p className="text-lg font-bold">${economic.gdp.toFixed(1)}B</p>
+  1285→          </div>
+  1286→          <div className="bg-muted rounded p-3">
+  1287→            <p className="text-[10px] text-muted-foreground">Final Popularity</p>
+  1288→            <p className="text-lg font-bold">{player.popularity.toFixed(0)}%</p>
+  1289→          </div>
+  1290→        </div>
+  1291→
+  1292→        <div className="flex gap-3">
+  1293→          <Button onClick={() => { resetGame(); setShowNewGameDialog(true); }} className="flex-1 bg-amber-600 hover:bg-amber-700">
+  1294→            New Game
+  1295→          </Button>
+  1296→        </div>
+  1297→      </motion.div>
+  1298→    </div>
+  1299→  );
+  1300→}
+  1301→
+  1302→// ═══════════════════════════════════════════════════════
+  1303→// START SCREEN
+  1304→// ═══════════════════════════════════════════════════════
+  1305→
+  1306→function StartScreen() {
+  1307→  const { startNewGame, setShowNewGameDialog } = useGameStore();
+  1308→
+  1309→  return (
+  1310→    <div className="flex items-center justify-center min-h-[80vh]">
+  1311→      <motion.div
+  1312→        initial={{ opacity: 0, y: 20 }}
+  1313→        animate={{ opacity: 1, y: 0 }}
+  1314→        transition={{ duration: 0.6 }}
+  1315→        className="text-center max-w-lg px-4"
+  1316→      >
+  1317→        <div className="mb-6">
+  1318→          <Gamepad2 className="h-16 w-16 text-amber-500 mx-auto mb-4" />
+  1319→          <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-2">
+  1320→            MAKE GREAT<br />
+  1321→            <span className="text-amber-500">ZIMBABWE</span><br />
+  1322→            AGAIN
+  1323→          </h1>
+  1324→          <p className="text-sm text-muted-foreground">
+  1325→            Political Strategy &amp; Economic Simulation
+  1326→          </p>
+  1327→          <div className="flex items-center justify-center gap-2 mt-2">
+  1328→            <Badge variant="secondary">Turn-Based</Badge>
+  1329→            <Badge variant="secondary">Strategy</Badge>
+  1330→            <Badge variant="secondary">Simulation</Badge>
+  1331→          </div>
+  1332→        </div>
+  1333→
+  1334→        <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
+  1335→          Begin your political career from Councillor to President.
+  1336→          Navigate corruption, manage infrastructure, balance budgets,
+  1337→          and make impossible decisions that shape the future of millions.
+  1338→          There are no perfect choices — only trade-offs.
+  1339→        </p>
+  1340→
+  1341→        <Button
+  1342→          size="lg"
+  1343→          className="bg-amber-600 hover:bg-amber-700 text-lg px-8 py-6"
+  1344→          onClick={() => setShowNewGameDialog(true)}
+  1345→        >
+  1346→          <Play className="h-5 w-5 mr-2" /> Start New Game
+  1347→        </Button>
+  1348→      </motion.div>
+  1349→    </div>
+  1350→  );
+  1351→}
+  1352→
+  1353→// ═══════════════════════════════════════════════════════
+  1354→// NEW GAME DIALOG
+  1355→// ═══════════════════════════════════════════════════════
+  1356→
+  1357→function NewGameDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  1358→  const { startNewGame, enableTips, setEnableTips } = useGameStore();
+  1359→  const [name, setName] = useState('Comrade Leader');
+  1360→  const [partyName, setPartyName] = useState('Zimbabwe Peoples Party');
+  1361→  const [difficulty, setDifficulty] = useState<'easy' | 'normal' | 'hard'>('normal');
+  1362→
+  1363→  const handleStart = () => {
+  1364→    startNewGame(name, partyName, difficulty);
+  1365→  };
+  1366→
+  1367→  return (
+  1368→    <Dialog open={open} onOpenChange={onOpenChange}>
+  1369→      <DialogContent className="sm:max-w-md">
+  1370→        <DialogHeader>
+  1371→          <DialogTitle>Start New Game</DialogTitle>
+  1372→          <DialogDescription>Configure your political career. Every decision matters.</DialogDescription>
+  1373→        </DialogHeader>
+  1374→        <div className="space-y-4 py-4">
+  1375→          <div className="space-y-2">
+  1376→            <Label>Your Name</Label>
+  1377→            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter your name" />
+  1378→          </div>
+  1379→          <div className="space-y-2">
+  1380→            <Label>Party Name</Label>
+  1381→            <Input value={partyName} onChange={(e) => setPartyName(e.target.value)} placeholder="Enter party name" />
+  1382→          </div>
+  1383→          <div className="space-y-2">
+  1384→            <Label>Difficulty</Label>
+  1385→            <Select value={difficulty} onValueChange={(v) => setDifficulty(v as any)}>
+  1386→              <SelectTrigger>
+  1387→                <SelectValue />
+  1388→              </SelectTrigger>
+  1389→              <SelectContent>
+  1390→                <SelectItem value="easy">
+  1391→                  <div><span className="font-bold">Easy</span> — For new players. More forgiving.</div>
+  1392→                </SelectItem>
+  1393→                <SelectItem value="normal">
+  1394→                  <div><span className="font-bold">Normal</span> — The intended experience.</div>
+  1395→                </SelectItem>
+  1396→                <SelectItem value="hard">
+  1397→                  <div><span className="font-bold">Hard</span> — For experienced strategists.</div>
+  1398→                </SelectItem>
+  1399→              </SelectContent>
+  1400→            </Select>
+  1401→          </div>
+  1402→          <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-card">
+  1403→            <div className="flex items-center gap-3">
+  1404→              <div className="flex items-center justify-center w-8 h-8 rounded-md bg-amber-500/15 text-amber-500">
+  1405→                <Lightbulb className="h-4 w-4" />
+  1406→              </div>
+  1407→              <div>
+  1408→                <p className="text-sm font-medium">Enable Hover Tips</p>
+  1409→                <p className="text-[10px] text-muted-foreground">Show strategy tips when hovering over game elements</p>
+  1410→              </div>
+  1411→            </div>
+  1412→            <Switch checked={enableTips} onCheckedChange={setEnableTips} />
+  1413→          </div>
+  1414→        </div>
+  1415→        <DialogFooter>
+  1416→          <Button onClick={handleStart} className="bg-amber-600 hover:bg-amber-700">
+  1417→            <Play className="h-4 w-4 mr-2" /> Begin Your Journey
+  1418→          </Button>
+  1419→        </DialogFooter>
+  1420→      </DialogContent>
+  1421→    </Dialog>
+  1422→  );
+  1423→}
+  1424→
+  1425→// ═══════════════════════════════════════════════════════
+  1426→// EVENT MODAL
+  1427→// ═══════════════════════════════════════════════════════
+  1428→
+  1429→function EventModal() {
+  1430→  const { showEventModal, resolveEvent, setShowEventModal } = useGameStore();
+  1431→  const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
+  1432→
+  1433→  if (!showEventModal || !showEventModal.choices || showEventModal.choices.length === 0) return null;
+  1434→
+  1435→  const event = showEventModal;
+  1436→
+  1437→  const handleResolve = () => {
+  1438→    if (selectedChoice) {
+  1439→      resolveEvent(event.id, selectedChoice);
+  1440→      setSelectedChoice(null);
+  1441→    }
+  1442→  };
+  1443→
+  1444→  return (
+  1445→    <Dialog open={!!showEventModal} onOpenChange={(open) => { if (!open) { setShowEventModal(null); setSelectedChoice(null); } }}>
+  1446→      <DialogContent className="sm:max-w-lg">
+  1447→        <DialogHeader>
+  1448→          <div className="flex items-center gap-2">
+  1449→            <Badge variant={event.severity === 'crisis' ? 'destructive' : event.severity === 'major' ? 'default' : 'secondary'}>
+  1450→              {event.severity.toUpperCase()}
+  1451→            </Badge>
+  1452→            <Badge variant="secondary" className="text-[10px]">{event.category}</Badge>
+  1453→          </div>
+  1454→          <DialogTitle className="text-lg">{event.title}</DialogTitle>
+  1455→          <DialogDescription className="text-sm leading-relaxed">{event.description}</DialogDescription>
+  1456→        </DialogHeader>
+  1457→
+  1458→        <div className="space-y-3 py-2">
+  1459→          {event.choices!.map((choice) => (
+  1460→            <button
+  1461→              key={choice.id}
+  1462→              onClick={() => setSelectedChoice(choice.id)}
+  1463→              className={`w-full text-left rounded-lg border p-4 transition-all ${
+  1464→                selectedChoice === choice.id
+  1465→                  ? 'border-amber-500 bg-amber-500/10 ring-1 ring-amber-500'
+  1466→                  : 'border-border bg-card hover:border-amber-500/50'
+  1467→              }`}
+  1468→            >
+  1469→              <h4 className="text-sm font-bold mb-1">{choice.text}</h4>
+  1470→              <p className="text-xs text-muted-foreground">{choice.shortDescription}</p>
+  1471→              <div className="flex gap-3 mt-2">
+  1472→                <span className={`text-[10px] ${choice.popularityImpact > 0 ? 'text-green-500' : 'text-red-500'}`}>
+  1473→                  Popularity: {choice.popularityImpact > 0 ? '+' : ''}{choice.popularityImpact}
+  1474→                </span>
+  1475→                <span className={`text-[10px] ${choice.politicalRisk > 0 ? 'text-green-500' : choice.politicalRisk < 0 ? 'text-red-500' : 'text-muted-foreground'}`}>
+  1476→                  Influence: {choice.politicalRisk > 0 ? '+' : ''}{choice.politicalRisk}
+  1477→                </span>
+  1478→              </div>
+  1479→            </button>
+  1480→          ))}
+  1481→        </div>
+  1482→
+  1483→        <DialogFooter>
+  1484→          <Button onClick={handleResolve} disabled={!selectedChoice} className="bg-amber-600 hover:bg-amber-700">
+  1485→            Confirm Decision
+  1486→          </Button>
+  1487→        </DialogFooter>
+  1488→      </DialogContent>
+  1489→    </Dialog>
+  1490→  );
+  1491→}
+  1492→
+  1493→// ═══════════════════════════════════════════════════════
+  1494→// SHARED UI COMPONENTS
+  1495→// ═══════════════════════════════════════════════════════
+  1496→
+  1497→function StatCard({ label, value, icon, color = 'text-foreground' }: { label: string; value: string | number; icon?: React.ReactNode; color?: string }) {
+  1498→  return (
+  1499→    <div className="bg-card border border-border rounded-lg p-3">
+  1500→      <div className="flex items-center justify-between">
+  1501→        <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</span>
+  1502→        {icon && <span className={color}>{icon}</span>}
+  1503→      </div>
+  1504→      <p className={`text-lg font-bold mt-1 ${color}`}>{value}</p>
+  1505→    </div>
+  1506→  );
+  1507→}
+  1508→
+  1509→function MetricCard({ title, items }: { title: string; items: { label: string; value: string }[] }) {
+  1510→  return (
+  1511→    <div className="bg-card border border-border rounded-lg p-4">
+  1512→      <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-3">{title}</h3>
+  1513→      <div className="space-y-2">
+  1514→        {items.map((item, i) => (
+  1515→          <div key={i} className="flex items-center justify-between">
+  1516→            <span className="text-xs text-muted-foreground">{item.label}</span>
+  1517→            <span className="text-xs font-bold">{item.value}</span>
+  1518→          </div>
+  1519→        ))}
+  1520→      </div>
+  1521→    </div>
+  1522→  );
+  1523→}
+  1524→
+  1525→function MiniStat({ label, value, suffix = '', inverted = false }: { label: string; value: number; suffix?: string; inverted?: boolean }) {
+  1526→  const color = inverted
+  1527→    ? value > 60 ? 'text-red-500' : value > 30 ? 'text-yellow-500' : 'text-green-500'
+  1528→    : value > 60 ? 'text-green-500' : value > 30 ? 'text-yellow-500' : 'text-red-500';
+  1529→  return (
+  1530→    <div>
+  1531→      <span className="text-[10px] text-muted-foreground">{label}</span>
+  1532→      <p className={`text-xs font-bold ${color}`}>{value}{suffix}</p>
+  1533→    </div>
+  1534→  );
+  1535→}
+  1536→
+  1537→function TrendCard({ title, data, color, formatValue }: { title: string; data: { label: string; value: number }[]; color: string; formatValue: (v: number) => string }) {
+  1538→  const maxVal = Math.max(...data.map(d => d.value), 1);
+  1539→  return (
+  1540→    <div className="bg-card border border-border rounded-lg p-4">
+  1541→      <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-3">{title}</h3>
+  1542→      <div className="flex items-end gap-1 h-24">
+  1543→        {data.map((point, i) => (
+  1544→          <div key={i} className="flex-1 flex flex-col items-center gap-1">
+  1545→            <span className="text-[8px] text-muted-foreground">{formatValue(point.value)}</span>
+  1546→            <div className="w-full rounded-t" style={{ height: `${(point.value / maxVal) * 80}px`, backgroundColor: color }} />
+  1547→            <span className="text-[7px] text-muted-foreground">{point.label}</span>
+  1548→          </div>
+  1549→        ))}
+  1550→      </div>
+  1551→    </div>
+  1552→  );
+  1553→}
+  1554→
+  1555→// ═══════════════════════════════════════════════════════
+  1556→// NAVIGATION ITEMS
+  1557→// ═══════════════════════════════════════════════════════
+  1558→
+  1559→const NAV_ITEMS: { id: GameScreen; label: string; icon: React.ReactNode }[] = [
+  1560→  { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-4 w-4" /> },
+  1561→  { id: 'budget', label: 'Budget', icon: <DollarSign className="h-4 w-4" /> },
+  1562→  { id: 'infrastructure', label: 'Infrastructure', icon: <Building2 className="h-4 w-4" /> },
+  1563→  { id: 'politics', label: 'Politics', icon: <Landmark className="h-4 w-4" /> },
+  1564→  { id: 'ministers', label: 'Ministers', icon: <Users className="h-4 w-4" /> },
+  1565→  { id: 'energy', label: 'Energy', icon: <Zap className="h-4 w-4" /> },
+  1566→  { id: 'water', label: 'Water', icon: <Droplets className="h-4 w-4" /> },
+  1567→  { id: 'map', label: 'Map', icon: <Map className="h-4 w-4" /> },
+  1568→  { id: 'events', label: 'Events', icon: <AlertTriangle className="h-4 w-4" /> },
+  1569→  { id: 'news', label: 'News', icon: <Newspaper className="h-4 w-4" /> },
+  1570→  { id: 'elections', label: 'Elections', icon: <Vote className="h-4 w-4" /> },
+  1571→];
+  1572→
+  1573→// ═══════════════════════════════════════════════════════
+  1574→// MAIN GAME PAGE
+  1575→// ═══════════════════════════════════════════════════════
+  1576→
+  1577→export default function GamePage() {
+  1578→  const { gameState, currentScreen, setScreen, endTurn, isProcessingTurn, showNewGameDialog, setShowNewGameDialog, resetGame, enableTips, setEnableTips } = useGameStore();
+  1579→  const [sidebarOpen, setSidebarOpen] = useState(false);
+  1580→  const [showLog, setShowLog] = useState(false);
+  1581→
+  1582→  // Start Screen
+  1583→  if (currentScreen === 'start') {
+  1584→    return (
+  1585→      <div className="min-h-screen bg-background flex flex-col">
+  1586→        <StartScreen />
+  1587→        <NewGameDialog open={showNewGameDialog} onOpenChange={setShowNewGameDialog} />
+  1588→      </div>
+  1589→    );
+  1590→  }
+  1591→
+  1592→  // Game Over Screen
+  1593→  if (currentScreen === 'game_over' || gameState?.isGameOver) {
+  1594→    return (
+  1595→      <div className="min-h-screen bg-background flex flex-col">
+  1596→        <GameOverScreen />
+  1597→      </div>
+  1598→    );
+  1599→  }
+  1600→
+  1601→  const { player, economic, energy, citizenSatisfaction } = gameState || {};
+  1602→
+  1603→  return (
+  1604→    <div className="min-h-screen bg-background flex flex-col">
+  1605→      {/* Top Header */}
+  1606→      <header className="sticky top-0 z-50 bg-card/95 backdrop-blur border-b border-border px-3 py-2">
+  1607→        <div className="flex items-center justify-between">
+  1608→          <div className="flex items-center gap-3">
+  1609→            <Button variant="ghost" size="sm" className="lg:hidden p-0 h-8 w-8" onClick={() => setSidebarOpen(!sidebarOpen)}>
+  1610→              <Menu className="h-4 w-4" />
+  1611→            </Button>
+  1612→            <div className="flex items-center gap-2">
+  1613→              <Gamepad2 className="h-5 w-5 text-amber-500" />
+  1614→              <h1 className="text-sm font-black tracking-tight hidden sm:block">MGZA</h1>
+  1615→            </div>
+  1616→            <Separator orientation="vertical" className="h-5 hidden sm:block" />
+  1617→            <div className="hidden sm:flex items-center gap-2">
+  1618→              <Badge variant="secondary" className="text-[10px]">{MONTH_NAMES[(player?.month || 1) - 1]} {player?.year || 2025}</Badge>
+  1619→              <Badge variant="secondary" className="text-[10px]">Turn {player?.turn || 1}</Badge>
+  1620→            </div>
+  1621→          </div>
+  1622→
+  1623→          <div className="flex items-center gap-2">
+  1624→            {/* Quick Stats */}
+  1625→            <div className="hidden md:flex items-center gap-3 text-[10px]">
+  1626→              <span className="flex items-center gap-1">
+  1627→                <Heart className="h-3 w-3 text-red-400" />
+  1628→                <span className="font-bold">{(player?.popularity || 0).toFixed(0)}%</span>
+  1629→              </span>
+  1630→              <span className="flex items-center gap-1">
+  1631→                <TrendingUp className="h-3 w-3 text-green-400" />
+  1632→                <span className="font-bold">{(economic?.gdpGrowth || 0).toFixed(1)}%</span>
+  1633→              </span>
+  1634→              <span className="flex items-center gap-1">
+  1635→                <Zap className="h-3 w-3 text-amber-400" />
+  1636→                <span className="font-bold">{(energy?.loadSheddingHoursPerDay || 0).toFixed(0)}h</span>
+  1637→              </span>
+  1638→            </div>
+  1639→
+  1640→            <Separator orientation="vertical" className="h-5 hidden md:block" />
+  1641→
+  1642→            {/* Event Alert */}
+  1643→            {gameState && gameState.events.filter(e => !e.resolved).length > 0 && (
+  1644→              <Button variant="destructive" size="sm" className="text-[10px] h-7 px-2 animate-pulse" onClick={() => setScreen('events')}>
+  1645→                <AlertTriangle className="h-3 w-3 mr-1" /> {gameState.events.filter(e => !e.resolved).length}
+  1646→              </Button>
+  1647→            )}
+  1648→
+  1649→            {/* Game Log Toggle */}
+  1650→            <Button variant="ghost" size="sm" className="text-[10px] h-7 px-2" onClick={() => setShowLog(!showLog)}>
+  1651→              <Settings className="h-3 w-3" />
+  1652→            </Button>
+  1653→
+  1654→            {/* End Turn Button */}
+  1655→            <HoverTip tipId="end_turn">
+  1656→              <Button
+  1657→                size="sm"
+  1658→                onClick={endTurn}
+  1659→                disabled={isProcessingTurn}
+  1660→                className="bg-amber-600 hover:bg-amber-700 text-xs font-bold px-4"
+  1661→              >
+  1662→                <ChevronRight className="h-4 w-4 mr-1" />
+  1663→                <span className="hidden sm:inline">End Turn</span>
+  1664→                <span className="sm:hidden">End</span>
+  1665→              </Button>
+  1666→            </HoverTip>
+  1667→          </div>
+  1668→        </div>
+  1669→      </header>
+  1670→
+  1671→      <div className="flex flex-1 overflow-hidden">
+  1672→        {/* Sidebar Navigation */}
+  1673→        <aside className={`
+  1674→          fixed lg:static inset-y-0 left-0 z-40 w-56 bg-card border-r border-border
+  1675→          transform transition-transform lg:translate-x-0
+  1676→          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+  1677→          lg:w-48 xl:w-56
+  1678→        `}>
+  1679→          <div className="flex flex-col h-full">
+  1680→            <div className="lg:hidden flex items-center justify-between p-3 border-b border-border">
+  1681→              <span className="text-sm font-bold">Navigation</span>
+  1682→              <Button variant="ghost" size="sm" className="p-0 h-6 w-6" onClick={() => setSidebarOpen(false)}>
+  1683→                <X className="h-4 w-4" />
+  1684→              </Button>
+  1685→            </div>
+  1686→
+  1687→            {/* Player Info */}
+  1688→            {gameState && (
+  1689→              <div className="p-3 border-b border-border">
+  1690→                <p className="text-xs font-bold">{gameState.player.name}</p>
+  1691→                <p className="text-[10px] text-muted-foreground">{gameState.player.partyName}</p>
+  1692→                <Badge variant="secondary" className="text-[10px] mt-1">
+  1693→                  {gameState.player.careerLevel.replace('_', ' ').toUpperCase()}
+  1694→                </Badge>
+  1695→              </div>
+  1696→            )}
+  1697→
+  1698→            <ScrollArea className="flex-1">
+  1699→              <nav className="p-2 space-y-0.5">
+  1700→                {NAV_ITEMS.map((item) => (
+  1701→                  <button
+  1702→                    key={item.id}
+  1703→                    onClick={() => { setScreen(item.id); setSidebarOpen(false); }}
+  1704→                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs transition-colors ${
+  1705→                      currentScreen === item.id
+  1706→                        ? 'bg-amber-600/20 text-amber-500 font-bold'
+  1707→                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+  1708→                    }`}
+  1709→                  >
+  1710→                    {item.icon}
+  1711→                    <span>{item.label}</span>
+  1712→                    {item.id === 'events' && gameState && gameState.events.filter(e => !e.resolved).length > 0 && (
+  1713→                      <span className="ml-auto bg-red-500 text-white text-[9px] rounded-full w-4 h-4 flex items-center justify-center">
+  1714→                        {gameState.events.filter(e => !e.resolved).length}
+  1715→                      </span>
+  1716→                    )}
+  1717→                  </button>
+  1718→                ))}
+  1719→              </nav>
+  1720→            </ScrollArea>
+  1721→
+  1722→            <div className="p-3 border-t border-border space-y-2">
+  1723→              <div className="flex items-center justify-between">
+  1724→                <div className="flex items-center gap-1.5">
+  1725→                  <Lightbulb className="h-3 w-3 text-amber-500" />
+  1726→                  <span className="text-[10px] text-muted-foreground">Tips</span>
+  1727→                </div>
+  1728→                <Switch checked={enableTips} onCheckedChange={setEnableTips} className="scale-75" />
+  1729→              </div>
+  1730→              <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground" onClick={() => { resetGame(); setShowNewGameDialog(true); }}>
+  1731→                <Gamepad2 className="h-3 w-3 mr-1" /> New Game
+  1732→              </Button>
+  1733→            </div>
+  1734→          </div>
+  1735→        </aside>
+  1736→
+  1737→        {/* Sidebar Overlay */}
+  1738→        {sidebarOpen && (
+  1739→          <div className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />
+  1740→        )}
+  1741→
+  1742→        {/* Main Content */}
+  1743→        <main className="flex-1 overflow-auto">
+  1744→          <div className="p-4 md:p-6 max-w-7xl mx-auto">
+  1745→            <AnimatePresence mode="wait">
+  1746→              <motion.div
+  1747→                key={currentScreen}
+  1748→                initial={{ opacity: 0, x: 10 }}
+  1749→                animate={{ opacity: 1, x: 0 }}
+  1750→                exit={{ opacity: 0, x: -10 }}
+  1751→                transition={{ duration: 0.2 }}
+  1752→              >
+  1753→                {currentScreen === 'dashboard' && <DashboardScreen />}
+  1754→                {currentScreen === 'budget' && <BudgetScreen />}
+  1755→                {currentScreen === 'infrastructure' && <InfrastructureScreen />}
+  1756→                {currentScreen === 'politics' && <PoliticsScreen />}
+  1757→                {currentScreen === 'ministers' && <MinistersScreen />}
+  1758→                {currentScreen === 'energy' && <EnergyScreen />}
+  1759→                {currentScreen === 'water' && <WaterScreen />}
+  1760→                {currentScreen === 'map' && <MapScreen />}
+  1761→                {currentScreen === 'events' && <EventsScreen />}
+  1762→                {currentScreen === 'news' && <NewsScreen />}
+  1763→                {currentScreen === 'elections' && <ElectionsScreen />}
+  1764→              </motion.div>
+  1765→            </AnimatePresence>
+  1766→          </div>
+  1767→
+  1768→          {/* Game Log Drawer */}
+  1769→          {showLog && gameState && (
+  1770→            <motion.div
+  1771→              initial={{ opacity: 0, x: 20 }}
+  1772→              animate={{ opacity: 1, x: 0 }}
+  1773→              className="fixed right-0 top-0 h-full w-72 bg-card border-l border-border z-50 p-4 overflow-auto"
+  1774→            >
+  1775→              <div className="flex items-center justify-between mb-3">
+  1776→                <h3 className="text-sm font-bold">Game Log</h3>
+  1777→                <Button variant="ghost" size="sm" className="p-0 h-6 w-6" onClick={() => setShowLog(false)}>
+  1778→                  <X className="h-3 w-3" />
+  1779→                </Button>
+  1780→              </div>
+  1781→              <div className="space-y-2">
+  1782→                {gameState.gameLog.slice().reverse().map((log, i) => (
+  1783→                  <div key={i} className="text-[10px] text-muted-foreground border-b border-border/30 pb-1">
+  1784→                    {log}
+  1785→                  </div>
+  1786→                ))}
+  1787→              </div>
+  1788→            </motion.div>
+  1789→          )}
+  1790→        </main>
+  1791→      </div>
+  1792→
+  1793→      {/* Footer */}
+  1794→      <footer className="border-t border-border bg-card/95 backdrop-blur px-4 py-2 mt-auto">
+  1795→        <div className="flex items-center justify-between text-[10px] text-muted-foreground max-w-7xl mx-auto">
+  1796→          <span className="flex items-center gap-1">
+  1797→            <Gamepad2 className="h-3 w-3 text-amber-500" /> Make Great Zimbabwe Again — v1.0
+  1798→          </span>
+  1799→          <span>{MONTH_NAMES[(player?.month || 1) - 1]} {player?.year || 2025} | Turn {(player?.turn || 1)} | {(citizenSatisfaction?.overall || 0).toFixed(0)}% Satisfaction</span>
+  1800→        </div>
+  1801→      </footer>
+  1802→
+  1803→      {/* Event Modal */}
+  1804→      <EventModal />
+  1805→      <NewGameDialog open={showNewGameDialog} onOpenChange={setShowNewGameDialog} />
+  1806→    </div>
+  1807→  );
+  1808→}
+  1809→

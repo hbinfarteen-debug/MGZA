@@ -43,80 +43,343 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/*
+ * ═══════════════════════════════════════════════════════════════
+ *  🇿🇼  MAKE GREAT ZIMBABWE AGAIN — National Theme
+ * ═══════════════════════════════════════════════════════════════
+ */
+
+/* ── Zimbabwe National Identity Palette ────────────────────── */
 :root {
+  /* National flag colours */
+  --zim-green:      #2E8B37;
+  --zim-red:        #CC2936;
+  --zim-gold:       #E8A817;
+  --zim-black:      #1A1A1A;
+  --zim-white:      #FAFAF7;
+
+  /* Secondary / earth tones inspired by the Zimbabwean landscape */
+  --zim-amber:      #D4940A;
+  --zim-earth:      #5C4033;
+  --zim-sand:       #E8DFC8;
+  --zim-stone:      #B8AFA4;
+  --zim-slate:      #6B6560;
+  --zim-light-green: #E8F5E9;
+  --zim-dark-green:  #1B5E20;
+
+  /* ── shadcn / Tailwind theme overrides (Light) ──────────── */
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+
+  --background:            #FAFAF7;
+  --foreground:            #1A1A1A;
+
+  --card:                  #FFFFFF;
+  --card-foreground:       #1A1A1A;
+
+  --popover:               #FFFFFF;
+  --popover-foreground:    #1A1A1A;
+
+  --primary:               #2E8B37;
+  --primary-foreground:    #FFFFFF;
+
+  --secondary:             #F5F0E8;
+  --secondary-foreground:  #3D2E1A;
+
+  --muted:                 #F2EFEA;
+  --muted-foreground:      #6B6560;
+
+  --accent:                #FFF3D4;
+  --accent-foreground:     #6B4E00;
+
+  --destructive:           #CC2936;
+
+  --border:                #E5E0D8;
+  --input:                 #E5E0D8;
+  --ring:                  #2E8B37;
+
+  /* Chart palette — Zimbabwe flag-inspired */
+  --chart-1:               #2E8B37;
+  --chart-2:               #E8A817;
+  --chart-3:               #CC2936;
+  --chart-4:               #D4940A;
+  --chart-5:               #5C4033;
+
+  /* Sidebar */
+  --sidebar:               #F7F5F0;
+  --sidebar-foreground:    #1A1A1A;
+  --sidebar-primary:       #2E8B37;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent:        #F5F0E8;
+  --sidebar-accent-foreground:  #3D2E1A;
+  --sidebar-border:        #E5E0D8;
+  --sidebar-ring:          #2E8B37;
 }
 
+/* ── Dark Theme ────────────────────────────────────────────── */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* National flag colours — dark-adjusted */
+  --zim-green:      #4ADE80;
+  --zim-red:        #F87171;
+  --zim-gold:       #FBBF24;
+  --zim-black:      #0A0A0A;
+  --zim-white:      #F5F5F0;
+
+  --zim-amber:      #F59E0B;
+  --zim-earth:      #A68B6B;
+  --zim-sand:       #3D3728;
+  --zim-stone:      #5C5650;
+  --zim-slate:      #A09890;
+  --zim-light-green: #1A2E1B;
+  --zim-dark-green:  #86EFAC;
+
+  --background:            #141414;
+  --foreground:            #FAFAF7;
+
+  --card:                  #1E1E1E;
+  --card-foreground:       #FAFAF7;
+
+  --popover:               #1E1E1E;
+  --popover-foreground:    #FAFAF7;
+
+  --primary:               #4ADE80;
+  --primary-foreground:    #141414;
+
+  --secondary:             #2A2520;
+  --secondary-foreground:  #FAFAF7;
+
+  --muted:                 #2A2520;
+  --muted-foreground:      #A09890;
+
+  --accent:                #3D3000;
+  --accent-foreground:     #FAFAF7;
+
+  --destructive:           #F87171;
+
+  --border:                #333330;
+  --input:                 #333330;
+  --ring:                  #4ADE80;
+
+  --chart-1:               #4ADE80;
+  --chart-2:               #FBBF24;
+  --chart-3:               #F87171;
+  --chart-4:               #F59E0B;
+  --chart-5:               #A68B6B;
+
+  --sidebar:               #181818;
+  --sidebar-foreground:    #FAFAF7;
+  --sidebar-primary:       #4ADE80;
+  --sidebar-primary-foreground: #141414;
+  --sidebar-accent:        #2A2520;
+  --sidebar-accent-foreground:  #FAFAF7;
+  --sidebar-border:       #333330;
+  --sidebar-ring:          #4ADE80;
 }
 
+/* ── Base Layer ────────────────────────────────────────────── */
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
+
+  /* Selection highlight — Zimbabwe green */
+  ::selection {
+    background-color: oklch(0.52 0.13 145 / 30%);
+    color: #1A1A1A;
+  }
+
+  .dark ::selection {
+    background-color: oklch(0.75 0.16 145 / 40%);
+    color: #FAFAF7;
+  }
+
+  /* Smooth scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #C8C0B6;
+    border-radius: 999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #A09890;
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    background: #444440;
+  }
+
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: #5C5650;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ *  🇿🇼  Custom Utility Classes — MGZA
+ * ═══════════════════════════════════════════════════════════════ */
+
+/* ── Hero gradient: green → gold ──────────────────────────── */
+.zim-gradient {
+  background: linear-gradient(
+    135deg,
+    var(--zim-green) 0%,
+    #3DA347 40%,
+    var(--zim-gold) 100%
+  );
+}
+
+/* ── Primary button gradient ──────────────────────────────── */
+.zim-gradient-btn {
+  background: linear-gradient(
+    135deg,
+    #2E8B37 0%,
+    #3DA347 50%,
+    #45B34A 100%
+  );
+  color: #FFFFFF;
+  box-shadow:
+    0 2px 4px oklch(0.15 0 0 / 15%),
+    0 4px 12px oklch(0.52 0.13 145 / 20%);
+  transition: all 0.2s ease;
+}
+
+.zim-gradient-btn:hover {
+  background: linear-gradient(
+    135deg,
+    #267A30 0%,
+    #35923F 50%,
+    #3DA347 100%
+  );
+  box-shadow:
+    0 4px 8px oklch(0.15 0 0 / 18%),
+    0 6px 20px oklch(0.52 0.13 145 / 30%);
+  transform: translateY(-1px);
+}
+
+.zim-gradient-btn:active {
+  transform: translateY(0);
+  box-shadow:
+    0 1px 2px oklch(0.15 0 0 / 12%),
+    0 2px 6px oklch(0.52 0.13 145 / 15%);
+}
+
+/* ── Green glow for active / selected elements ─────────────── */
+.zim-glow {
+  box-shadow:
+    0 0 0 2px oklch(0.52 0.13 145 / 35%),
+    0 0 16px oklch(0.52 0.13 145 / 20%);
+}
+
+.zim-glow:hover {
+  box-shadow:
+    0 0 0 3px oklch(0.52 0.13 145 / 45%),
+    0 0 24px oklch(0.52 0.13 145 / 30%);
+}
+
+/* ── Enhanced card with warm shadow + hover lift ─────────── */
+.zim-card {
+  background: #FFFFFF;
+  border: 1px solid #E5E0D8;
+  border-radius: 0.625rem;
+  box-shadow:
+    0 1px 3px oklch(0.15 0.02 60 / 8%),
+    0 4px 12px oklch(0.15 0.02 60 / 5%);
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+
+.zim-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 4px 8px oklch(0.15 0.02 60 / 10%),
+    0 8px 24px oklch(0.15 0.02 60 / 8%);
+}
+
+.dark .zim-card {
+  background: #1E1E1E;
+  border-color: #333330;
+  box-shadow:
+    0 1px 3px oklch(0 0 0 / 20%),
+    0 4px 12px oklch(0 0 0 / 12%);
+}
+
+.dark .zim-card:hover {
+  box-shadow:
+    0 4px 8px oklch(0 0 0 / 30%),
+    0 8px 24px oklch(0 0 0 / 18%);
+}
+
+/* ── Stat card with colored left border indicator ─────────── */
+.zim-stat-card {
+  position: relative;
+  padding-left: 1rem;
+  border-left: 4px solid var(--zim-green);
+}
+
+.zim-stat-card[data-stat="gold"],
+.zim-stat-card[data-stat="money"],
+.zim-stat-card[data-stat="finance"] {
+  border-left-color: var(--zim-gold);
+}
+
+.zim-stat-card[data-stat="red"],
+.zim-stat-card[data-stat="danger"],
+.zim-stat-card[data-stat="health"] {
+  border-left-color: var(--zim-red);
+}
+
+.zim-stat-card[data-stat="earth"],
+.zim-stat-card[data-stat="infrastructure"],
+.zim-stat-card[data-stat="resource"] {
+  border-left-color: var(--zim-earth);
+}
+
+/* ── Badge with Zimbabwe gold tint ────────────────────────── */
+.zim-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  border-radius: 9999px;
+  background: linear-gradient(
+    135deg,
+    oklch(0.92 0.06 85 / 100%),
+    oklch(0.90 0.07 85 / 100%)
+  );
+  color: #6B4E00;
+  border: 1px solid oklch(0.85 0.06 85 / 100%);
+  transition: all 0.15s ease;
+}
+
+.zim-badge:hover {
+  background: linear-gradient(
+    135deg,
+    oklch(0.90 0.07 85 / 100%),
+    oklch(0.88 0.08 85 / 100%)
+  );
+}
+
+.dark .zim-badge {
+  background: oklch(0.22 0.04 85 / 100%);
+  color: #FBBF24;
+  border-color: oklch(0.30 0.05 85 / 100%);
+}
+
+.dark .zim-badge:hover {
+  background: oklch(0.26 0.05 85 / 100%);
 }

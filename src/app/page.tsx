@@ -309,7 +309,7 @@ const GAME_TIPS: Record<string, GameTip> = {
 // HOVER TIP COMPONENT
 // ═══════════════════════════════════════════════════════
 
-function HoverTip({ tipId, children, screenId }: { tipId: string; children: React.ReactNode; screenId?: GameScreen }) {
+function HoverTip({ tipId, children, screenId, position = 'top' }: { tipId: string; children: React.ReactNode; screenId?: GameScreen; position?: 'top' | 'bottom' }) {
   const { enableTips, currentScreen } = useGameStore();
   const [show, setShow] = useState(false);
   const tip = GAME_TIPS[tipId];
@@ -318,6 +318,8 @@ function HoverTip({ tipId, children, screenId }: { tipId: string; children: Reac
 
   // Optionally filter by screen
   if (tip.screen && tip.screen !== screenId && tip.screen !== currentScreen) return <>{children}</>;
+
+  const isBottom = position === 'bottom';
 
   return (
     <div
@@ -329,11 +331,11 @@ function HoverTip({ tipId, children, screenId }: { tipId: string; children: Reac
       <AnimatePresence>
         {show && (
           <motion.div
-            initial={{ opacity: 0, y: 6, scale: 0.95 }}
+            initial={{ opacity: 0, y: isBottom ? -6 : 6, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 6, scale: 0.95 }}
+            exit={{ opacity: 0, y: isBottom ? -6 : 6, scale: 0.95 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="absolute z-[100] bottom-full left-1/2 -translate-x-1/2 mb-2 w-72 sm:w-80 pointer-events-none"
+            className={`absolute z-[200] left-1/2 -translate-x-1/2 w-72 sm:w-80 pointer-events-none ${isBottom ? 'top-full mt-2' : 'bottom-full mb-2'}`}
           >
             <div className="bg-popover border border-border rounded-lg shadow-xl p-3.5 text-left">
               {/* Header */}
@@ -355,9 +357,15 @@ function HoverTip({ tipId, children, screenId }: { tipId: string; children: Reac
               </div>
             </div>
             {/* Arrow */}
-            <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px">
-              <div className="w-2 h-2 bg-popover border-r border-b border-border rotate-45" />
-            </div>
+            {isBottom ? (
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 -mb-px">
+                <div className="w-2 h-2 bg-popover border-l border-t border-border rotate-45" />
+              </div>
+            ) : (
+              <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px">
+                <div className="w-2 h-2 bg-popover border-r border-b border-border rotate-45" />
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -1307,45 +1315,80 @@ function StartScreen() {
   const { startNewGame, setShowNewGameDialog } = useGameStore();
 
   return (
-    <div className="flex items-center justify-center min-h-[80vh]">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="text-center max-w-lg px-4"
-      >
-        <div className="mb-6">
-          <Gamepad2 className="h-16 w-16 text-amber-500 mx-auto mb-4" />
-          <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-2">
-            MAKE GREAT<br />
-            <span className="text-amber-500">ZIMBABWE</span><br />
-            AGAIN
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Political Strategy &amp; Economic Simulation
-          </p>
-          <div className="flex items-center justify-center gap-2 mt-2">
-            <Badge variant="secondary">Turn-Based</Badge>
-            <Badge variant="secondary">Strategy</Badge>
-            <Badge variant="secondary">Simulation</Badge>
-          </div>
-        </div>
+    <div className="flex flex-col min-h-[80vh] bg-gradient-to-b from-[#2E8B37]/5 via-background to-background">
+      {/* Zimbabwe Flag Stripe Bar */}
+      <div className="w-full flex flex-col">
+        <div className="w-full h-1" style={{ backgroundColor: '#2E8B37' }} />
+        <div className="w-full h-1" style={{ backgroundColor: '#FFFFFF' }} />
+        <div className="w-full h-1" style={{ backgroundColor: '#CC2936' }} />
+      </div>
 
-        <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
-          Begin your political career from Councillor to President.
-          Navigate corruption, manage infrastructure, balance budgets,
-          and make impossible decisions that shape the future of millions.
-          There are no perfect choices — only trade-offs.
-        </p>
-
-        <Button
-          size="lg"
-          className="bg-amber-600 hover:bg-amber-700 text-lg px-8 py-6"
-          onClick={() => setShowNewGameDialog(true)}
+      <div className="flex-1 flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="text-center max-w-xl px-4"
         >
-          <Play className="h-5 w-5 mr-2" /> Start New Game
-        </Button>
-      </motion.div>
+          <div className="mb-6">
+            <div className="text-6xl mb-4">🇿🇼</div>
+            <h1 className="text-4xl md:text-5xl font-black tracking-tight mb-3">
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#2E8B37] to-[#E8A817]">MAKE GREAT</span><br />
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#E8A817] to-[#2E8B37]">ZIMBABWE</span><br />
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#2E8B37] to-[#E8A817]">AGAIN</span>
+            </h1>
+            <p className="text-sm text-muted-foreground font-medium">
+              Political Strategy &amp; Economic Simulation
+            </p>
+            <p className="text-xs text-muted-foreground/70 italic mt-1">
+              &ldquo;Ivhu risina mutsindo hairevi&rdquo; — A tree without roots cannot stand
+            </p>
+            <div className="flex items-center justify-center gap-2 mt-3">
+              <Badge variant="secondary">Turn-Based</Badge>
+              <Badge variant="secondary">Strategy</Badge>
+              <Badge variant="secondary">Simulation</Badge>
+            </div>
+          </div>
+
+          {/* Feature Cards */}
+          <div className="grid grid-cols-3 gap-3 mb-8">
+            <div className="bg-card border border-border rounded-lg p-3 text-center shadow-sm">
+              <div className="text-2xl mb-1">🇿🇼</div>
+              <p className="text-xs font-bold">Lead Zimbabwe</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">From Councillor to President</p>
+            </div>
+            <div className="bg-card border border-border rounded-lg p-3 text-center shadow-sm">
+              <div className="text-2xl mb-1">📊</div>
+              <p className="text-xs font-bold">Manage Economy</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Balance budgets &amp; trade</p>
+            </div>
+            <div className="bg-card border border-border rounded-lg p-3 text-center shadow-sm">
+              <div className="text-2xl mb-1">🗳️</div>
+              <p className="text-xs font-bold">Win Elections</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Secure the people&apos;s mandate</p>
+            </div>
+          </div>
+
+          <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
+            Begin your political career from Councillor to President.
+            Navigate corruption, manage infrastructure, balance budgets,
+            and make impossible decisions that shape the future of millions.
+            There are no perfect choices — only trade-offs.
+          </p>
+
+          <Button
+            size="lg"
+            className="bg-[#2E8B37] hover:bg-[#247A2E] text-lg font-bold px-10 py-7 rounded-xl shadow-lg shadow-green-500/20"
+            onClick={() => setShowNewGameDialog(true)}
+          >
+            <Play className="h-5 w-5 mr-2" /> Start New Game
+          </Button>
+
+          <p className="text-[10px] text-muted-foreground/50 mt-6">
+            v1.0 — Made with ❤️ for Zimbabwe
+          </p>
+        </motion.div>
+      </div>
     </div>
   );
 }
@@ -1496,25 +1539,25 @@ function EventModal() {
 
 function StatCard({ label, value, icon, color = 'text-foreground' }: { label: string; value: string | number; icon?: React.ReactNode; color?: string }) {
   return (
-    <div className="bg-card border border-border rounded-lg p-3">
+    <div className="bg-card border border-border rounded-lg p-4 shadow-sm" style={{ borderLeftWidth: '3px', borderLeftColor: color.startsWith('text-green') ? '#2E8B37' : color.startsWith('text-yellow') ? '#E8A817' : color.startsWith('text-red') ? '#CC2936' : '#888' }}>
       <div className="flex items-center justify-between">
-        <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</span>
+        <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">{label}</span>
         {icon && <span className={color}>{icon}</span>}
       </div>
-      <p className={`text-lg font-bold mt-1 ${color}`}>{value}</p>
+      <p className={`text-xl font-bold mt-1.5 ${color}`}>{value}</p>
     </div>
   );
 }
 
 function MetricCard({ title, items }: { title: string; items: { label: string; value: string }[] }) {
   return (
-    <div className="bg-card border border-border rounded-lg p-4">
+    <div className="bg-card border border-border rounded-lg p-4 transition-colors hover:bg-muted/50" style={{ borderTopWidth: '2px', borderTopColor: '#E8A817' }}>
       <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-3">{title}</h3>
-      <div className="space-y-2">
+      <div className="space-y-2.5">
         {items.map((item, i) => (
           <div key={i} className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">{item.label}</span>
-            <span className="text-xs font-bold">{item.value}</span>
+            <span className="text-xs font-bold tabular-nums">{item.value}</span>
           </div>
         ))}
       </div>
@@ -1542,9 +1585,9 @@ function TrendCard({ title, data, color, formatValue }: { title: string; data: {
       <div className="flex items-end gap-1 h-24">
         {data.map((point, i) => (
           <div key={i} className="flex-1 flex flex-col items-center gap-1">
-            <span className="text-[8px] text-muted-foreground">{formatValue(point.value)}</span>
-            <div className="w-full rounded-t" style={{ height: `${(point.value / maxVal) * 80}px`, backgroundColor: color }} />
-            <span className="text-[7px] text-muted-foreground">{point.label}</span>
+            <span className="text-[8px] text-muted-foreground font-medium">{formatValue(point.value)}</span>
+            <div className="w-full rounded-t" style={{ height: `${(point.value / maxVal) * 80}px`, background: `linear-gradient(to top, ${color}, ${color}88)` }} />
+            <span className="text-[7px] text-muted-foreground font-medium">{point.label}</span>
           </div>
         ))}
       </div>
@@ -1652,7 +1695,7 @@ export default function GamePage() {
             </Button>
 
             {/* End Turn Button */}
-            <HoverTip tipId="end_turn">
+            <HoverTip tipId="end_turn" position="bottom">
               <Button
                 size="sm"
                 onClick={endTurn}
@@ -1791,12 +1834,15 @@ export default function GamePage() {
       </div>
 
       {/* Footer */}
-      <footer className="border-t border-border bg-card/95 backdrop-blur px-4 py-2 mt-auto">
-        <div className="flex items-center justify-between text-[10px] text-muted-foreground max-w-7xl mx-auto">
-          <span className="flex items-center gap-1">
-            <Gamepad2 className="h-3 w-3 text-amber-500" /> Make Great Zimbabwe Again — v1.0
-          </span>
-          <span>{MONTH_NAMES[(player?.month || 1) - 1]} {player?.year || 2025} | Turn {(player?.turn || 1)} | {(citizenSatisfaction?.overall || 0).toFixed(0)}% Satisfaction</span>
+      <footer className="bg-card/95 backdrop-blur mt-auto">
+        <div className="w-full h-0.5" style={{ backgroundColor: '#2E8B37' }} />
+        <div className="px-4 py-3">
+          <div className="flex items-center justify-between text-[10px] text-muted-foreground max-w-7xl mx-auto">
+            <span className="flex items-center gap-1">
+              <Gamepad2 className="h-3 w-3 text-amber-500" /> Make Great Zimbabwe Again — v1.0
+            </span>
+            <span>{MONTH_NAMES[(player?.month || 1) - 1]} {player?.year || 2025} | Turn {(player?.turn || 1)} | {(citizenSatisfaction?.overall || 0).toFixed(0)}% Satisfaction</span>
+          </div>
         </div>
       </footer>
 
