@@ -16,7 +16,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useSpring, useTransform } from 'framer-motion';
 import {
   LayoutDashboard, DollarSign, Building2, Landmark, Newspaper, Map,
   Users, Zap, Droplets, ShieldAlert, Vote, ChevronRight, Play,
@@ -456,15 +456,15 @@ function DashboardScreen() {
     <div className="space-y-6">
       {/* Player Status Bar */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <HoverTip tipId="popularity"><div><StatCard label="Popularity" value={`${player.popularity.toFixed(0)}%`} icon={<Heart className="h-4 w-4" />} color={player.popularity > 50 ? 'text-green-500' : player.popularity > 30 ? 'text-yellow-500' : 'text-red-500'} /></div></HoverTip>
-        <HoverTip tipId="gdp"><div><StatCard label="GDP Growth" value={`${economic.gdpGrowth.toFixed(1)}%`} icon={<TrendingUp className="h-4 w-4" />} color={economic.gdpGrowth > 3 ? 'text-green-500' : economic.gdpGrowth > 0 ? 'text-yellow-500' : 'text-red-500'} /></div></HoverTip>
-        <HoverTip tipId="inflation"><div><StatCard label="Inflation" value={`${economic.inflation.toFixed(1)}%`} icon={<Flame className="h-4 w-4" />} color={economic.inflation < 15 ? 'text-green-500' : economic.inflation < 30 ? 'text-yellow-500' : 'text-red-500'} /></div></HoverTip>
-        <HoverTip tipId="satisfaction"><div><StatCard label="Satisfaction" value={`${citizenSatisfaction.overall.toFixed(0)}%`} icon={<Star className="h-4 w-4" />} color={citizenSatisfaction.overall > 50 ? 'text-green-500' : citizenSatisfaction.overall > 30 ? 'text-yellow-500' : 'text-red-500'} /></div></HoverTip>
+        <HoverTip tipId="popularity"><div><AnimatedStatCard label="Popularity" value={`${player.popularity.toFixed(0)}%`} numericValue={player.popularity} icon={<Heart className="h-4 w-4" />} color={player.popularity > 50 ? 'text-green-500' : player.popularity > 30 ? 'text-yellow-500' : 'text-red-500'} index={0} /></div></HoverTip>
+        <HoverTip tipId="gdp"><div><AnimatedStatCard label="GDP Growth" value={`${economic.gdpGrowth.toFixed(1)}%`} numericValue={economic.gdpGrowth} icon={<TrendingUp className="h-4 w-4" />} color={economic.gdpGrowth > 3 ? 'text-green-500' : economic.gdpGrowth > 0 ? 'text-yellow-500' : 'text-red-500'} index={1} /></div></HoverTip>
+        <HoverTip tipId="inflation"><div><AnimatedStatCard label="Inflation" value={`${economic.inflation.toFixed(1)}%`} numericValue={economic.inflation} icon={<Flame className="h-4 w-4" />} color={economic.inflation < 15 ? 'text-green-500' : economic.inflation < 30 ? 'text-yellow-500' : 'text-red-500'} index={2} /></div></HoverTip>
+        <HoverTip tipId="satisfaction"><div><AnimatedStatCard label="Satisfaction" value={`${citizenSatisfaction.overall.toFixed(0)}%`} numericValue={citizenSatisfaction.overall} icon={<Star className="h-4 w-4" />} color={citizenSatisfaction.overall > 50 ? 'text-green-500' : citizenSatisfaction.overall > 30 ? 'text-yellow-500' : 'text-red-500'} index={3} /></div></HoverTip>
       </div>
 
       {/* Key Metrics Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <HoverTip tipId="dashboard_economic" screenId="dashboard"><div><MetricCard title="ECONOMIC INDICATORS" items={[
+        <HoverTip tipId="dashboard_economic" screenId="dashboard"><div><AnimatedMetricCard title="ECONOMIC INDICATORS" index={0} items={[
           { label: 'GDP', value: `$${economic.gdp.toFixed(1)}B` },
           { label: 'Unemployment', value: `${economic.unemploymentRate.toFixed(1)}%` },
           { label: 'Exchange Rate', value: `${economic.exchangeRate.toLocaleString()} ZWL/USD` },
@@ -472,7 +472,7 @@ function DashboardScreen() {
           { label: 'Investor Confidence', value: `${economic.investorConfidence.toFixed(0)}` },
           { label: 'Informal Economy', value: `${economic.informalEconomySize.toFixed(0)}%` },
         ]} /></div></HoverTip>
-        <HoverTip tipId="dashboard_infrastructure" screenId="dashboard"><div><MetricCard title="INFRASTRUCTURE" items={[
+        <HoverTip tipId="dashboard_infrastructure" screenId="dashboard"><div><AnimatedMetricCard title="INFRASTRUCTURE" index={1} items={[
           { label: 'Road Quality', value: `${infrastructure.roadQuality.toFixed(0)}/100` },
           { label: 'Water Reliability', value: `${infrastructure.waterReliability.toFixed(0)}/100` },
           { label: 'Electricity', value: `${infrastructure.electricityAvailability.toFixed(0)}/100` },
@@ -480,7 +480,7 @@ function DashboardScreen() {
           { label: 'Load Shedding', value: `${energy.loadSheddingHoursPerDay.toFixed(1)} hrs/day` },
           { label: 'Housing Backlog', value: `${(infrastructure.housingBacklog / 1000).toFixed(0)}K units` },
         ]} /></div></HoverTip>
-        <MetricCard title="SOCIAL INDICATORS" items={[
+        <AnimatedMetricCard title="SOCIAL INDICATORS" index={2} items={[
           { label: 'Population', value: `${(national.population / 1e6).toFixed(1)}M` },
           { label: 'Literacy', value: `${national.literacyRate.toFixed(0)}%` },
           { label: 'Life Expectancy', value: `${national.lifeExpectancy.toFixed(0)} yrs` },
@@ -488,7 +488,7 @@ function DashboardScreen() {
           { label: 'Youth Unemployment', value: `${economic.youthUnemployment.toFixed(0)}%` },
           { label: 'Schools', value: `${gameState.publicServices.schools.toFixed(0)}/100` },
         ]} />
-        <HoverTip tipId="legitimacy" screenId="dashboard"><div><MetricCard title="GOVERNANCE" items={[
+        <HoverTip tipId="legitimacy" screenId="dashboard"><div><AnimatedMetricCard title="GOVERNANCE" index={3} items={[
           { label: 'Corruption Index', value: `${corruption.nationalLevel.toFixed(0)}/100` },
           { label: 'Legitimacy', value: `${player.legitimacy.toFixed(0)}/100` },
           { label: 'Parliament Seats', value: `${gameState.parliament.rulingPartySeats}/${gameState.parliament.totalSeats}` },
@@ -1254,10 +1254,30 @@ function NewsScreen() {
 
 function ElectionsScreen() {
   const { gameState } = useGameStore();
-  if (!gameState) return null;
 
-  const election = gameState.elections[gameState.elections.length - 1];
-  if (!election) return null;
+  const election = gameState ? gameState.elections[gameState.elections.length - 1] : null;
+
+  // Confetti on election win — must be before any early returns (hooks rule)
+  useEffect(() => {
+    if (!election?.isOver || !election.playerWon) return;
+    // Dynamic import for client-side only library
+    import('canvas-confetti').then((mod) => {
+      const confetti = mod.default;
+      const fire = () => {
+        confetti({
+          particleCount: 60,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#2E8B37', '#E8A817', '#CC2936', '#FAFAF7'],
+        });
+      };
+      fire();
+      setTimeout(fire, 300);
+      setTimeout(fire, 700);
+    });
+  }, [election?.isOver, election?.playerWon]);
+
+  if (!gameState || !election) return null;
 
   const monthsUntilElection = ((election.year - gameState.player.year) * 12 + election.month - gameState.player.month);
   const turnsUntilElection = Math.max(0, monthsUntilElection);
@@ -1485,7 +1505,7 @@ function StartScreen() {
   }, [fontSize]);
 
   return (
-    <div className="flex flex-col min-h-[80vh] bg-gradient-to-b from-[#2E8B37]/5 via-background to-background">
+    <div className="flex flex-col min-h-[80vh] bg-gradient-to-b from-[#2E8B37]/5 via-background to-background zim-hero-bg">
       {/* Zimbabwe Flag Stripe Bar */}
       <div className="w-full flex flex-col">
         <div className="w-full h-1" style={{ backgroundColor: '#2E8B37' }} />
@@ -1559,9 +1579,11 @@ function StartScreen() {
           <div className="mb-6">
             <div className="text-6xl mb-4">🇿🇼</div>
             <h1 className="text-4xl md:text-5xl font-black tracking-tight mb-3">
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#2E8B37] to-[#E8A817]">MAKE GREAT</span><br />
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#E8A817] to-[#2E8B37]">ZIMBABWE</span><br />
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#2E8B37] to-[#E8A817]">AGAIN</span>
+              <div className="zim-title-shimmer">
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#2E8B37] to-[#E8A817]">MAKE GREAT</span><br />
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#E8A817] to-[#2E8B37]">ZIMBABWE</span><br />
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#2E8B37] to-[#E8A817]">AGAIN</span>
+              </div>
             </h1>
             <p className="text-sm text-muted-foreground font-medium">
               Political Strategy &amp; Economic Simulation
@@ -1578,21 +1600,36 @@ function StartScreen() {
 
           {/* Feature Cards */}
           <div className="grid grid-cols-3 gap-3 mb-8">
-            <div className="bg-card border border-border rounded-lg p-3 text-center shadow-sm">
-              <div className="text-2xl mb-1">🇿🇼</div>
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.3 }}
+              className="bg-card border border-border rounded-lg p-3 text-center shadow-sm"
+            >
+              <div className="text-2xl mb-1 zim-float">🇿🇼</div>
               <p className="text-xs font-bold">Lead Zimbabwe</p>
               <p className="text-[0.625rem] text-muted-foreground mt-0.5">From Councillor to President</p>
-            </div>
-            <div className="bg-card border border-border rounded-lg p-3 text-center shadow-sm">
-              <div className="text-2xl mb-1">📊</div>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.4 }}
+              className="bg-card border border-border rounded-lg p-3 text-center shadow-sm"
+            >
+              <div className="text-2xl mb-1 zim-float zim-float-delay-1">📊</div>
               <p className="text-xs font-bold">Manage Economy</p>
               <p className="text-[0.625rem] text-muted-foreground mt-0.5">Balance budgets &amp; trade</p>
-            </div>
-            <div className="bg-card border border-border rounded-lg p-3 text-center shadow-sm">
-              <div className="text-2xl mb-1">🗳️</div>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.5 }}
+              className="bg-card border border-border rounded-lg p-3 text-center shadow-sm"
+            >
+              <div className="text-2xl mb-1 zim-float zim-float-delay-2">🗳️</div>
               <p className="text-xs font-bold">Win Elections</p>
               <p className="text-[0.625rem] text-muted-foreground mt-0.5">Secure the people&apos;s mandate</p>
-            </div>
+            </motion.div>
           </div>
 
           <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
@@ -1602,13 +1639,20 @@ function StartScreen() {
             There are no perfect choices — only trade-offs.
           </p>
 
-          <Button
-            size="lg"
-            className="bg-[#2E8B37] hover:bg-[#247A2E] text-lg font-bold px-10 py-7 rounded-xl shadow-lg shadow-green-500/20"
-            onClick={() => setShowNewGameDialog(true)}
+          <motion.div
+            whileHover={{ scale: 1.06, boxShadow: '0 0 24px rgba(46, 139, 55, 0.35)' }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+            className="inline-block"
           >
-            <Play className="h-5 w-5 mr-2" /> Start New Game
-          </Button>
+            <Button
+              size="lg"
+              className="bg-[#2E8B37] hover:bg-[#247A2E] text-lg font-bold px-10 py-7 rounded-xl shadow-lg shadow-green-500/20"
+              onClick={() => setShowNewGameDialog(true)}
+            >
+              <Play className="h-5 w-5 mr-2" /> Start New Game
+            </Button>
+          </motion.div>
 
           <p className="text-[0.625rem] text-muted-foreground/50 mt-6">
             v1.0 — Made with ❤️ for Zimbabwe
@@ -1912,6 +1956,115 @@ function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
 }
 
 // ═══════════════════════════════════════════════════════
+// PREMIUM ANIMATED COMPONENTS & HOOKS
+// ═══════════════════════════════════════════════════════
+
+// ── useTilt hook — 3D mouse-follow tilt effect ───────────
+function useTilt() {
+  const ref = useRef<HTMLDivElement>(null);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const el = ref.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    const rotateX = (0.5 - y) * 12;
+    const rotateY = (x - 0.5) * 12;
+    el.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.transform = 'perspective(800px) rotateX(0deg) rotateY(0deg) scale(1)';
+  }, []);
+
+  return { ref, handleMouseMove, handleMouseLeave };
+}
+
+// ── AnimatedNumber — smooth number transitions ───────────
+function AnimatedNumber({ value, decimals = 0 }: { value: number; decimals?: number }) {
+  const spring = useSpring(value, { stiffness: 100, damping: 30, mass: 0.5 });
+  const display = useTransform(spring, (v) => v.toFixed(decimals));
+  const [displayText, setDisplayText] = useState(value.toFixed(decimals));
+
+  useEffect(() => {
+    spring.set(value);
+  }, [value, spring]);
+
+  useEffect(() => {
+    const unsubscribe = display.on('change', (v) => setDisplayText(v));
+    return unsubscribe;
+  }, [display]);
+
+  return <span>{displayText}</span>;
+}
+
+// ── AnimatedStatCard — wrapped StatCard with premium FX ─
+function AnimatedStatCard({ label, value, numericValue, icon, color = 'text-foreground', index = 0 }: {
+  label: string; value: string | number; numericValue?: number; icon?: React.ReactNode; color?: string; index?: number;
+}) {
+  const { ref, handleMouseMove, handleMouseLeave } = useTilt();
+
+  const pulseClass = color.startsWith('text-red')
+    ? 'zim-pulse-danger'
+    : color.startsWith('text-yellow')
+      ? 'zim-pulse-warning'
+      : color.startsWith('text-green')
+        ? 'zim-pulse-success'
+        : '';
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: 'spring', stiffness: 260, damping: 20, delay: index * 0.08 }}
+      whileHover={{ scale: 1.03, y: -2 }}
+      whileTap={{ scale: 0.98 }}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      className={`zim-tilt-card bg-card border border-border rounded-lg p-4 ${pulseClass}`}
+      style={{ borderLeftWidth: '3px', borderLeftColor: color.startsWith('text-green') ? '#2E8B37' : color.startsWith('text-yellow') ? '#E8A817' : color.startsWith('text-red') ? '#CC2936' : '#888' }}
+    >
+      <div className="flex items-center justify-between">
+        <span className="text-[0.625rem] text-muted-foreground uppercase tracking-wider font-medium">{label}</span>
+        {icon && <span className={color}>{icon}</span>}
+      </div>
+      <p className={`text-xl font-bold mt-1.5 ${color}`}>
+        {numericValue !== undefined ? <AnimatedNumber value={numericValue} decimals={numericValue % 1 !== 0 ? 1 : 0} /> : value}
+      </p>
+    </motion.div>
+  );
+}
+
+// ── AnimatedMetricCard — wrapped MetricCard with glow border
+function AnimatedMetricCard({ title, items, index = 0 }: { title: string; items: { label: string; value: string }[]; index?: number }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.2 + index * 0.08 }}
+      whileHover={{ y: -2 }}
+      className="zim-glow-border rounded-lg"
+    >
+      <div className="bg-card border border-border rounded-lg p-4 relative z-10" style={{ borderTopWidth: '2px', borderTopColor: '#E8A817' }}>
+        <h3 className="text-[0.625rem] font-bold text-muted-foreground uppercase tracking-wider mb-3">{title}</h3>
+        <div className="space-y-2.5">
+          {items.map((item, i) => (
+            <div key={i} className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">{item.label}</span>
+              <span className="text-xs font-bold tabular-nums">{item.value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
 // SHARED UI COMPONENTS
 // ═══════════════════════════════════════════════════════
 
@@ -1961,13 +2114,22 @@ function TrendCard({ title, data, color, formatValue }: { title: string; data: {
     <div className="bg-card border border-border rounded-lg p-4">
       <h3 className="text-[0.625rem] font-bold text-muted-foreground uppercase tracking-wider mb-3">{title}</h3>
       <div className="flex items-end gap-1 h-24">
-        {data.map((point, i) => (
-          <div key={i} className="flex-1 flex flex-col items-center gap-1">
-            <span className="text-[0.5625rem] text-muted-foreground font-medium">{formatValue(point.value)}</span>
-            <div className="w-full rounded-t" style={{ height: `${(point.value / maxVal) * 80}px`, background: `linear-gradient(to top, ${color}, ${color}88)` }} />
-            <span className="text-[0.5rem] text-muted-foreground font-medium">{point.label}</span>
-          </div>
-        ))}
+        {data.map((point, i) => {
+          const barHeight = (point.value / maxVal) * 80;
+          return (
+            <div key={i} className="flex-1 flex flex-col items-center gap-1">
+              <span className="text-[0.5625rem] text-muted-foreground font-medium">{formatValue(point.value)}</span>
+              <motion.div
+                className="w-full rounded-t zim-progress-bar"
+                initial={{ height: 0 }}
+                animate={{ height: `${barHeight}px` }}
+                transition={{ type: 'spring', stiffness: 300, damping: 25, delay: i * 0.04 }}
+                style={{ background: `linear-gradient(to top, ${color}, ${color}88)` }}
+              />
+              <span className="text-[0.5rem] text-muted-foreground font-medium">{point.label}</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -2099,16 +2261,23 @@ export default function GamePage() {
 
             {/* End Turn Button */}
             <HoverTip tipId="end_turn">
-              <Button
-                size="sm"
-                onClick={endTurn}
-                disabled={isProcessingTurn}
-                className="bg-amber-600 hover:bg-amber-700 text-xs font-bold px-4"
+              <motion.div
+                whileHover={{ scale: 1.05, boxShadow: '0 0 20px rgba(232, 168, 23, 0.4)' }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+                className="inline-block"
               >
-                <ChevronRight className="h-4 w-4 mr-1" />
-                <span className="hidden sm:inline">End Turn</span>
-                <span className="sm:hidden">End</span>
-              </Button>
+                <Button
+                  size="sm"
+                  onClick={endTurn}
+                  disabled={isProcessingTurn}
+                  className="bg-amber-600 hover:bg-amber-700 text-xs font-bold px-4"
+                >
+                  <ChevronRight className="h-4 w-4 mr-1" />
+                  <span className="hidden sm:inline">End Turn</span>
+                  <span className="sm:hidden">End</span>
+                </Button>
+              </motion.div>
             </HoverTip>
           </div>
         </div>
@@ -2193,11 +2362,11 @@ export default function GamePage() {
           <div className="p-4 md:p-6 max-w-7xl mx-auto">
             <AnimatePresence mode="wait">
               <motion.div
+                initial={{ opacity: 0, y: 8, scale: 0.99 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.99 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                 key={currentScreen}
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                transition={{ duration: 0.2 }}
               >
                 {currentScreen === 'dashboard' && <DashboardScreen />}
                 {currentScreen === 'budget' && <BudgetScreen />}

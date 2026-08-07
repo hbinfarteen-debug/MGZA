@@ -1,0 +1,1954 @@
+   310→// ═══════════════════════════════════════════════════════
+   311→// FONT SIZE MAP — Maps size setting to CSS root variable
+   312→// ═══════════════════════════════════════════════════════
+   313→
+   314→const FONT_SIZE_MAP: Record<FontSize, string> = {
+   315→  small: '14px',
+   316→  medium: '16px',
+   317→  large: '18px',
+   318→  xlarge: '20px',
+   319→};
+   320→
+   321→// ═══════════════════════════════════════════════════════
+   322→// HOVER TIP COMPONENT
+   323→// Uses position:fixed + getBoundingClientRect to escape overflow:auto clipping.
+   324→// Always renders wrapper div to prevent layout shift when toggling.
+   325→// ═══════════════════════════════════════════════════════
+   326→
+   327→function HoverTip({ tipId, children, screenId }: { tipId: string; children: React.ReactNode; screenId?: GameScreen }) {
+   328→  const { enableTips, currentScreen } = useGameStore();
+   329→  const [show, setShow] = useState(false);
+   330→  const [coords, setCoords] = useState({ top: 0, left: 0, arrowSide: 'top' as 'top' | 'bottom' });
+   331→  const tip = GAME_TIPS[tipId];
+   332→  const triggerRef = useRef<HTMLDivElement>(null);
+   333→
+   334→  // Check if tip should render at all
+   335→  const isActive = enableTips && tip && (!tip.screen || tip.screen === screenId || tip.screen === currentScreen);
+   336→
+   337→  const updatePosition = useCallback(() => {
+   338→    const el = triggerRef.current;
+   339→    if (!el) return;
+   340→    const rect = el.getBoundingClientRect();
+   341→    const tipWidth = 320; // w-80 = 20rem = 320px
+   342→    const tipHeight = 180; // approximate
+   343→    const gap = 8;
+   344→    const viewportHeight = window.innerHeight;
+   345→    const viewportWidth = window.innerWidth;
+   346→
+   347→    // Prefer showing above, but flip below if no room
+   348→    const showAbove = rect.top > tipHeight + gap + 50; // 50px buffer for header
+   349→    const arrowSide = showAbove ? 'top' : 'bottom';
+   350→
+   351→    let top: number;
+   352→    if (showAbove) {
+   353→      top = rect.top - tipHeight - gap;
+   354→    } else {
+   355→      top = rect.bottom + gap;
+   356→    }
+   357→
+   358→    // Center horizontally, but clamp to viewport edges
+   359→    let left = rect.left + rect.width / 2 - tipWidth / 2;
+   360→    left = Math.max(8, Math.min(left, viewportWidth - tipWidth - 8));
+   361→
+   362→    setCoords({ top: Math.max(4, top), left, arrowSide });
+   363→  }, []);
+   364→
+   365→  const handleEnter = useCallback(() => {
+   366→    if (!isActive) return;
+   367→    updatePosition();
+   368→    setShow(true);
+   369→  }, [isActive, updatePosition]);
+   370→
+   371→  const handleLeave = useCallback(() => setShow(false), []);
+   372→
+   373→  // Update position on scroll / resize while visible
+   374→  useEffect(() => {
+   375→    if (!show) return;
+   376→    updatePosition();
+   377→    const onScroll = () => updatePosition();
+   378→    const onResize = () => updatePosition();
+   379→    window.addEventListener('scroll', onScroll, true);
+   380→    window.addEventListener('resize', onResize);
+   381→    return () => {
+   382→      window.removeEventListener('scroll', onScroll, true);
+   383→      window.removeEventListener('resize', onResize);
+   384→    };
+   385→  }, [show, updatePosition]);
+   386→
+   387→  return (
+   388→    <div
+   389→      ref={triggerRef}
+   390→      className="contents"
+   391→      onMouseEnter={handleEnter}
+   392→      onMouseLeave={handleLeave}
+   393→    >
+   394→      {children}
+   395→      <AnimatePresence>
+   396→        {show && isActive && (
+   397→          <motion.div
+   398→            initial={{ opacity: 0, scale: 0.92 }}
+   399→            animate={{ opacity: 1, scale: 1 }}
+   400→            exit={{ opacity: 0, scale: 0.92 }}
+   401→            transition={{ duration: 0.12, ease: 'easeOut' }}
+   402→            style={{ position: 'fixed', top: coords.top, left: coords.left, width: 320, zIndex: 9999 }}
+   403→            className="pointer-events-none"
+   404→          >
+   405→            <div className="bg-popover border border-border rounded-lg shadow-xl p-3.5 text-left">
+   406→              {/* Header */}
+   407→              <div className="flex items-center gap-2 mb-2">
+   408→                <div className="flex items-center justify-center w-6 h-6 rounded-md bg-amber-500/15 text-amber-500 shrink-0">
+   409→                  <Lightbulb className="h-3.5 w-3.5" />
+   410→                </div>
+   411→                <h4 className="text-xs font-bold text-foreground">{tip.title}</h4>
+   412→                <Badge variant="secondary" className="text-[0.5rem] px-1.5 py-0 ml-auto bg-amber-500/10 text-amber-600 border-amber-500/20">TIP</Badge>
+   413→              </div>
+   414→              {/* Description */}
+   415→              <p className="text-[0.6875rem] text-muted-foreground leading-relaxed mb-2">{tip.description}</p>
+   416→              {/* Strategy */}
+   417→              <div className="border-t border-border/50 pt-2">
+   418→                <div className="flex items-start gap-1.5">
+   419→                  <Info className="h-3 w-3 text-amber-500 mt-0.5 shrink-0" />
+   420→                  <p className="text-[0.625rem] text-amber-600 font-medium leading-relaxed">{tip.strategy}</p>
+   421→                </div>
+   422→              </div>
+   423→            </div>
+   424→            {/* Arrow */}
+   425→            {coords.arrowSide === 'bottom' ? (
+   426→              <div className="absolute bottom-full left-[var(--arrow-x)] -translate-x-1/2 -mb-px">
+   427→                <div className="w-2 h-2 bg-popover border-l border-t border-border rotate-45" />
+   428→              </div>
+   429→            ) : (
+   430→              <div className="absolute top-full left-[var(--arrow-x)] -translate-x-1/2 -mt-px">
+   431→                <div className="w-2 h-2 bg-popover border-r border-b border-border rotate-45" />
+   432→              </div>
+   433→            )}
+   434→          </motion.div>
+   435→        )}
+   436→      </AnimatePresence>
+   437→    </div>
+   438→  );
+   439→}
+   440→
+   441→// ═══════════════════════════════════════════════════════
+   442→// DASHBOARD
+   443→// ═══════════════════════════════════════════════════════
+   444→
+   445→function DashboardScreen() {
+   446→  const { gameState, historicalData, setScreen } = useGameStore();
+   447→  if (!gameState) return null;
+   448→
+   449→  const { player, economic, energy, water, infrastructure, citizenSatisfaction, national, corruption } = gameState;
+   450→  const recentHistory = historicalData.slice(-12);
+   451→  const recentNews = gameState.newsHistory.slice(0, 5);
+   452→  const activeEvents = gameState.events.filter(e => !e.resolved).slice(0, 3);
+   453→  const activeProjects = gameState.projects.filter(p => p.status === 'in_progress');
+   454→
+   455→  return (
+   456→    <div className="space-y-6">
+   457→      {/* Player Status Bar */}
+   458→      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+   459→        <HoverTip tipId="popularity"><div><StatCard label="Popularity" value={`${player.popularity.toFixed(0)}%`} icon={<Heart className="h-4 w-4" />} color={player.popularity > 50 ? 'text-green-500' : player.popularity > 30 ? 'text-yellow-500' : 'text-red-500'} /></div></HoverTip>
+   460→        <HoverTip tipId="gdp"><div><StatCard label="GDP Growth" value={`${economic.gdpGrowth.toFixed(1)}%`} icon={<TrendingUp className="h-4 w-4" />} color={economic.gdpGrowth > 3 ? 'text-green-500' : economic.gdpGrowth > 0 ? 'text-yellow-500' : 'text-red-500'} /></div></HoverTip>
+   461→        <HoverTip tipId="inflation"><div><StatCard label="Inflation" value={`${economic.inflation.toFixed(1)}%`} icon={<Flame className="h-4 w-4" />} color={economic.inflation < 15 ? 'text-green-500' : economic.inflation < 30 ? 'text-yellow-500' : 'text-red-500'} /></div></HoverTip>
+   462→        <HoverTip tipId="satisfaction"><div><StatCard label="Satisfaction" value={`${citizenSatisfaction.overall.toFixed(0)}%`} icon={<Star className="h-4 w-4" />} color={citizenSatisfaction.overall > 50 ? 'text-green-500' : citizenSatisfaction.overall > 30 ? 'text-yellow-500' : 'text-red-500'} /></div></HoverTip>
+   463→      </div>
+   464→
+   465→      {/* Key Metrics Grid */}
+   466→      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+   467→        <HoverTip tipId="dashboard_economic" screenId="dashboard"><div><MetricCard title="ECONOMIC INDICATORS" items={[
+   468→          { label: 'GDP', value: `$${economic.gdp.toFixed(1)}B` },
+   469→          { label: 'Unemployment', value: `${economic.unemploymentRate.toFixed(1)}%` },
+   470→          { label: 'Exchange Rate', value: `${economic.exchangeRate.toLocaleString()} ZWL/USD` },
+   471→          { label: 'Debt/GDP', value: `${economic.debtToGdp.toFixed(0)}%` },
+   472→          { label: 'Investor Confidence', value: `${economic.investorConfidence.toFixed(0)}` },
+   473→          { label: 'Informal Economy', value: `${economic.informalEconomySize.toFixed(0)}%` },
+   474→        ]} /></div></HoverTip>
+   475→        <HoverTip tipId="dashboard_infrastructure" screenId="dashboard"><div><MetricCard title="INFRASTRUCTURE" items={[
+   476→          { label: 'Road Quality', value: `${infrastructure.roadQuality.toFixed(0)}/100` },
+   477→          { label: 'Water Reliability', value: `${infrastructure.waterReliability.toFixed(0)}/100` },
+   478→          { label: 'Electricity', value: `${infrastructure.electricityAvailability.toFixed(0)}/100` },
+   479→          { label: 'Internet', value: `${infrastructure.internetPenetration.toFixed(0)}%` },
+   480→          { label: 'Load Shedding', value: `${energy.loadSheddingHoursPerDay.toFixed(1)} hrs/day` },
+   481→          { label: 'Housing Backlog', value: `${(infrastructure.housingBacklog / 1000).toFixed(0)}K units` },
+   482→        ]} /></div></HoverTip>
+   483→        <MetricCard title="SOCIAL INDICATORS" items={[
+   484→          { label: 'Population', value: `${(national.population / 1e6).toFixed(1)}M` },
+   485→          { label: 'Literacy', value: `${national.literacyRate.toFixed(0)}%` },
+   486→          { label: 'Life Expectancy', value: `${national.lifeExpectancy.toFixed(0)} yrs` },
+   487→          { label: 'Urban Pop.', value: `${national.urbanPopulation.toFixed(0)}%` },
+   488→          { label: 'Youth Unemployment', value: `${economic.youthUnemployment.toFixed(0)}%` },
+   489→          { label: 'Schools', value: `${gameState.publicServices.schools.toFixed(0)}/100` },
+   490→        ]} />
+   491→        <HoverTip tipId="legitimacy" screenId="dashboard"><div><MetricCard title="GOVERNANCE" items={[
+   492→          { label: 'Corruption Index', value: `${corruption.nationalLevel.toFixed(0)}/100` },
+   493→          { label: 'Legitimacy', value: `${player.legitimacy.toFixed(0)}/100` },
+   494→          { label: 'Parliament Seats', value: `${gameState.parliament.rulingPartySeats}/${gameState.parliament.totalSeats}` },
+   495→          { label: 'Dam Level', value: `${energy.damLevel.toFixed(0)}%` },
+   496→          { label: 'Water Reservoirs', value: `${water.reservoirLevels.toFixed(0)}%` },
+   497→          { label: 'Funds Lost to Corruption', value: `$${corruption.fundsLostToCorruption.toFixed(0)}M/mo` },
+   498→        ]} /></div></HoverTip>
+   499→      </div>
+   500→
+   501→      {/* Quick Trends */}
+   502→      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+   503→        {/* GDP Trend */}
+   504→        <HoverTip tipId="dashboard_gdp_trend" screenId="dashboard"><div><TrendCard
+   505→          title="GDP TREND"
+   506→          data={recentHistory.map(h => ({ label: `${h.month}/${h.year.toString().slice(2)}`, value: h.gdp }))}
+   507→          color="#4CAF50"
+   508→          formatValue={(v) => `$${v.toFixed(1)}B`}
+   509→        /></div></HoverTip>
+   510→        <HoverTip tipId="dashboard_popularity_trend" screenId="dashboard"><div><TrendCard
+   511→          title="POPULARITY TREND"
+   512→          data={recentHistory.map(h => ({ label: `${h.month}/${h.year.toString().slice(2)}`, value: h.popularity }))}
+   513→          color={player.popularity > 50 ? '#4CAF50' : '#f44336'}
+   514→          formatValue={(v) => `${v.toFixed(0)}%`}
+   515→        /></div></HoverTip>
+   516→      </div>
+   517→
+   518→      {/* Active Items */}
+   519→      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+   520→        {/* Recent News */}
+   521→        <div className="bg-card border border-border rounded-lg p-4">
+   522→          <div className="flex items-center gap-2 mb-3">
+   523→            <Newspaper className="h-4 w-4 text-amber-500" />
+   524→            <h3 className="text-sm font-bold uppercase tracking-wider">Latest News</h3>
+   525→          </div>
+   526→          <ScrollArea className="h-[200px]">
+   527→            <div className="space-y-3">
+   528→              {recentNews.map((article) => (
+   529→                <div key={article.id} className="pb-3 border-b border-border/50 last:border-0">
+   530→                  <div className="flex items-center gap-2 mb-1">
+   531→                    <Badge variant={article.isBreaking ? 'destructive' : article.sentiment === 'positive' ? 'default' : article.sentiment === 'negative' ? 'destructive' : 'secondary'} className="text-[0.625rem] px-1.5 py-0">
+   532→                      {article.isBreaking ? 'BREAKING' : article.category}
+   533→                    </Badge>
+   534→                  </div>
+   535→                  <p className="text-sm font-medium">{article.headline}</p>
+   536→                  <p className="text-xs text-muted-foreground mt-1">{article.subheadline}</p>
+   537→                </div>
+   538→              ))}
+   539→            </div>
+   540→          </ScrollArea>
+   541→        </div>
+   542→
+   543→        {/* Active Events */}
+   544→        <div className="bg-card border border-border rounded-lg p-4">
+   545→          <div className="flex items-center gap-2 mb-3">
+   546→            <AlertTriangle className="h-4 w-4 text-red-500" />
+   547→            <h3 className="text-sm font-bold uppercase tracking-wider">Active Events</h3>
+   548→          </div>
+   549→          <ScrollArea className="h-[200px]">
+   550→            <div className="space-y-3">
+   551→              {activeEvents.length === 0 ? (
+   552→                <p className="text-sm text-muted-foreground">No active events this month.</p>
+   553→              ) : activeEvents.map((event) => (
+   554→                <div key={event.id} className="pb-3 border-b border-border/50 last:border-0">
+   555→                  <Badge variant={event.severity === 'crisis' ? 'destructive' : event.severity === 'major' ? 'default' : 'secondary'} className="text-[0.625rem] px-1.5 py-0 mb-1">
+   556→                    {event.severity.toUpperCase()}
+   557→                  </Badge>
+   558→                  <p className="text-sm font-medium">{event.title}</p>
+   559→                  <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{event.description}</p>
+   560→                </div>
+   561→              ))}
+   562→            </div>
+   563→          </ScrollArea>
+   564→        </div>
+   565→
+   566→        {/* Active Projects */}
+   567→        <div className="bg-card border border-border rounded-lg p-4">
+   568→          <div className="flex items-center gap-2 mb-3">
+   569→            <Building2 className="h-4 w-4 text-blue-500" />
+   570→            <h3 className="text-sm font-bold uppercase tracking-wider">Active Projects</h3>
+   571→          </div>
+   572→          <ScrollArea className="h-[200px]">
+   573→            <div className="space-y-3">
+   574→              {activeProjects.length === 0 ? (
+   575→                <p className="text-sm text-muted-foreground">No active projects. Visit Infrastructure to start new projects.</p>
+   576→              ) : activeProjects.slice(0, 5).map((project) => (
+   577→                <div key={project.id} className="pb-3 border-b border-border/50 last:border-0">
+   578→                  <p className="text-sm font-medium">{project.name}</p>
+   579→                  <div className="mt-1 flex items-center gap-2">
+   580→                    <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+   581→                      <div className="h-full bg-amber-500 rounded-full" style={{ width: `${project.progress}%` }} />
+   582→                    </div>
+   583→                    <span className="text-xs text-muted-foreground">{project.progress.toFixed(0)}%</span>
+   584→                  </div>
+   585→                </div>
+   586→              ))}
+   587→            </div>
+   588→          </ScrollArea>
+   589→        </div>
+   590→      </div>
+   591→    </div>
+   592→  );
+   593→}
+   594→
+   595→// ═══════════════════════════════════════════════════════
+   596→// BUDGET SCREEN
+   597→// ═══════════════════════════════════════════════════════
+   598→
+   599→function BudgetScreen() {
+   600→  const { gameState, updateBudget, allocateBudget } = useGameStore();
+   601→  const [localBudget, setLocalBudget] = useState<Record<string, number>>(() => {
+   602→    if (!gameState) return {};
+   603→    return Object.fromEntries(gameState.budget.items.map(i => [i.category, i.allocated]));
+   604→  });
+   605→
+   606→  // Sync when game state changes (but not via setState in effect body)
+   607→  const lastTurn = gameState?.player.turn ?? 0;
+   608→  const [prevTurn, setPrevTurn] = useState(lastTurn);
+   609→  if (lastTurn !== prevTurn && gameState) {
+   610→    setPrevTurn(lastTurn);
+   611→    const map = Object.fromEntries(gameState.budget.items.map(i => [i.category, i.allocated]));
+   612→    setLocalBudget(map);
+   613→  }
+   614→
+   615→  if (!gameState) return null;
+   616→  const { budget, economic } = gameState;
+   617→  const totalAllocated = Object.values(localBudget).reduce((s, v) => s + v, 0);
+   618→  const deficit = totalAllocated - budget.totalRevenue;
+   619→  const revenuePerCategory = budget.totalRevenue / budget.items.length;
+   620→
+   621→  const handleAllocate = () => {
+   622→    Object.entries(localBudget).forEach(([cat, amt]) => updateBudget(cat, amt));
+   623→    allocateBudget();
+   624→  };
+   625→
+   626→  return (
+   627→    <div className="space-y-6">
+   628→      {/* Budget Summary */}
+   629→      <HoverTip tipId="budget_overview" screenId="budget"><div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+   630→        <StatCard label="Revenue" value={`$${budget.totalRevenue.toLocaleString()}M`} icon={<DollarSign className="h-4 w-4" />} color="text-green-500" />
+   631→        <StatCard label="Allocated" value={`$${totalAllocated.toLocaleString()}M`} icon={<DollarSign className="h-4 w-4" />} color={deficit > 0 ? 'text-red-500' : 'text-green-500'} />
+   632→        <StatCard label="Deficit" value={`$${deficit.toLocaleString()}M`} icon={<AlertTriangle className="h-4 w-4" />} color={deficit > 0 ? 'text-red-500' : 'text-green-500'} />
+   633→        <StatCard label="GDP" value={`$${economic.gdp.toFixed(1)}B`} icon={<TrendingUp className="h-4 w-4" />} color={economic.gdpGrowth > 0 ? 'text-green-500' : 'text-red-500'} />
+   634→      </div></HoverTip>
+   635→
+   636→      <div className="flex justify-end">
+   637→        <HoverTip tipId="allocate_button" screenId="budget"><Button onClick={handleAllocate} size="sm" className="bg-amber-600 hover:bg-amber-700">
+   638→          <Check className="h-4 w-4 mr-1" /> Allocate Budget
+   639→        </Button></HoverTip>
+   640→      </div>
+   641→
+   642→      {/* Budget Items */}
+   643→      <HoverTip tipId="budget_sliders" screenId="budget"><div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+   644→        {budget.items.map((item) => {
+   645→          const pct = (localBudget[item.category] || 0) / budget.totalRevenue * 100;
+   646→          const meetsMin = (localBudget[item.category] || 0) >= item.minimumRequired;
+   647→          return (
+   648→            <div key={item.category} className="bg-card border border-border rounded-lg p-4">
+   649→              <div className="flex items-center justify-between mb-2">
+   650→                <div className="flex items-center gap-2">
+   651→                  <span className="text-lg">{item.icon}</span>
+   652→                  <div>
+   653→                    <h4 className="text-sm font-bold">{item.displayName}</h4>
+   654→                    <p className="text-[0.625rem] text-muted-foreground">Min: ${item.minimumRequired}M | Rec: ${item.recommended}M</p>
+   655→                  </div>
+   656→                </div>
+   657→                <div className="text-right">
+   658→                  <span className={`text-sm font-bold ${!meetsMin ? 'text-red-500' : ''}`}>
+   659→                    ${localBudget[item.category]?.toLocaleString() || 0}M
+   660→                  </span>
+   661→                  <p className="text-[0.625rem] text-muted-foreground">{pct.toFixed(1)}%</p>
+   662→                </div>
+   663→              </div>
+   664→              <div className="mb-1">
+   665→                <input
+   666→                  type="range"
+   667→                  min={0}
+   668→                  max={2000}
+   669→                  step={10}
+   670→                  value={localBudget[item.category] || 0}
+   671→                  onChange={(e) => setLocalBudget(prev => ({ ...prev, [item.category]: Number(e.target.value) }))}
+   672→                  className="w-full h-2 bg-muted rounded-full appearance-none cursor-pointer accent-amber-500"
+   673→                />
+   674→              </div>
+   675→              <div className="flex items-center gap-3 text-[0.625rem] text-muted-foreground">
+   676→                <span>Efficiency: {item.efficiency}%</span>
+   677→                <span>Corruption: {item.corruptionLeakage}%</span>
+   678→                {!meetsMin && <Badge variant="destructive" className="text-[0.5625rem] px-1">Below Min</Badge>}
+   679→              </div>
+   680→            </div>
+   681→          );
+   682→        })}
+   683→      </div></HoverTip>
+   684→    </div>
+   685→  );
+   686→}
+   687→
+   688→// ═══════════════════════════════════════════════════════
+   689→// INFRASTRUCTURE SCREEN
+   690→
+   691→function InfrastructureScreen() {
+   692→  const { gameState, approveProject, availableProjects } = useGameStore();
+   693→  if (!gameState) return null;
+   694→
+   695→  const activeProjects = gameState.projects.filter(p => p.status === 'in_progress');
+   696→  const completedProjects = gameState.projects.filter(p => p.status === 'completed').slice(-5);
+   697→
+   698→  return (
+   699→    <div className="space-y-6">
+   700→      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+   701→        <StatCard label="Active Projects" value={`${activeProjects.length}`} icon={<Building2 className="h-4 w-4" />} color="text-amber-500" />
+   702→        <StatCard label="Completed" value={`${gameState.projects.filter(p => p.status === 'completed').length}`} icon={<Trophy className="h-4 w-4" />} color="text-green-500" />
+   703→        <StatCard label="Total Invested" value={`$${gameState.projects.reduce((s, p) => s + p.cost, 0).toLocaleString()}M`} icon={<DollarSign className="h-4 w-4" />} color="text-blue-500" />
+   704→        <StatCard label="Jobs Created" value={`${gameState.projects.reduce((s, p) => s + p.employmentCreated, 0).toLocaleString()}`} icon={<Users className="h-4 w-4" />} color="text-green-500" />
+   705→      </div>
+   706→
+   707→      {/* Available Projects */}
+   708→      <div>
+   709→        <h3 className="text-sm font-bold uppercase tracking-wider mb-3 flex items-center gap-2">
+   710→          <Building2 className="h-4 w-4" /> Available Projects
+   711→        </h3>
+   712→        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+   713→          {availableProjects.map((project) => (
+   714→            <div key={project.id} className="bg-card border border-border rounded-lg p-4">
+   715→              <div className="flex items-start justify-between mb-2">
+   716→                <div>
+   717→                  <h4 className="text-sm font-bold">{project.name}</h4>
+   718→                  <Badge variant="secondary" className="text-[0.625rem] mt-1">{project.category}</Badge>
+   719→                </div>
+   720→                <Button size="sm" onClick={() => approveProject(project.id)} className="bg-amber-600 hover:bg-amber-700 text-xs">
+   721→                  Approve
+   722→                </Button>
+   723→              </div>
+   724→              <p className="text-xs text-muted-foreground mb-3">{project.description}</p>
+   725→              <div className="grid grid-cols-3 gap-2 text-xs">
+   726→                <div><span className="text-muted-foreground">Cost:</span> <span className="font-bold">${project.cost}M</span></div>
+   727→                <div><span className="text-muted-foreground">Time:</span> <span className="font-bold">{project.completionTime} mo</span></div>
+   728→                <div><span className="text-muted-foreground">Jobs:</span> <span className="font-bold">{project.employmentCreated.toLocaleString()}</span></div>
+   729→              </div>
+   730→              <div className="flex gap-3 mt-2 text-[0.625rem] text-muted-foreground">
+   731→                <span>Popularity: {project.politicalPopularity > 0 ? '+' : ''}{project.politicalPopularity}</span>
+   732→                <span>Economic: {project.economicImpact > 0 ? '+' : ''}{project.economicImpact}</span>
+   733→                <span>Corruption Risk: {project.corruptionRisk}%</span>
+   734→              </div>
+   735→            </div>
+   736→          ))}
+   737→        </div>
+   738→      </div>
+   739→
+   740→      {/* Active Projects */}
+   741→      <div>
+   742→        <h3 className="text-sm font-bold uppercase tracking-wider mb-3 flex items-center gap-2">
+   743→          <Clock className="h-4 w-4" /> In Progress
+   744→        </h3>
+   745→        <div className="space-y-2">
+   746→          {activeProjects.length === 0 ? (
+   747→            <p className="text-sm text-muted-foreground">No projects currently in progress.</p>
+   748→          ) : activeProjects.map((project) => (
+   749→            <div key={project.id} className="bg-card border border-border rounded-lg p-4">
+   750→              <div className="flex items-center justify-between">
+   751→                <div className="flex-1">
+   752→                  <h4 className="text-sm font-bold">{project.name}</h4>
+   753→                  <p className="text-xs text-muted-foreground">{project.province}</p>
+   754→                </div>
+   755→                <div className="w-32">
+   756→                  <div className="flex items-center justify-between text-xs mb-1">
+   757→                    <span>{project.progress.toFixed(0)}%</span>
+   758→                    <span>{project.completionTime - Math.floor(project.progress / (100 / project.completionTime))} mo left</span>
+   759→                  </div>
+   760→                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+   761→                    <div className="h-full bg-amber-500 rounded-full transition-all" style={{ width: `${project.progress}%` }} />
+   762→                  </div>
+   763→                </div>
+   764→              </div>
+   765→            </div>
+   766→          ))}
+   767→        </div>
+   768→      </div>
+   769→    </div>
+   770→  );
+   771→}
+   772→
+   773→// ═══════════════════════════════════════════════════════
+   774→// POLITICS SCREEN
+   775→// ═══════════════════════════════════════════════════════
+   776→
+   777→function PoliticsScreen() {
+   778→  const { gameState } = useGameStore();
+   779→  if (!gameState) return null;
+   780→
+   781→  const { parliament, factions, bills, player } = gameState;
+   782→
+   783→  return (
+   784→    <div className="space-y-6">
+   785→      {/* Parliament Overview */}
+   786→      <div className="bg-card border border-border rounded-lg p-6">
+   787→        <h3 className="text-lg font-bold uppercase tracking-wider mb-4 flex items-center gap-2">
+   788→          <Landmark className="h-5 w-5 text-amber-500" /> Parliament
+   789→        </h3>
+   790→        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+   791→          <StatCard label="Total Seats" value={`${parliament.totalSeats}`} color="text-foreground" />
+   792→          <StatCard label="Ruling Party" value={`${parliament.rulingPartySeats}`} color="text-amber-500" />
+   793→          <StatCard label="Opposition" value={`${parliament.oppositionSeats}`} color="text-red-500" />
+   794→          <StatCard label="Public Support" value={`${parliament.publicSupportForGovernment.toFixed(0)}%`} color={parliament.publicSupportForGovernment > 50 ? 'text-green-500' : 'text-red-500'} />
+   795→          <StatCard label="MP Satisfaction" value={`${parliament.mpSatisfaction.toFixed(0)}%`} color="text-blue-500" />
+   796→        </div>
+   797→
+   798→        {/* Parliament Seat Visualization */}
+   799→        <div className="flex h-8 rounded-lg overflow-hidden gap-0.5">
+   800→          <div className="bg-amber-500 rounded-l-md flex items-center justify-center" style={{ width: `${parliament.rulingPartySeats / parliament.totalSeats * 100}%` }}>
+   801→            <span className="text-[0.625rem] font-bold text-black">{parliament.rulingPartySeats}</span>
+   802→          </div>
+   803→          <div className="bg-red-500 flex items-center justify-center" style={{ width: `${parliament.oppositionSeats / parliament.totalSeats * 100}%` }}>
+   804→            <span className="text-[0.625rem] font-bold">{parliament.oppositionSeats}</span>
+   805→          </div>
+   806→          <div className="bg-gray-400 rounded-r-md flex items-center justify-center" style={{ width: `${parliament.independentSeats / parliament.totalSeats * 100}%` }}>
+   807→            <span className="text-[0.625rem] font-bold">{parliament.independentSeats}</span>
+   808→          </div>
+   809→        </div>
+   810→        <div className="flex gap-4 mt-2 text-[0.625rem] text-muted-foreground">
+   811→          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500" /> Ruling Party</span>
+   812→          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" /> Opposition</span>
+   813→          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gray-400" /> Independent</span>
+   814→        </div>
+   815→      </div>
+   816→
+   817→      {/* Factions */}
+   818→      <div>
+   819→        <h3 className="text-sm font-bold uppercase tracking-wider mb-3 flex items-center gap-2">
+   820→          <ShieldAlert className="h-4 w-4" /> Political Factions
+   821→        </h3>
+   822→        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+   823→          {factions.map((faction) => (
+   824→            <div key={faction.id} className="bg-card border border-border rounded-lg p-4">
+   825→              <div className="flex items-center justify-between mb-2">
+   826→                <h4 className="text-sm font-bold">{faction.name}</h4>
+   827→                <Badge variant={
+   828→                  faction.stance === 'ally' ? 'default' :
+   829→                  faction.stance === 'neutral' ? 'secondary' :
+   830→                  faction.stance === 'opponent' ? 'destructive' : 'destructive'
+   831→                }>
+   832→                  {faction.stance.toUpperCase()}
+   833→                </Badge>
+   834→              </div>
+   835→              <p className="text-xs text-muted-foreground mb-2">{faction.ideology}</p>
+   836→              <p className="text-[0.625rem] text-muted-foreground">Leader: {faction.leaderName}</p>
+   837→              <div className="mt-2">
+   838→                <div className="flex items-center justify-between text-xs mb-1">
+   839→                  <span>Support</span>
+   840→                  <span>{faction.supportLevel.toFixed(0)}%</span>
+   841→                </div>
+   842→                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+   843→                  <div
+   844→                    className="h-full rounded-full"
+   845→                    style={{
+   846→                      width: `${faction.supportLevel}%`,
+   847→                      backgroundColor: faction.stance === 'ally' ? '#4CAF50' : faction.stance === 'neutral' ? '#FF9800' : '#f44336',
+   848→                    }}
+   849→                  />
+   850→                </div>
+   851→              </div>
+   852→              <div className="mt-2 space-y-1">
+   853→                {faction.demands.map((demand, i) => (
+   854→                  <div key={i} className="text-[0.625rem] text-muted-foreground flex items-center gap-1">
+   855→                    <ChevronRight className="h-2 w-2" /> {demand}
+   856→                  </div>
+   857→                ))}
+   858→              </div>
+   859→            </div>
+   860→          ))}
+   861→        </div>
+   862→      </div>
+   863→    </div>
+   864→  );
+   865→}
+   866→
+   867→// ═══════════════════════════════════════════════════════
+   868→// MINISTERS SCREEN
+   869→// ═══════════════════════════════════════════════════════
+   870→
+   871→function MinistersScreen() {
+   872→  const { gameState, fireMinister } = useGameStore();
+   873→  if (!gameState) return null;
+   874→
+   875→  const activeMinisters = gameState.ministers.filter(m => m.isActive);
+   876→  const inactiveMinisters = gameState.ministers.filter(m => !m.isActive);
+   877→
+   878→  return (
+   879→    <div className="space-y-6">
+   880→      <HoverTip tipId="ministers_cabinet" screenId="ministers"><div>
+   881→        <h3 className="text-sm font-bold uppercase tracking-wider mb-3 flex items-center gap-2">
+   882→          <Users className="h-4 w-4" /> Active Cabinet ({activeMinisters.length})
+   883→        </h3>
+   884→        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+   885→          {activeMinisters.map((minister) => (
+   886→            <div key={minister.id} className="bg-card border border-border rounded-lg p-4">
+   887→              <div className="flex items-start justify-between mb-2">
+   888→                <div>
+   889→                  <h4 className="text-sm font-bold">{minister.name}</h4>
+   890→                  <Badge variant="secondary" className="text-[0.625rem] mt-1">{minister.portfolio}</Badge>
+   891→                </div>
+   892→                <HoverTip tipId="fire_minister" screenId="ministers"><Button size="sm" variant="destructive" className="text-[0.625rem] px-2 py-0 h-6" onClick={() => fireMinister(minister.id)}>
+   893→                  Fire
+   894→                </Button></HoverTip>
+   895→              </div>
+   896→              <div className="grid grid-cols-2 gap-2 mt-3">
+   897→                <MiniStat label="Competence" value={minister.competence} />
+   898→                <MiniStat label="Loyalty" value={minister.loyalty} />
+   899→                <MiniStat label="Corruption" value={minister.corruption} inverted />
+   900→                <MiniStat label="Popularity" value={minister.popularity} />
+   901→              </div>
+   902→              <p className="text-[0.625rem] text-muted-foreground mt-2">Faction: {minister.faction} | Age: {minister.age}</p>
+   903→            </div>
+   904→          ))}
+   905→        </div>
+   906→      </div></HoverTip>
+   907→
+   908→      {inactiveMinisters.length > 0 && (
+   909→        <div>
+   910→          <h3 className="text-sm font-bold uppercase tracking-wider mb-3 text-muted-foreground">Dismissed Ministers</h3>
+   911→          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+   912→            {inactiveMinisters.map((minister) => (
+   913→              <div key={minister.id} className="bg-card border border-border/50 rounded-lg p-4 opacity-50">
+   914→                <h4 className="text-sm font-bold">{minister.name} — {minister.portfolio}</h4>
+   915→                <p className="text-[0.625rem] text-muted-foreground">Previously dismissed</p>
+   916→              </div>
+   917→            ))}
+   918→          </div>
+   919→        </div>
+   920→      )}
+   921→    </div>
+   922→  );
+   923→}
+   924→
+   925→// ═══════════════════════════════════════════════════════
+   926→// ENERGY SCREEN
+   927→// ═══════════════════════════════════════════════════════
+   928→
+   929→function EnergyScreen() {
+   930→  const { gameState } = useGameStore();
+   931→  if (!gameState) return null;
+   932→
+   933→  const { energy } = gameState;
+   934→  const totalOutput = Object.values(energy.sources).reduce((s, src) => s + src.output, 0);
+   935→
+   936→  return (
+   937→    <div className="space-y-6">
+   938→      <HoverTip tipId="energy_overview" screenId="energy"><div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+   939→        <StatCard label="Demand" value={`${energy.totalDemand.toLocaleString()} MW`} icon={<Zap className="h-4 w-4" />} color="text-amber-500" />
+   940→        <StatCard label="Supply" value={`${energy.totalSupply.toLocaleString()} MW`} icon={<Zap className="h-4 w-4" />} color={energy.totalSupply >= energy.totalDemand ? 'text-green-500' : 'text-red-500'} />
+   941→        <StatCard label="Deficit" value={`${energy.deficit.toLocaleString()} MW`} icon={<AlertTriangle className="h-4 w-4" />} color={energy.deficit > 0 ? 'text-red-500' : 'text-green-500'} />
+   942→        <StatCard label="Load Shedding" value={`${energy.loadSheddingHoursPerDay.toFixed(1)} hrs/day`} icon={<Clock className="h-4 w-4" />} color={energy.loadSheddingHoursPerDay < 4 ? 'text-green-500' : energy.loadSheddingHoursPerDay < 8 ? 'text-yellow-500' : 'text-red-500'} />
+   943→      </div></HoverTip>
+   944→
+   945→      {/* Load Shedding Stages */}
+   946→      <HoverTip tipId="load_shedding_screen" screenId="energy"><div className="bg-card border border-border rounded-lg p-4">
+   947→        <h3 className="text-sm font-bold uppercase tracking-wider mb-3">LOAD SHEDDING STAGE: {energy.loadSheddingStage}</h3>
+   948→        <div className="flex gap-1 mb-2">
+   949→          {[0,1,2,3,4,5,6,7,8].map(stage => (
+   950→            <div
+   951→              key={stage}
+   952→              className={`flex-1 h-8 rounded flex items-center justify-center text-[0.625rem] font-bold ${
+   953→                stage <= energy.loadSheddingStage
+   954→                  ? stage <= 2 ? 'bg-green-500/80 text-white' : stage <= 5 ? 'bg-yellow-500/80 text-black' : 'bg-red-500/80 text-white'
+   955→                  : 'bg-muted text-muted-foreground'
+   956→              }`}
+   957→            >
+   958→              S{stage}
+   959→            </div>
+   960→          ))}
+   961→        </div>
+   962→        <p className="text-xs text-muted-foreground">
+   963→          Stage {energy.loadSheddingStage}: {energy.loadSheddingHoursPerDay.toFixed(0)} hours of load shedding per day
+   964→          {energy.loadSheddingStage >= 6 && ' — CRITICAL: Major economic disruption'}
+   965→          {energy.loadSheddingStage >= 3 && energy.loadSheddingStage < 6 && ' — Businesses severely affected'}
+   966→          {energy.loadSheddingStage < 3 && ' — Managed load shedding'}
+   967→        </p>
+   968→      </div></HoverTip>
+   969→
+   970→      {/* Power Sources */}
+   971→      <div>
+   972→        <h3 className="text-sm font-bold uppercase tracking-wider mb-3">Power Sources</h3>
+   973→        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+   974→          {Object.entries(energy.sources).map(([source, data]) => (
+   975→            <div key={source} className="bg-card border border-border rounded-lg p-4">
+   976→              <div className="flex items-center justify-between mb-2">
+   977→                <h4 className="text-sm font-bold capitalize">{source.replace('_', ' ')}</h4>
+   978→                <span className="text-sm font-bold">{data.output.toLocaleString()} / {data.capacity.toLocaleString()} MW</span>
+   979→              </div>
+   980→              <div className="h-2 bg-muted rounded-full overflow-hidden mb-2">
+   981→                <div
+   982→                  className={`h-full rounded-full ${data.output / data.capacity > 0.7 ? 'bg-green-500' : data.output / data.capacity > 0.4 ? 'bg-yellow-500' : 'bg-red-500'}`}
+   983→                  style={{ width: `${(data.output / data.capacity) * 100}%` }}
+   984→                />
+   985→              </div>
+   986→              <div className="grid grid-cols-3 gap-2 text-[0.625rem] text-muted-foreground">
+   987→                <span>Reliability: {data.reliability}%</span>
+   988→                <span>Cost: ${data.costPerMW}/MW</span>
+   989→                <span>Env: {data.environmentalImpact}/100</span>
+   990→              </div>
+   991→            </div>
+   992→          ))}
+   993→        </div>
+   994→      </div>
+   995→
+   996→      {/* Dam Levels */}
+   997→      <div className="bg-card border border-border rounded-lg p-4">
+   998→        <h3 className="text-sm font-bold uppercase tracking-wider mb-2">Hydroelectric System</h3>
+   999→        <div className="grid grid-cols-3 gap-3">
+  1000→          <MiniStat label="Dam Level" value={energy.damLevel} suffix="%" />
+  1001→          <MiniStat label="Rainfall Index" value={energy.rainfallIndex} suffix="%" />
+  1002→          <MiniStat label="Maintenance Backlog" value={energy.maintenanceBacklog} suffix="%" inverted />
+  1003→        </div>
+  1004→        <div className="mt-3">
+  1005→          <div className="flex items-center justify-between text-xs mb-1">
+  1006→            <span>Renewable Energy</span>
+  1007→            <span>{energy.renewablePercentage.toFixed(1)}%</span>
+  1008→          </div>
+  1009→          <div className="h-2 bg-muted rounded-full overflow-hidden">
+  1010→            <div className="h-full bg-green-500 rounded-full" style={{ width: `${energy.renewablePercentage}%` }} />
+  1011→          </div>
+  1012→        </div>
+  1013→      </div>
+  1014→    </div>
+  1015→  );
+  1016→}
+  1017→
+  1018→// ═══════════════════════════════════════════════════════
+  1019→// WATER SCREEN
+  1020→// ═══════════════════════════════════════════════════════
+  1021→
+  1022→function WaterScreen() {
+  1023→  const { gameState } = useGameStore();
+  1024→  if (!gameState) return null;
+  1025→
+  1026→  const { water } = gameState;
+  1027→
+  1028→  return (
+  1029→    <div className="space-y-6">
+  1030→      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+  1031→        <StatCard label="Demand" value={`${water.totalDemand.toLocaleString()} ML/day`} icon={<Droplets className="h-4 w-4" />} color="text-blue-500" />
+  1032→        <StatCard label="Supply" value={`${water.totalSupply.toLocaleString()} ML/day`} icon={<Droplets className="h-4 w-4" />} color={water.totalSupply >= water.totalDemand ? 'text-green-500' : 'text-red-500'} />
+  1033→        <StatCard label="Reservoir" value={`${water.reservoirLevels.toFixed(0)}%`} icon={<Droplets className="h-4 w-4" />} color={water.reservoirLevels > 50 ? 'text-green-500' : water.reservoirLevels > 25 ? 'text-yellow-500' : 'text-red-500'} />
+  1034→        <StatCard label="Urban Access" value={`${water.urbanAccess.toFixed(0)}%`} icon={<Users className="h-4 w-4" />} color={water.urbanAccess > 70 ? 'text-green-500' : 'text-yellow-500'} />
+  1035→      </div>
+  1036→
+  1037→      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+  1038→        <div className="bg-card border border-border rounded-lg p-4">
+  1039→          <h3 className="text-sm font-bold uppercase tracking-wider mb-3">Water Quality</h3>
+  1040→          <div className="h-4 bg-muted rounded-full overflow-hidden mb-2">
+  1041→            <div
+  1042→              className={`h-full rounded-full ${water.waterQuality > 60 ? 'bg-green-500' : water.waterQuality > 40 ? 'bg-yellow-500' : 'bg-red-500'}`}
+  1043→              style={{ width: `${water.waterQuality}%` }}
+  1044→            />
+  1045→          </div>
+  1046→          <div className="grid grid-cols-2 gap-3 mt-3">
+  1047→            <MiniStat label="Treatment Capacity" value={water.treatmentCapacity} suffix="%" />
+  1048→            <MiniStat label="Pipeline Condition" value={water.pipelineCondition} suffix="%" />
+  1049→            <MiniStat label="Leakage Rate" value={water.leakageRate} suffix="%" inverted />
+  1050→            <MiniStat label="Sewer Condition" value={water.sewerCondition} suffix="%" inverted />
+  1051→          </div>
+  1052→        </div>
+  1053→
+  1054→        <div className="bg-card border border-border rounded-lg p-4">
+  1055→          <h3 className="text-sm font-bold uppercase tracking-wider mb-3">Access & Risk</h3>
+  1056→          <div className="space-y-3">
+  1057→            <div>
+  1058→              <div className="flex items-center justify-between text-xs mb-1">
+  1059→                <span>Urban Access</span><span>{water.urbanAccess.toFixed(0)}%</span>
+  1060→              </div>
+  1061→              <div className="h-2 bg-muted rounded-full overflow-hidden">
+  1062→                <div className="h-full bg-blue-500 rounded-full" style={{ width: `${water.urbanAccess}%` }} />
+  1063→              </div>
+  1064→            </div>
+  1065→            <div>
+  1066→              <div className="flex items-center justify-between text-xs mb-1">
+  1067→                <span>Rural Access</span><span>{water.ruralAccess.toFixed(0)}%</span>
+  1068→              </div>
+  1069→              <div className="h-2 bg-muted rounded-full overflow-hidden">
+  1070→                <div className="h-full bg-cyan-500 rounded-full" style={{ width: `${water.ruralAccess}%` }} />
+  1071→              </div>
+  1072→            </div>
+  1073→            <Separator />
+  1074→            <div className="grid grid-cols-2 gap-3">
+  1075→              <MiniStat label="Drought Risk" value={water.droughtRisk} suffix="%" inverted />
+  1076→              <MiniStat label="Flooding Risk" value={water.floodingRisk} suffix="%" inverted />
+  1077→              <MiniStat label="Boreholes" value={water.boreholeCount} />
+  1078→              <MiniStat label="Deficit" value={water.deficit} suffix=" ML/day" inverted />
+  1079→            </div>
+  1080→          </div>
+  1081→        </div>
+  1082→      </div>
+  1083→    </div>
+  1084→  );
+  1085→}
+  1086→
+  1087→// ═══════════════════════════════════════════════════════
+  1088→// EVENTS SCREEN
+  1089→// ═══════════════════════════════════════════════════════
+  1090→
+  1091→function EventsScreen() {
+  1092→  const { gameState, setShowEventModal } = useGameStore();
+  1093→  if (!gameState) return null;
+  1094→
+  1095→  const unresolvedEvents = gameState.events.filter(e => !e.resolved);
+  1096→  const resolvedEvents = gameState.events.filter(e => e.resolved).slice(-10).reverse();
+  1097→
+  1098→  return (
+  1099→    <div className="space-y-6">
+  1100→      <HoverTip tipId="events_pending" screenId="events"><div>
+  1101→        <h3 className="text-sm font-bold uppercase tracking-wider mb-3 flex items-center gap-2">
+  1102→          <AlertTriangle className="h-4 w-4 text-red-500" /> Pending Events ({unresolvedEvents.length})
+  1103→        </h3>
+  1104→        <div className="space-y-3">
+  1105→          {unresolvedEvents.length === 0 ? (
+  1106→            <p className="text-sm text-muted-foreground">No pending events. End turn to see what happens next.</p>
+  1107→          ) : unresolvedEvents.map((event) => (
+  1108→            <div key={event.id} className="bg-card border border-red-500/30 rounded-lg p-4">
+  1109→              <div className="flex items-center gap-2 mb-2">
+  1110→                <Badge variant={event.severity === 'crisis' ? 'destructive' : event.severity === 'major' ? 'default' : 'secondary'}>
+  1111→                  {event.severity.toUpperCase()}
+  1112→                </Badge>
+  1113→                <Badge variant="secondary" className="text-[0.625rem]">{event.category}</Badge>
+  1114→              </div>
+  1115→              <h4 className="text-sm font-bold mb-1">{event.title}</h4>
+  1116→              <p className="text-xs text-muted-foreground mb-3">{event.description}</p>
+  1117→              {event.choices && event.choices.length > 0 && (
+  1118→                <Button size="sm" onClick={() => setShowEventModal(event)} className="bg-amber-600 hover:bg-amber-700">
+  1119→                  Make Decision
+  1120→                </Button>
+  1121→              )}
+  1122→            </div>
+  1123→          ))}
+  1124→        </div>
+  1125→      </div></HoverTip>
+  1126→
+  1127→      <Separator />
+  1128→
+  1129→      <div>
+  1130→        <h3 className="text-sm font-bold uppercase tracking-wider mb-3 text-muted-foreground">Resolved Events</h3>
+  1131→        <div className="space-y-2">
+  1132→          {resolvedEvents.map((event) => (
+  1133→            <div key={event.id} className="bg-card border border-border/50 rounded-lg p-3 opacity-70">
+  1134→              <div className="flex items-center gap-2">
+  1135→                <Check className="h-3 w-3 text-green-500" />
+  1136→                <span className="text-xs font-medium">{event.title}</span>
+  1137→                <span className="text-[0.625rem] text-muted-foreground">{MONTH_NAMES[event.month - 1]} {event.year}</span>
+  1138→              </div>
+  1139→            </div>
+  1140→          ))}
+  1141→        </div>
+  1142→      </div>
+  1143→    </div>
+  1144→  );
+  1145→}
+  1146→
+  1147→// ═══════════════════════════════════════════════════════
+  1148→// MAP SCREEN
+  1149→// ═══════════════════════════════════════════════════════
+  1150→
+  1151→function MapScreen() {
+  1152→  const { gameState, selectProvince } = useGameStore();
+  1153→  if (!gameState) return null;
+  1154→
+  1155→  return (
+  1156→    <div className="space-y-6">
+  1157→      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+  1158→        {/* Province Grid Map */}
+  1159→        <HoverTip tipId="province_overview" screenId="map"><div className="lg:col-span-2">
+  1160→          <div className="bg-card border border-border rounded-lg p-4">
+  1161→            <h3 className="text-sm font-bold uppercase tracking-wider mb-4">PROVINCES</h3>
+  1162→            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 gap-3">
+  1163→              {gameState.provinces.map((province) => (
+  1164→                <button
+  1165→                  key={province.id}
+  1166→                  onClick={() => selectProvince(province.id)}
+  1167→                  className="bg-muted hover:bg-muted/80 border border-border rounded-lg p-4 text-left transition-colors"
+  1168→                >
+  1169→                  <h4 className="text-sm font-bold">{province.name}</h4>
+  1170→                  <div className="grid grid-cols-2 gap-2 mt-2 text-[0.625rem]">
+  1171→                    <span>Pop: {(province.population / 1e6).toFixed(1)}M</span>
+  1172→                    <span>Urban: {province.urbanization.toFixed(0)}%</span>
+  1173→                    <span>Support: {province.politicalSupport.toFixed(0)}%</span>
+  1174→                    <span>Happy: {province.satisfactionIndex.toFixed(0)}%</span>
+  1175→                  </div>
+  1176→                  <div className="mt-2 h-1.5 bg-background rounded-full overflow-hidden">
+  1177→                    <div
+  1178→                      className="h-full rounded-full"
+  1179→                      style={{
+  1180→                        width: `${province.satisfactionIndex}%`,
+  1181→                        backgroundColor: province.satisfactionIndex > 50 ? '#4CAF50' : province.satisfactionIndex > 30 ? '#FF9800' : '#f44336',
+  1182→                      }}
+  1183→                    />
+  1184→                  </div>
+  1185→                </button>
+  1186→              ))}
+  1187→            </div>
+  1188→          </div>
+  1189→        </div></HoverTip>
+  1190→
+  1191→        {/* Province Details */}
+  1192→        <HoverTip tipId="province_support" screenId="map"><div className="bg-card border border-border rounded-lg p-4">
+  1193→          <h3 className="text-sm font-bold uppercase tracking-wider mb-3">PROVINCE COMPARISON</h3>
+  1194→          <ScrollArea className="h-[600px]">
+  1195→            <div className="space-y-3">
+  1196→              {gameState.provinces.map((province) => (
+  1197→                <div key={province.id} className="pb-3 border-b border-border/50 last:border-0">
+  1198→                  <h4 className="text-xs font-bold mb-1">{province.name}</h4>
+  1199→                  <div className="grid grid-cols-2 gap-1 text-[0.625rem] text-muted-foreground">
+  1200→                    <span>Health: {province.healthIndex.toFixed(0)}</span>
+  1201→                    <span>Education: {province.educationIndex.toFixed(0)}</span>
+  1202→                    <span>Infrastructure: {province.infrastructureIndex.toFixed(0)}</span>
+  1203→                    <span>Safety: {province.safetyIndex.toFixed(0)}</span>
+  1204→                    <span>Poverty: {province.povertyRate.toFixed(0)}%</span>
+  1205→                    <span>Unemployment: {province.unemploymentRate.toFixed(0)}%</span>
+  1206→                    <span>Agri: {province.agriculturalOutput}</span>
+  1207→                    <span>Mining: {province.miningOutput}</span>
+  1208→                  </div>
+  1209→                </div>
+  1210→              ))}
+  1211→            </div>
+  1212→          </ScrollArea>
+  1213→        </div></HoverTip>
+  1214→      </div>
+  1215→    </div>
+  1216→  );
+  1217→}
+  1218→
+  1219→// ═══════════════════════════════════════════════════════
+  1220→// NEWS SCREEN
+  1221→// ═══════════════════════════════════════════════════════
+  1222→
+  1223→function NewsScreen() {
+  1224→  const { gameState } = useGameStore();
+  1225→  if (!gameState) return null;
+  1226→
+  1227→  return (
+  1228→    <div className="space-y-4">
+  1229→      <HoverTip tipId="news_feed" screenId="news"><h3 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
+  1230→        <Newspaper className="h-4 w-4 text-amber-500" /> National News Feed
+  1231→      </h3></HoverTip>
+  1232→      <div className="space-y-3">
+  1233→        {gameState.newsHistory.map((article) => (
+  1234→          <div key={article.id} className="bg-card border border-border rounded-lg p-4">
+  1235→            <div className="flex items-center gap-2 mb-2">
+  1236→              <Badge variant={article.isBreaking ? 'destructive' : article.sentiment === 'positive' ? 'default' : article.sentiment === 'negative' ? 'destructive' : 'secondary'} className="text-[0.625rem]">
+  1237→                {article.isBreaking ? 'BREAKING' : article.sentiment.toUpperCase()}
+  1238→              </Badge>
+  1239→              <span className="text-[0.625rem] text-muted-foreground">{MONTH_NAMES[article.month - 1]} {article.year}</span>
+  1240→            </div>
+  1241→            <h4 className="text-sm font-bold mb-1">{article.headline}</h4>
+  1242→            <p className="text-xs text-muted-foreground">{article.subheadline}</p>
+  1243→            <p className="text-xs text-muted-foreground mt-2 line-clamp-3">{article.body}</p>
+  1244→          </div>
+  1245→        ))}
+  1246→      </div>
+  1247→    </div>
+  1248→  );
+  1249→}
+  1250→
+  1251→// ═══════════════════════════════════════════════════════
+  1252→// ELECTIONS SCREEN
+  1253→// ═══════════════════════════════════════════════════════
+  1254→
+  1255→function ElectionsScreen() {
+  1256→  const { gameState } = useGameStore();
+  1257→  if (!gameState) return null;
+  1258→
+  1259→  const election = gameState.elections[gameState.elections.length - 1];
+  1260→  if (!election) return null;
+  1261→
+  1262→  const monthsUntilElection = ((election.year - gameState.player.year) * 12 + election.month - gameState.player.month);
+  1263→  const turnsUntilElection = Math.max(0, monthsUntilElection);
+  1264→  const latestPoll = election.polls[election.polls.length - 1];
+  1265→  const isUrgent = turnsUntilElection <= 0 && !election.isOver;
+  1266→
+  1267→  return (
+  1268→    <div className="space-y-6">
+  1269→      {/* Urgency banner */}
+  1270→      {isUrgent && (
+  1271→        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 text-center">
+  1272→          <p className="text-sm font-bold text-red-500">🗳️ THE ELECTION IS HERE!</p>
+  1273→          <p className="text-xs text-muted-foreground mt-1">The next time you press End Turn, the election will be held. Make sure you're ready!</p>
+  1274→        </div>
+  1275→      )}
+  1276→
+  1277→      <HoverTip tipId="election_countdown" screenId="elections"><div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+  1278→        <StatCard label="Election Type" value={election.type.charAt(0).toUpperCase() + election.type.slice(1)} color="text-amber-500" />
+  1279→        <StatCard label="Election Date" value={`${MONTH_NAMES[election.month - 1]} ${election.year}`} color="text-foreground" />
+  1280→        <StatCard label="Turns Until" value={`${turnsUntilElection}`} color={turnsUntilElection < 12 ? 'text-red-500' : 'text-green-500'} />
+  1281→        <StatCard label="Current Polls" value={`${latestPoll?.playerPercent.toFixed(0) || 48}%`} color={(latestPoll?.playerPercent || 0) > 50 ? 'text-green-500' : 'text-yellow-500'} />
+  1282→      </div></HoverTip>
+  1283→
+  1284→      {/* Election Status */}
+  1285→      {election.isOver && (
+  1286→        <div className={`rounded-lg p-6 text-center ${election.playerWon ? 'bg-green-500/10 border border-green-500/30' : 'bg-red-500/10 border border-red-500/30'}`}>
+  1287→          {election.playerWon ? (
+  1288→            <>
+  1289→              <p className="text-2xl mb-2">🎉</p>
+  1290→              <h3 className="text-lg font-bold text-green-500">YOU WON THE ELECTION!</h3>
+  1291→              <p className="text-sm text-muted-foreground mt-2">
+  1292→                You secured {(election.playerVotes / (election.playerVotes + election.opponentVotes) * 100).toFixed(1)}% of the vote.
+  1293→                Your mandate is renewed!
+  1294→              </p>
+  1295→            </>
+  1296→          ) : (
+  1297→            <>
+  1298→              <p className="text-2xl mb-2">😢</p>
+  1299→              <h3 className="text-lg font-bold text-red-500">YOU LOST THE ELECTION</h3>
+  1300→              <p className="text-sm text-muted-foreground mt-2">
+  1301→                The opposition won with {(election.opponentVotes / (election.playerVotes + election.opponentVotes) * 100).toFixed(1)}% of the vote.
+  1302→                Your presidency is over.
+  1303→              </p>
+  1304→            </>
+  1305→          )}
+  1306→          {election.isOver && (
+  1307→            <div className="mt-4 flex justify-center gap-8">
+  1308→              <div>
+  1309→                <p className="text-[0.625rem] text-muted-foreground">Your Votes</p>
+  1310→                <p className="text-lg font-bold text-amber-500">{(election.playerVotes / 1e6).toFixed(1)}M</p>
+  1311→              </div>
+  1312→              <div>
+  1313→                <p className="text-[0.625rem] text-muted-foreground">Opposition Votes</p>
+  1314→                <p className="text-lg font-bold text-red-500">{(election.opponentVotes / 1e6).toFixed(1)}M</p>
+  1315→              </div>
+  1316→              <div>
+  1317→                <p className="text-[0.625rem] text-muted-foreground">Turnout</p>
+  1318→                <p className="text-lg font-bold">{election.turnoutPercent.toFixed(0)}%</p>
+  1319→              </div>
+  1320→            </div>
+  1321→          )}
+  1322→        </div>
+  1323→      )}
+  1324→
+  1325→      <div className="bg-card border border-border rounded-lg p-6">
+  1326→        <h3 className="text-lg font-bold uppercase tracking-wider mb-4">Campaign Status</h3>
+  1327→        <p className="text-sm text-muted-foreground mb-4">
+  1328→          {election.isOver ? (election.playerWon ? 'Congratulations on your victory! A new election cycle has begun.' : 'The election has been decided. Your time in office is over.') :
+  1329→           turnsUntilElection > 24 ? 'The next election is still far away. Focus on governance to build popularity.' :
+  1330→           turnsUntilElection > 12 ? 'Election season approaches. Start planning your campaign strategy.' :
+  1331→           turnsUntilElection > 6 ? 'Campaign time! Start holding rallies and announcing your manifesto.' :
+  1332→           turnsUntilElection > 0 ? 'The election is imminent! Final push for votes.' :
+  1333→           'The election is THIS MONTH. Make every decision count!'}
+  1334→        </p>
+  1335→
+  1336→        {/* Polls Chart */}
+  1337→        <div className="h-40 flex items-end gap-2 mb-4">
+  1338→          {election.polls.slice(-20).map((poll, i) => (
+  1339→            <div key={i} className="flex-1 flex flex-col gap-0.5">
+  1340→              <div className="flex gap-0.5 items-end h-32">
+  1341→                <div className="flex-1 bg-amber-500 rounded-t" style={{ height: `${poll.playerPercent}%` }} />
+  1342→                <div className="flex-1 bg-red-500 rounded-t" style={{ height: `${poll.opponentPercent}%` }} />
+  1343→              </div>
+  1344→              <span className="text-[0.5625rem] text-center text-muted-foreground">T{poll.turn}</span>
+  1345→            </div>
+  1346→          ))}
+  1347→        </div>
+  1348→
+  1349→        {/* Historical Results */}
+  1350→        {election.historicalResults && (
+  1351→          <div>
+  1352→            <h4 className="text-sm font-bold mb-2">Historical Election Results</h4>
+  1353→            <div className="space-y-2">
+  1354→              {election.historicalResults.map((result, i) => (
+  1355→                <div key={i} className="flex items-center gap-3">
+  1356→                  <span className="text-xs w-12">{result.year}</span>
+  1357→                  <div className="flex-1 flex h-4 rounded overflow-hidden">
+  1358→                    <div className="bg-amber-500 flex items-center justify-center" style={{ width: `${result.playerParty}%` }}>
+  1359→                      <span className="text-[0.5625rem] font-bold">{result.playerParty}%</span>
+  1360→                    </div>
+  1361→                    <div className="bg-red-500 flex items-center justify-center" style={{ width: `${result.opposition}%` }}>
+  1362→                      <span className="text-[0.5625rem] font-bold">{result.opposition}%</span>
+  1363→                    </div>
+  1364→                  </div>
+  1365→                </div>
+  1366→              ))}
+  1367→            </div>
+  1368→          </div>
+  1369→        )}
+  1370→      </div>
+  1371→
+  1372→      {/* Election Tips */}
+  1373→      {!election.isOver && (
+  1374→        <div className="bg-card border border-amber-500/20 rounded-lg p-4">
+  1375→          <h4 className="text-xs font-bold uppercase tracking-wider text-amber-500 mb-2 flex items-center gap-1.5">
+  1376→            <Lightbulb className="h-3.5 w-3.5" /> Election Strategy
+  1377→          </h4>
+  1378→          <ul className="space-y-1 text-xs text-muted-foreground">
+  1379→            <li>• Your poll numbers are based on popularity, satisfaction, and legitimacy</li>
+  1380→            <li>• Keep inflation low and GDP growing to boost your numbers</li>
+  1381→            <li>• Resolve crises quickly — unresolved events hurt your standing</li>
+  1382→            {turnsUntilElection <= 6 && <li className="text-red-500 font-bold">• ⚠️ URGENT: Focus all efforts on boosting popularity now!</li>}
+  1383→          </ul>
+  1384→        </div>
+  1385→      )}
+  1386→    </div>
+  1387→  );
+  1388→}
+  1389→
+  1390→// ═══════════════════════════════════════════════════════
+  1391→// GAME OVER SCREEN
+  1392→// ═══════════════════════════════════════════════════════
+  1393→
+  1394→function GameOverScreen() {
+  1395→  const { gameState, resetGame, setShowNewGameDialog } = useGameStore();
+  1396→  if (!gameState) return null;
+  1397→
+  1398→  const { player, economic, citizenSatisfaction, national } = gameState;
+  1399→  const isElectionLoss = gameState.gameOverReason?.includes('ELECTION');
+  1400→
+  1401→  const turnsSurvived = player.turn;
+  1402→  const yearsSurvived = turnsSurvived / 12;
+  1403→
+  1404→  return (
+  1405→    <div className="flex items-center justify-center min-h-[60vh]">
+  1406→      <motion.div
+  1407→        initial={{ opacity: 0, scale: 0.9 }}
+  1408→        animate={{ opacity: 1, scale: 1 }}
+  1409→        className={`rounded-lg p-8 max-w-lg text-center ${isElectionLoss ? 'bg-card border border-red-500/30' : 'bg-card border border-red-500/30'}`}
+  1410→      >
+  1411→        {isElectionLoss ? (
+  1412→          <div className="text-6xl mb-4">🗳️</div>
+  1413→        ) : (
+  1414→          <Skull className="h-16 w-16 text-red-500 mx-auto mb-4" />
+  1415→        )}
+  1416→        <h2 className="text-2xl font-bold mb-2">GAME OVER</h2>
+  1417→        <p className="text-sm text-muted-foreground mb-4">{gameState.gameOverReason}</p>
+  1418→
+  1419→        <div className="grid grid-cols-2 gap-3 mb-6 text-left">
+  1420→          <div className="bg-muted rounded p-3">
+  1421→            <p className="text-[0.625rem] text-muted-foreground">Turns Survived</p>
+  1422→            <p className="text-lg font-bold">{turnsSurvived}</p>
+  1423→          </div>
+  1424→          <div className="bg-muted rounded p-3">
+  1425→            <p className="text-[0.625rem] text-muted-foreground">Years in Office</p>
+  1426→            <p className="text-lg font-bold">{yearsSurvived.toFixed(1)}</p>
+  1427→          </div>
+  1428→          <div className="bg-muted rounded p-3">
+  1429→            <p className="text-[0.625rem] text-muted-foreground">Final GDP</p>
+  1430→            <p className="text-lg font-bold">${economic.gdp.toFixed(1)}B</p>
+  1431→          </div>
+  1432→          <div className="bg-muted rounded p-3">
+  1433→            <p className="text-[0.625rem] text-muted-foreground">Final Popularity</p>
+  1434→            <p className="text-lg font-bold">{player.popularity.toFixed(0)}%</p>
+  1435→          </div>
+  1436→          <div className="bg-muted rounded p-3">
+  1437→            <p className="text-[0.625rem] text-muted-foreground">Population</p>
+  1438→            <p className="text-lg font-bold">{(national.population / 1e6).toFixed(1)}M</p>
+  1439→          </div>
+  1440→          <div className="bg-muted rounded p-3">
+  1441→            <p className="text-[0.625rem] text-muted-foreground">Satisfaction</p>
+  1442→            <p className="text-lg font-bold">{citizenSatisfaction.overall.toFixed(0)}%</p>
+  1443→          </div>
+  1444→        </div>
+  1445→
+  1446→        <p className="text-xs text-muted-foreground/70 italic mb-6">
+  1447→          &ldquo;Rwendo rweupenyu haruna kudzoka&rdquo; — The journey of life has no return
+  1448→        </p>
+  1449→
+  1450→        <div className="flex gap-3">
+  1451→          <Button onClick={() => { resetGame(); setShowNewGameDialog(true); }} className="flex-1 bg-amber-600 hover:bg-amber-700">
+  1452→            <Gamepad2 className="h-4 w-4 mr-2" /> New Game
+  1453→          </Button>
+  1454→        </div>
+  1455→      </motion.div>
+  1456→    </div>
+  1457→  );
+  1458→}
+  1459→
+  1460→// ═══════════════════════════════════════════════════════
+  1461→// START SCREEN
+  1462→// ═══════════════════════════════════════════════════════
+  1463→
+  1464→function StartScreen() {
+  1465→  const { startNewGame, setShowNewGameDialog, fontSize, darkMode, setDarkMode, setFontSize } = useGameStore();
+  1466→  const { setTheme } = useTheme();
+  1467→  const [showStartSettings, setShowStartSettings] = useState(false);
+  1468→  const mountedRef = useRef(false);
+  1469→
+  1470→  // Mark as mounted and sync dark mode from store to next-themes (one-way)
+  1471→  useEffect(() => {
+  1472→    mountedRef.current = true;
+  1473→    setTheme(darkMode ? 'dark' : 'light');
+  1474→  }, []);
+  1475→
+  1476→  // Sync dark mode changes after mount
+  1477→  useEffect(() => {
+  1478→    if (!mountedRef.current) return;
+  1479→    setTheme(darkMode ? 'dark' : 'light');
+  1480→  }, [darkMode, setTheme]);
+  1481→
+  1482→  // Apply font size via CSS custom property
+  1483→  useEffect(() => {
+  1484→    document.documentElement.style.setProperty('--mgza-font-size', FONT_SIZE_MAP[fontSize]);
+  1485→  }, [fontSize]);
+  1486→
+  1487→  return (
+  1488→    <div className="flex flex-col min-h-[80vh] bg-gradient-to-b from-[#2E8B37]/5 via-background to-background">
+  1489→      {/* Zimbabwe Flag Stripe Bar */}
+  1490→      <div className="w-full flex flex-col">
+  1491→        <div className="w-full h-1" style={{ backgroundColor: '#2E8B37' }} />
+  1492→        <div className="w-full h-1" style={{ backgroundColor: '#FFFFFF' }} />
+  1493→        <div className="w-full h-1" style={{ backgroundColor: '#CC2936' }} />
+  1494→      </div>
+  1495→
+  1496→      {/* Settings bar */}
+  1497→      <div className="flex justify-end p-2">
+  1498→        <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => setShowStartSettings(!showStartSettings)}>
+  1499→          <Settings className="h-3.5 w-3.5 mr-1.5" /> Settings
+  1500→        </Button>
+  1501→      </div>
+  1502→
+  1503→      {/* Inline Settings Panel */}
+  1504→      {showStartSettings && (
+  1505→        <motion.div
+  1506→          initial={{ opacity: 0, height: 0 }}
+  1507→          animate={{ opacity: 1, height: 'auto' }}
+  1508→          exit={{ opacity: 0, height: 0 }}
+  1509→          className="mx-auto max-w-md w-full px-4 mb-4"
+  1510→        >
+  1511→          <div className="bg-card border border-border rounded-lg p-4 space-y-4">
+  1512→            {/* Dark Mode */}
+  1513→            <div className="flex items-center justify-between">
+  1514→              <div className="flex items-center gap-2">
+  1515→                {darkMode ? <Moon className="h-4 w-4 text-indigo-400" /> : <Sun className="h-4 w-4 text-amber-500" />}
+  1516→                <span className="text-sm font-medium">Dark Mode</span>
+  1517→              </div>
+  1518→              <Switch checked={darkMode} onCheckedChange={setDarkMode} />
+  1519→            </div>
+  1520→
+  1521→            {/* Text Size */}
+  1522→            <div>
+  1523→              <div className="flex items-center gap-2 mb-2">
+  1524→                <Type className="h-4 w-4 text-amber-500" />
+  1525→                <span className="text-sm font-medium">Text Size</span>
+  1526→              </div>
+  1527→              <div className="grid grid-cols-4 gap-2">
+  1528→                {(['small', 'medium', 'large', 'xlarge'] as FontSize[]).map((size) => (
+  1529→                  <button
+  1530→                    key={size}
+  1531→                    onClick={() => setFontSize(size)}
+  1532→                    className={`rounded-lg border p-2 text-center transition-all ${
+  1533→                      fontSize === size
+  1534→                        ? 'border-amber-500 bg-amber-500/10 ring-1 ring-amber-500'
+  1535→                        : 'border-border bg-card hover:border-amber-500/50'
+  1536→                    }`}
+  1537→                  >
+  1538→                    <span className={`block font-bold leading-none ${
+  1539→                      size === 'small' ? 'text-xs' : size === 'medium' ? 'text-sm' : size === 'large' ? 'text-base' : 'text-lg'
+  1540→                    }`}>
+  1541→                      Aa
+  1542→                    </span>
+  1543→                    <span className="text-[0.625rem] text-muted-foreground mt-1 block capitalize">{size}</span>
+  1544→                  </button>
+  1545→                ))}
+  1546→              </div>
+  1547→            </div>
+  1548→          </div>
+  1549→        </motion.div>
+  1550→      )}
+  1551→
+  1552→      <div className="flex-1 flex items-center justify-center">
+  1553→        <motion.div
+  1554→          initial={{ opacity: 0, y: 20 }}
+  1555→          animate={{ opacity: 1, y: 0 }}
+  1556→          transition={{ duration: 0.6 }}
+  1557→          className="text-center max-w-xl px-4"
+  1558→        >
+  1559→          <div className="mb-6">
+  1560→            <div className="text-6xl mb-4">🇿🇼</div>
+  1561→            <h1 className="text-4xl md:text-5xl font-black tracking-tight mb-3">
+  1562→              <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#2E8B37] to-[#E8A817]">MAKE GREAT</span><br />
+  1563→              <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#E8A817] to-[#2E8B37]">ZIMBABWE</span><br />
+  1564→              <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#2E8B37] to-[#E8A817]">AGAIN</span>
+  1565→            </h1>
+  1566→            <p className="text-sm text-muted-foreground font-medium">
+  1567→              Political Strategy &amp; Economic Simulation
+  1568→            </p>
+  1569→            <p className="text-xs text-muted-foreground/70 italic mt-1">
+  1570→              &ldquo;Ivhu risina mutsindo hairevi&rdquo; — A tree without roots cannot stand
+  1571→            </p>
+  1572→            <div className="flex items-center justify-center gap-2 mt-3">
+  1573→              <Badge variant="secondary">Turn-Based</Badge>
+  1574→              <Badge variant="secondary">Strategy</Badge>
+  1575→              <Badge variant="secondary">Simulation</Badge>
+  1576→            </div>
+  1577→          </div>
+  1578→
+  1579→          {/* Feature Cards */}
+  1580→          <div className="grid grid-cols-3 gap-3 mb-8">
+  1581→            <div className="bg-card border border-border rounded-lg p-3 text-center shadow-sm">
+  1582→              <div className="text-2xl mb-1">🇿🇼</div>
+  1583→              <p className="text-xs font-bold">Lead Zimbabwe</p>
+  1584→              <p className="text-[0.625rem] text-muted-foreground mt-0.5">From Councillor to President</p>
+  1585→            </div>
+  1586→            <div className="bg-card border border-border rounded-lg p-3 text-center shadow-sm">
+  1587→              <div className="text-2xl mb-1">📊</div>
+  1588→              <p className="text-xs font-bold">Manage Economy</p>
+  1589→              <p className="text-[0.625rem] text-muted-foreground mt-0.5">Balance budgets &amp; trade</p>
+  1590→            </div>
+  1591→            <div className="bg-card border border-border rounded-lg p-3 text-center shadow-sm">
+  1592→              <div className="text-2xl mb-1">🗳️</div>
+  1593→              <p className="text-xs font-bold">Win Elections</p>
+  1594→              <p className="text-[0.625rem] text-muted-foreground mt-0.5">Secure the people&apos;s mandate</p>
+  1595→            </div>
+  1596→          </div>
+  1597→
+  1598→          <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
+  1599→            Begin your political career from Councillor to President.
+  1600→            Navigate corruption, manage infrastructure, balance budgets,
+  1601→            and make impossible decisions that shape the future of millions.
+  1602→            There are no perfect choices — only trade-offs.
+  1603→          </p>
+  1604→
+  1605→          <Button
+  1606→            size="lg"
+  1607→            className="bg-[#2E8B37] hover:bg-[#247A2E] text-lg font-bold px-10 py-7 rounded-xl shadow-lg shadow-green-500/20"
+  1608→            onClick={() => setShowNewGameDialog(true)}
+  1609→          >
+  1610→            <Play className="h-5 w-5 mr-2" /> Start New Game
+  1611→          </Button>
+  1612→
+  1613→          <p className="text-[0.625rem] text-muted-foreground/50 mt-6">
+  1614→            v1.0 — Made with ❤️ for Zimbabwe
+  1615→          </p>
+  1616→        </motion.div>
+  1617→      </div>
+  1618→    </div>
+  1619→  );
+  1620→}
+  1621→
+  1622→// ═══════════════════════════════════════════════════════
+  1623→// NEW GAME DIALOG
+  1624→// ═══════════════════════════════════════════════════════
+  1625→
+  1626→function NewGameDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  1627→  const { startNewGame, enableTips, setEnableTips } = useGameStore();
+  1628→  const [name, setName] = useState('Comrade Leader');
+  1629→  const [partyName, setPartyName] = useState('Zimbabwe Peoples Party');
+  1630→  const [difficulty, setDifficulty] = useState<'easy' | 'normal' | 'hard'>('normal');
+  1631→
+  1632→  const handleStart = () => {
+  1633→    startNewGame(name, partyName, difficulty);
+  1634→  };
+  1635→
+  1636→  return (
+  1637→    <Dialog open={open} onOpenChange={onOpenChange}>
+  1638→      <DialogContent className="sm:max-w-md">
+  1639→        <DialogHeader>
+  1640→          <DialogTitle>Start New Game</DialogTitle>
+  1641→          <DialogDescription>Configure your political career. Every decision matters.</DialogDescription>
+  1642→        </DialogHeader>
+  1643→        <div className="space-y-4 py-4">
+  1644→          <div className="space-y-2">
+  1645→            <Label>Your Name</Label>
+  1646→            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter your name" />
+  1647→          </div>
+  1648→          <div className="space-y-2">
+  1649→            <Label>Party Name</Label>
+  1650→            <Input value={partyName} onChange={(e) => setPartyName(e.target.value)} placeholder="Enter party name" />
+  1651→          </div>
+  1652→          <div className="space-y-2">
+  1653→            <Label>Difficulty</Label>
+  1654→            <Select value={difficulty} onValueChange={(v) => setDifficulty(v as any)}>
+  1655→              <SelectTrigger>
+  1656→                <SelectValue />
+  1657→              </SelectTrigger>
+  1658→              <SelectContent>
+  1659→                <SelectItem value="easy">
+  1660→                  <div><span className="font-bold">Easy</span> — For new players. More forgiving.</div>
+  1661→                </SelectItem>
+  1662→                <SelectItem value="normal">
+  1663→                  <div><span className="font-bold">Normal</span> — The intended experience.</div>
+  1664→                </SelectItem>
+  1665→                <SelectItem value="hard">
+  1666→                  <div><span className="font-bold">Hard</span> — For experienced strategists.</div>
+  1667→                </SelectItem>
+  1668→              </SelectContent>
+  1669→            </Select>
+  1670→          </div>
+  1671→          <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-card">
+  1672→            <div className="flex items-center gap-3">
+  1673→              <div className="flex items-center justify-center w-8 h-8 rounded-md bg-amber-500/15 text-amber-500">
+  1674→                <Lightbulb className="h-4 w-4" />
+  1675→              </div>
+  1676→              <div>
+  1677→                <p className="text-sm font-medium">Enable Hover Tips</p>
+  1678→                <p className="text-[0.625rem] text-muted-foreground">Show strategy tips when hovering over game elements</p>
+  1679→              </div>
+  1680→            </div>
+  1681→            <Switch checked={enableTips} onCheckedChange={setEnableTips} />
+  1682→          </div>
+  1683→        </div>
+  1684→        <DialogFooter>
+  1685→          <Button onClick={handleStart} className="bg-amber-600 hover:bg-amber-700">
+  1686→            <Play className="h-4 w-4 mr-2" /> Begin Your Journey
+  1687→          </Button>
+  1688→        </DialogFooter>
+  1689→      </DialogContent>
+  1690→    </Dialog>
+  1691→  );
+  1692→}
+  1693→
+  1694→// ═══════════════════════════════════════════════════════
+  1695→// EVENT MODAL
+  1696→// ═══════════════════════════════════════════════════════
+  1697→
+  1698→function EventModal() {
+  1699→  const { showEventModal, resolveEvent, setShowEventModal } = useGameStore();
+  1700→  const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
+  1701→
+  1702→  if (!showEventModal || !showEventModal.choices || showEventModal.choices.length === 0) return null;
+  1703→
+  1704→  const event = showEventModal;
+  1705→
+  1706→  const handleResolve = () => {
+  1707→    if (selectedChoice) {
+  1708→      resolveEvent(event.id, selectedChoice);
+  1709→      setSelectedChoice(null);
+  1710→    }
+  1711→  };
+  1712→
+  1713→  return (
+  1714→    <Dialog open={!!showEventModal} onOpenChange={(open) => { if (!open) { setShowEventModal(null); setSelectedChoice(null); } }}>
+  1715→      <DialogContent className="sm:max-w-lg">
+  1716→        <DialogHeader>
+  1717→          <div className="flex items-center gap-2">
+  1718→            <Badge variant={event.severity === 'crisis' ? 'destructive' : event.severity === 'major' ? 'default' : 'secondary'}>
+  1719→              {event.severity.toUpperCase()}
+  1720→            </Badge>
+  1721→            <Badge variant="secondary" className="text-[0.625rem]">{event.category}</Badge>
+  1722→          </div>
+  1723→          <DialogTitle className="text-lg">{event.title}</DialogTitle>
+  1724→          <DialogDescription className="text-sm leading-relaxed">{event.description}</DialogDescription>
+  1725→        </DialogHeader>
+  1726→
+  1727→        <div className="space-y-3 py-2">
+  1728→          {event.choices!.map((choice) => (
+  1729→            <button
+  1730→              key={choice.id}
+  1731→              onClick={() => setSelectedChoice(choice.id)}
+  1732→              className={`w-full text-left rounded-lg border p-4 transition-all ${
+  1733→                selectedChoice === choice.id
+  1734→                  ? 'border-amber-500 bg-amber-500/10 ring-1 ring-amber-500'
+  1735→                  : 'border-border bg-card hover:border-amber-500/50'
+  1736→              }`}
+  1737→            >
+  1738→              <h4 className="text-sm font-bold mb-1">{choice.text}</h4>
+  1739→              <p className="text-xs text-muted-foreground">{choice.shortDescription}</p>
+  1740→              <div className="flex gap-3 mt-2">
+  1741→                <span className={`text-[0.625rem] ${choice.popularityImpact > 0 ? 'text-green-500' : 'text-red-500'}`}>
+  1742→                  Popularity: {choice.popularityImpact > 0 ? '+' : ''}{choice.popularityImpact}
+  1743→                </span>
+  1744→                <span className={`text-[0.625rem] ${choice.politicalRisk > 0 ? 'text-green-500' : choice.politicalRisk < 0 ? 'text-red-500' : 'text-muted-foreground'}`}>
+  1745→                  Influence: {choice.politicalRisk > 0 ? '+' : ''}{choice.politicalRisk}
+  1746→                </span>
+  1747→              </div>
+  1748→            </button>
+  1749→          ))}
+  1750→        </div>
+  1751→
+  1752→        <DialogFooter>
+  1753→          <Button onClick={handleResolve} disabled={!selectedChoice} className="bg-amber-600 hover:bg-amber-700">
+  1754→            Confirm Decision
+  1755→          </Button>
+  1756→        </DialogFooter>
+  1757→      </DialogContent>
+  1758→    </Dialog>
+  1759→  );
+  1760→}
+  1761→
+  1762→// ═══════════════════════════════════════════════════════
+  1763→// MINISTER REPLACEMENT DIALOG
+  1764→// ═══════════════════════════════════════════════════════
+  1765→
+  1766→function MinisterReplacementDialog() {
+  1767→  const { gameState, showReplacementDialog, replaceMinister, setShowReplacementDialog } = useGameStore();
+  1768→  const [selectedCandidate, setSelectedCandidate] = useState<string | null>(null);
+  1769→
+  1770→  if (!showReplacementDialog || !gameState) return null;
+  1771→
+  1772→  const { portfolio, candidates } = showReplacementDialog;
+  1773→  const selected = candidates.find(c => c.id === selectedCandidate);
+  1774→
+  1775→  const handleReplace = () => {
+  1776→    if (selectedCandidate && selected) {
+  1777→      replaceMinister(selectedCandidate, selected.popularityImpact);
+  1778→      setSelectedCandidate(null);
+  1779→    }
+  1780→  };
+  1781→
+  1782→  const handleSkip = () => {
+  1783→    // Leave the position vacant — popularity penalty
+  1784→    replaceMinister('', -5);
+  1785→    setSelectedCandidate(null);
+  1786→  };
+  1787→
+  1788→  return (
+  1789→    <Dialog open={!!showReplacementDialog} onOpenChange={(open) => { if (!open) { setShowReplacementDialog(null); setSelectedCandidate(null); } }}>
+  1790→      <DialogContent className="sm:max-w-xl">
+  1791→        <DialogHeader>
+  1792→          <DialogTitle className="text-lg">Choose a Replacement — {portfolio}</DialogTitle>
+  1793→          <DialogDescription>
+  1794→            The previous minister has been dismissed. Select a replacement from 3 candidates. Your choice will affect your public standing.
+  1795→          </DialogDescription>
+  1796→        </DialogHeader>
+  1797→
+  1798→        <div className="space-y-3 py-2">
+  1799→          {candidates.map((candidate) => (
+  1800→            <button
+  1801→              key={candidate.id}
+  1802→              onClick={() => setSelectedCandidate(candidate.id)}
+  1803→              className={`w-full text-left rounded-lg border p-4 transition-all ${
+  1804→                selectedCandidate === candidate.id
+  1805→                  ? 'border-amber-500 bg-amber-500/10 ring-1 ring-amber-500'
+  1806→                  : 'border-border bg-card hover:border-amber-500/50'
+  1807→              }`}
+  1808→            >
+  1809→              <div className="flex items-center justify-between mb-2">
+  1810→                <div>
+  1811→                  <h4 className="text-sm font-bold">{candidate.name}</h4>
+  1812→                  <p className="text-[0.625rem] text-muted-foreground">{candidate.faction} • Age {candidate.age}</p>
+  1813→                </div>
+  1814→                <span className={`text-xs font-bold ${candidate.popularityImpact > 0 ? 'text-green-500' : candidate.popularityImpact < 0 ? 'text-red-500' : 'text-muted-foreground'}`}>
+  1815→                  {candidate.popularityImpact > 0 ? '+' : ''}{candidate.popularityImpact} Popularity
+  1816→                </span>
+  1817→              </div>
+  1818→              <p className="text-xs text-muted-foreground mb-2">{candidate.description}</p>
+  1819→              <div className="grid grid-cols-4 gap-2">
+  1820→                <MiniStat label="Competence" value={candidate.competence} />
+  1821→                <MiniStat label="Loyalty" value={candidate.loyalty} />
+  1822→                <MiniStat label="Corruption" value={candidate.corruption} inverted />
+  1823→                <MiniStat label="Public Image" value={candidate.popularity} />
+  1824→              </div>
+  1825→            </button>
+  1826→          ))}
+  1827→        </div>
+  1828→
+  1829→        <DialogFooter className="flex gap-2">
+  1830→          <Button variant="ghost" size="sm" onClick={handleSkip} className="text-xs">
+  1831→            Leave Vacant (-5 Popularity)
+  1832→          </Button>
+  1833→          <Button onClick={handleReplace} disabled={!selectedCandidate} className="bg-amber-600 hover:bg-amber-700 text-xs">
+  1834→            <Check className="h-3.5 w-3.5 mr-1" /> Appoint Selected
+  1835→          </Button>
+  1836→        </DialogFooter>
+  1837→      </DialogContent>
+  1838→    </Dialog>
+  1839→  );
+  1840→}
+  1841→
+  1842→// ═══════════════════════════════════════════════════════
+  1843→// SETTINGS DIALOG
+  1844→// ═══════════════════════════════════════════════════════
+  1845→
+  1846→function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  1847→  const { fontSize, setFontSize, darkMode, setDarkMode } = useGameStore();
+  1848→
+  1849→  return (
+  1850→    <Dialog open={open} onOpenChange={onOpenChange}>
+  1851→      <DialogContent className="sm:max-w-md">
+  1852→        <DialogHeader>
+  1853→          <DialogTitle className="flex items-center gap-2">
+  1854→            <Settings className="h-4 w-4 text-amber-500" /> Settings
+  1855→          </DialogTitle>
+  1856→          <DialogDescription>Customize your game experience.</DialogDescription>
+  1857→        </DialogHeader>
+  1858→        <div className="space-y-5 py-4">
+  1859→          {/* Dark Mode Toggle */}
+  1860→          <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-card">
+  1861→            <div className="flex items-center gap-3">
+  1862→              <div className={`flex items-center justify-center w-8 h-8 rounded-md ${darkMode ? 'bg-indigo-500/15 text-indigo-400' : 'bg-amber-500/15 text-amber-500'}`}>
+  1863→                {darkMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+  1864→              </div>
+  1865→              <div>
+  1866→                <p className="text-sm font-medium">Dark Mode</p>
+  1867→                <p className="text-[0.625rem] text-muted-foreground">Switch between light and dark theme</p>
+  1868→              </div>
+  1869→            </div>
+  1870→            <Switch checked={darkMode} onCheckedChange={setDarkMode} />
+  1871→          </div>
+  1872→
+  1873→          {/* Text Size */}
+  1874→          <div className="p-3 rounded-lg border border-border bg-card">
+  1875→            <div className="flex items-center gap-3 mb-3">
+  1876→              <div className="flex items-center justify-center w-8 h-8 rounded-md bg-amber-500/15 text-amber-500">
+  1877→                <Type className="h-4 w-4" />
+  1878→              </div>
+  1879→              <div>
+  1880→                <p className="text-sm font-medium">Text Size</p>
+  1881→                <p className="text-[0.625rem] text-muted-foreground">Choose text size that is comfortable for you</p>
+  1882→              </div>
+  1883→            </div>
+  1884→            <div className="grid grid-cols-4 gap-2">
+  1885→              {(['small', 'medium', 'large', 'xlarge'] as FontSize[]).map((size) => (
+  1886→                <button
+  1887→                  key={size}
+  1888→                  onClick={() => setFontSize(size)}
+  1889→                  className={`rounded-lg border p-2 text-center transition-all ${
+  1890→                    fontSize === size
+  1891→                      ? 'border-amber-500 bg-amber-500/10 ring-1 ring-amber-500'
+  1892→                      : 'border-border bg-card hover:border-amber-500/50'
+  1893→                  }`}
+  1894→                >
+  1895→                  <span className={`block font-bold leading-none ${
+  1896→                    size === 'small' ? 'text-xs' : size === 'medium' ? 'text-sm' : size === 'large' ? 'text-base' : 'text-lg'
+  1897→                  }`}>
+  1898→                    Aa
+  1899→                  </span>
+  1900→                  <span className="text-[0.625rem] text-muted-foreground mt-1 block capitalize">{size}</span>
+  1901→                </button>
+  1902→              ))}
+  1903→            </div>
+  1904→          </div>
+  1905→        </div>
+  1906→        <DialogFooter>
+  1907→          <Button variant="secondary" onClick={() => onOpenChange(false)}>Close</Button>
+  1908→        </DialogFooter>
+  1909→      </DialogContent>
+  1910→    </Dialog>
+  1911→  );
+  1912→}
+  1913→
+  1914→// ═══════════════════════════════════════════════════════
+  1915→// SHARED UI COMPONENTS
+  1916→// ═══════════════════════════════════════════════════════
+  1917→
+  1918→function StatCard({ label, value, icon, color = 'text-foreground' }: { label: string; value: string | number; icon?: React.ReactNode; color?: string }) {
+  1919→  return (
+  1920→    <div className="bg-card border border-border rounded-lg p-4" style={{ borderLeftWidth: '3px', borderLeftColor: color.startsWith('text-green') ? '#2E8B37' : color.startsWith('text-yellow') ? '#E8A817' : color.startsWith('text-red') ? '#CC2936' : '#888' }}>
+  1921→      <div className="flex items-center justify-between">
+  1922→        <span className="text-[0.625rem] text-muted-foreground uppercase tracking-wider font-medium">{label}</span>
+  1923→        {icon && <span className={color}>{icon}</span>}
+  1924→      </div>
+  1925→      <p className={`text-xl font-bold mt-1.5 ${color}`}>{value}</p>
+  1926→    </div>
+  1927→  );
+  1928→}
+  1929→
+  1930→function MetricCard({ title, items }: { title: string; items: { label: string; value: string }[] }) {
+  1931→  return (
+  1932→    <div className="bg-card border border-border rounded-lg p-4" style={{ borderTopWidth: '2px', borderTopColor: '#E8A817' }}>
+  1933→      <h3 className="text-[0.625rem] font-bold text-muted-foreground uppercase tracking-wider mb-3">{title}</h3>
+  1934→      <div className="space-y-2.5">
+  1935→        {items.map((item, i) => (
+  1936→          <div key={i} className="flex items-center justify-between">
+  1937→            <span className="text-xs text-muted-foreground">{item.label}</span>
+  1938→            <span className="text-xs font-bold tabular-nums">{item.value}</span>
+  1939→          </div>
+  1940→        ))}
+  1941→      </div>
+  1942→    </div>
+  1943→  );
+  1944→}
+  1945→
+  1946→function MiniStat({ label, value, suffix = '', inverted = false }: { label: string; value: number; suffix?: string; inverted?: boolean }) {
+  1947→  const color = inverted
+  1948→    ? value > 60 ? 'text-red-500' : value > 30 ? 'text-yellow-500' : 'text-green-500'
+  1949→    : value > 60 ? 'text-green-500' : value > 30 ? 'text-yellow-500' : 'text-red-500';
+  1950→  return (
+  1951→    <div>
+  1952→      <span className="text-[0.625rem] text-muted-foreground">{label}</span>
+  1953→      <p className={`text-xs font-bold ${color}`}>{value}{suffix}</p>
+  1954→    </div>
+  1955→  );
+  1956→}
+  1957→
+  1958→function TrendCard({ title, data, color, formatValue }: { title: string; data: { label: string; value: number }[]; color: string; formatValue: (v: number) => string }) {
+  1959→  const maxVal = Math.max(...data.map(d => d.value), 1);
+  1960→  return (
+  1961→    <div className="bg-card border border-border rounded-lg p-4">
+  1962→      <h3 className="text-[0.625rem] font-bold text-muted-foreground uppercase tracking-wider mb-3">{title}</h3>
+  1963→      <div className="flex items-end gap-1 h-24">
+  1964→        {data.map((point, i) => (
+  1965→          <div key={i} className="flex-1 flex flex-col items-center gap-1">
+  1966→            <span className="text-[0.5625rem] text-muted-foreground font-medium">{formatValue(point.value)}</span>
+  1967→            <div className="w-full rounded-t" style={{ height: `${(point.value / maxVal) * 80}px`, background: `linear-gradient(to top, ${color}, ${color}88)` }} />
+  1968→            <span className="text-[0.5rem] text-muted-foreground font-medium">{point.label}</span>
+  1969→          </div>
+  1970→        ))}
+  1971→      </div>
+  1972→    </div>
+  1973→  );
+  1974→}
+  1975→
+  1976→// ═══════════════════════════════════════════════════════
+  1977→// NAVIGATION ITEMS
+  1978→// ═══════════════════════════════════════════════════════
+  1979→
+  1980→const NAV_ITEMS: { id: GameScreen; label: string; icon: React.ReactNode }[] = [
+  1981→  { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-4 w-4" /> },
+  1982→  { id: 'budget', label: 'Budget', icon: <DollarSign className="h-4 w-4" /> },
+  1983→  { id: 'infrastructure', label: 'Infrastructure', icon: <Building2 className="h-4 w-4" /> },
+  1984→  { id: 'politics', label: 'Politics', icon: <Landmark className="h-4 w-4" /> },
+  1985→  { id: 'ministers', label: 'Ministers', icon: <Users className="h-4 w-4" /> },
+  1986→  { id: 'energy', label: 'Energy', icon: <Zap className="h-4 w-4" /> },
+  1987→  { id: 'water', label: 'Water', icon: <Droplets className="h-4 w-4" /> },
+  1988→  { id: 'map', label: 'Map', icon: <Map className="h-4 w-4" /> },
+  1989→  { id: 'events', label: 'Events', icon: <AlertTriangle className="h-4 w-4" /> },
+  1990→  { id: 'news', label: 'News', icon: <Newspaper className="h-4 w-4" /> },
+  1991→  { id: 'elections', label: 'Elections', icon: <Vote className="h-4 w-4" /> },
+  1992→];
+  1993→
+  1994→// ═══════════════════════════════════════════════════════
+  1995→// MAIN GAME PAGE
+  1996→// ═══════════════════════════════════════════════════════
+  1997→
+  1998→export default function GamePage() {
+  1999→  const { gameState, currentScreen, setScreen, endTurn, isProcessingTurn, showNewGameDialog, setShowNewGameDialog, resetGame, enableTips, setEnableTips, fontSize, darkMode, setDarkMode } = useGameStore();
+  2000→  const { setTheme } = useTheme();
+  2001→  const [sidebarOpen, setSidebarOpen] = useState(false);
+  2002→  const [showLog, setShowLog] = useState(false);
+  2003→  const [showSettings, setShowSettings] = useState(false);
+  2004→  const mountedRef = useRef(false);
+  2005→
+  2006→  // Mark as mounted and sync dark mode from store to next-themes (one-way)
+  2007→  useEffect(() => {
+  2008→    mountedRef.current = true;
+  2009→    setTheme(darkMode ? 'dark' : 'light');
+  2010→  }, []);
+  2011→
+  2012→  // Sync dark mode changes after mount
+  2013→  useEffect(() => {
+  2014→    if (!mountedRef.current) return;
+  2015→    setTheme(darkMode ? 'dark' : 'light');
+  2016→  }, [darkMode, setTheme]);
+  2017→
+  2018→  // Apply font size via CSS custom property
+  2019→  useEffect(() => {
+  2020→    document.documentElement.style.setProperty('--mgza-font-size', FONT_SIZE_MAP[fontSize]);
+  2021→  }, [fontSize]);
+  2022→
+  2023→  // Start Screen
+  2024→  if (currentScreen === 'start') {
+  2025→    return (
+  2026→      <div className="min-h-screen bg-background flex flex-col">
+  2027→        <StartScreen />
+  2028→        <NewGameDialog open={showNewGameDialog} onOpenChange={setShowNewGameDialog} />
+  2029→      </div>
+  2030→    );
+  2031→  }
+  2032→
+  2033→  // Game Over Screen
+  2034→  if (currentScreen === 'game_over' || gameState?.isGameOver) {
+  2035→    return (
+  2036→      <div className="min-h-screen bg-background flex flex-col">
+  2037→        <GameOverScreen />
+  2038→      </div>
+  2039→    );
+  2040→  }
+  2041→
+  2042→  const { player, economic, energy, citizenSatisfaction } = gameState || {};
+  2043→
+  2044→  return (
+  2045→    <div className="min-h-screen bg-background flex flex-col">
+  2046→      {/* Top Header */}
+  2047→      <header className="sticky top-0 z-50 bg-card/95 backdrop-blur border-b border-border px-3 py-2">
+  2048→        <div className="flex items-center justify-between">
+  2049→          <div className="flex items-center gap-3">
+  2050→            <Button variant="ghost" size="sm" className="lg:hidden p-0 h-8 w-8" onClick={() => setSidebarOpen(!sidebarOpen)}>
+  2051→              <Menu className="h-4 w-4" />
+  2052→            </Button>
+  2053→            <div className="flex items-center gap-2">
+  2054→              <Gamepad2 className="h-5 w-5 text-amber-500" />
+  2055→              <h1 className="text-sm font-black tracking-tight hidden sm:block">MGZA</h1>
+  2056→            </div>
+  2057→            <Separator orientation="vertical" className="h-5 hidden sm:block" />
+  2058→            <div className="hidden sm:flex items-center gap-2">
+  2059→              <Badge variant="secondary" className="text-[0.625rem]">{MONTH_NAMES[(player?.month || 1) - 1]} {player?.year || 2025}</Badge>
+  2060→              <Badge variant="secondary" className="text-[0.625rem]">Turn {player?.turn || 1}</Badge>
+  2061→            </div>
+  2062→          </div>
+  2063→
+  2064→          <div className="flex items-center gap-2">
+  2065→            {/* Quick Stats */}
+  2066→            <div className="hidden md:flex items-center gap-3 text-[0.625rem]">
+  2067→              <span className="flex items-center gap-1">
+  2068→                <Heart className="h-3 w-3 text-red-400" />
+  2069→                <span className="font-bold">{(player?.popularity || 0).toFixed(0)}%</span>
+  2070→              </span>
+  2071→              <span className="flex items-center gap-1">
+  2072→                <TrendingUp className="h-3 w-3 text-green-400" />
+  2073→                <span className="font-bold">{(economic?.gdpGrowth || 0).toFixed(1)}%</span>
+  2074→              </span>
+  2075→              <span className="flex items-center gap-1">
+  2076→                <Zap className="h-3 w-3 text-amber-400" />
+  2077→                <span className="font-bold">{(energy?.loadSheddingHoursPerDay || 0).toFixed(0)}h</span>
+  2078→              </span>
+  2079→            </div>
+  2080→
+  2081→            <Separator orientation="vertical" className="h-5 hidden md:block" />
+  2082→
+  2083→            {/* Event Alert */}
+  2084→            {gameState && gameState.events.filter(e => !e.resolved).length > 0 && (
+  2085→              <Button variant="destructive" size="sm" className="text-[0.625rem] h-7 px-2 animate-pulse" onClick={() => setScreen('events')}>
+  2086→                <AlertTriangle className="h-3 w-3 mr-1" /> {gameState.events.filter(e => !e.resolved).length}
+  2087→              </Button>
+  2088→            )}
+  2089→
+  2090→            {/* Game Log Toggle */}
+  2091→            <Button variant="ghost" size="sm" className="text-[0.625rem] h-7 px-2" onClick={() => setShowLog(!showLog)} title="Game Log">
+  2092→              <Newspaper className="h-3 w-3" />
+  2093→            </Button>
+  2094→
+  2095→            {/* Settings */}
+  2096→            <Button variant="ghost" size="sm" className="text-[0.625rem] h-7 px-2" onClick={() => setShowSettings(true)} title="Settings">
+  2097→              <Settings className="h-3 w-3" />
+  2098→            </Button>
+  2099→
+  2100→            {/* End Turn Button */}
+  2101→            <HoverTip tipId="end_turn">
+  2102→              <Button
+  2103→                size="sm"
+  2104→                onClick={endTurn}
+  2105→                disabled={isProcessingTurn}
+  2106→                className="bg-amber-600 hover:bg-amber-700 text-xs font-bold px-4"
+  2107→              >
+  2108→                <ChevronRight className="h-4 w-4 mr-1" />
+  2109→                <span className="hidden sm:inline">End Turn</span>
+  2110→                <span className="sm:hidden">End</span>
+  2111→              </Button>
+  2112→            </HoverTip>
+  2113→          </div>
+  2114→        </div>
+  2115→      </header>
+  2116→
+  2117→      <div className="flex flex-1 overflow-hidden">
+  2118→        {/* Sidebar Navigation */}
+  2119→        <aside className={`
+  2120→          fixed lg:static inset-y-0 left-0 z-40 w-56 bg-card border-r border-border
+  2121→          transform transition-transform lg:translate-x-0
+  2122→          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+  2123→          lg:w-48 xl:w-56
+  2124→        `}>
+  2125→          <div className="flex flex-col h-full">
+  2126→            <div className="lg:hidden flex items-center justify-between p-3 border-b border-border">
+  2127→              <span className="text-sm font-bold">Navigation</span>
+  2128→              <Button variant="ghost" size="sm" className="p-0 h-6 w-6" onClick={() => setSidebarOpen(false)}>
+  2129→                <X className="h-4 w-4" />
+  2130→              </Button>
+  2131→            </div>
+  2132→
+  2133→            {/* Player Info */}
+  2134→            {gameState && (
+  2135→              <div className="p-3 border-b border-border">
+  2136→                <p className="text-xs font-bold">{gameState.player.name}</p>
+  2137→                <p className="text-[0.625rem] text-muted-foreground">{gameState.player.partyName}</p>
+  2138→                <Badge variant="secondary" className="text-[0.625rem] mt-1">
+  2139→                  {gameState.player.careerLevel.replace('_', ' ').toUpperCase()}
+  2140→                </Badge>
+  2141→              </div>
+  2142→            )}
+  2143→
+  2144→            <ScrollArea className="flex-1">
+  2145→              <nav className="p-2 space-y-0.5">
+  2146→                {NAV_ITEMS.map((item) => (
+  2147→                  <button
+  2148→                    key={item.id}
+  2149→                    onClick={() => { setScreen(item.id); setSidebarOpen(false); }}
+  2150→                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs transition-colors ${
+  2151→                      currentScreen === item.id
+  2152→                        ? 'bg-amber-600/20 text-amber-500 font-bold'
+  2153→                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+  2154→                    }`}
+  2155→                  >
+  2156→                    {item.icon}
+  2157→                    <span>{item.label}</span>
+  2158→                    {item.id === 'events' && gameState && gameState.events.filter(e => !e.resolved).length > 0 && (
+  2159→                      <span className="ml-auto bg-red-500 text-white text-[0.5625rem] rounded-full w-4 h-4 flex items-center justify-center">
+  2160→                        {gameState.events.filter(e => !e.resolved).length}
+  2161→                      </span>
+  2162→                    )}
+  2163→                  </button>
+  2164→                ))}
+  2165→              </nav>
+  2166→            </ScrollArea>
+  2167→
+  2168→            <div className="p-3 border-t border-border space-y-2">
+  2169→              <div className="flex items-center justify-between">
+  2170→                <div className="flex items-center gap-1.5">
+  2171→                  <Lightbulb className="h-3 w-3 text-amber-500" />
+  2172→                  <span className="text-[0.625rem] text-muted-foreground">Tips</span>
+  2173→                </div>
+  2174→                <Switch checked={enableTips} onCheckedChange={setEnableTips} className="scale-75" />
+  2175→              </div>
+  2176→              <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground" onClick={() => setShowSettings(true)}>
+  2177→                <Settings className="h-3 w-3 mr-1" /> Settings
+  2178→              </Button>
+  2179→              <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground" onClick={() => { resetGame(); setShowNewGameDialog(true); }}>
+  2180→                <Gamepad2 className="h-3 w-3 mr-1" /> New Game
+  2181→              </Button>
+  2182→            </div>
+  2183→          </div>
+  2184→        </aside>
+  2185→
+  2186→        {/* Sidebar Overlay */}
+  2187→        {sidebarOpen && (
+  2188→          <div className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />
+  2189→        )}
+  2190→
+  2191→        {/* Main Content */}
+  2192→        <main className="flex-1 overflow-auto">
+  2193→          <div className="p-4 md:p-6 max-w-7xl mx-auto">
+  2194→            <AnimatePresence mode="wait">
+  2195→              <motion.div
+  2196→                key={currentScreen}
+  2197→                initial={{ opacity: 0, x: 10 }}
+  2198→                animate={{ opacity: 1, x: 0 }}
+  2199→                exit={{ opacity: 0, x: -10 }}
+  2200→                transition={{ duration: 0.2 }}
+  2201→              >
+  2202→                {currentScreen === 'dashboard' && <DashboardScreen />}
+  2203→                {currentScreen === 'budget' && <BudgetScreen />}
+  2204→                {currentScreen === 'infrastructure' && <InfrastructureScreen />}
+  2205→                {currentScreen === 'politics' && <PoliticsScreen />}
+  2206→                {currentScreen === 'ministers' && <MinistersScreen />}
+  2207→                {currentScreen === 'energy' && <EnergyScreen />}
+  2208→                {currentScreen === 'water' && <WaterScreen />}
+  2209→                {currentScreen === 'map' && <MapScreen />}
+  2210→                {currentScreen === 'events' && <EventsScreen />}
+  2211→                {currentScreen === 'news' && <NewsScreen />}
+  2212→                {currentScreen === 'elections' && <ElectionsScreen />}
+  2213→              </motion.div>
+  2214→            </AnimatePresence>
+  2215→          </div>
+  2216→
+  2217→          {/* Game Log Drawer */}
+  2218→          {showLog && gameState && (
+  2219→            <motion.div
+  2220→              initial={{ opacity: 0, x: 20 }}
+  2221→              animate={{ opacity: 1, x: 0 }}
+  2222→              className="fixed right-0 top-0 h-full w-72 bg-card border-l border-border z-50 p-4 overflow-auto"
+  2223→            >
+  2224→              <div className="flex items-center justify-between mb-3">
+  2225→                <h3 className="text-sm font-bold">Game Log</h3>
+  2226→                <Button variant="ghost" size="sm" className="p-0 h-6 w-6" onClick={() => setShowLog(false)}>
+  2227→                  <X className="h-3 w-3" />
+  2228→                </Button>
+  2229→              </div>
+  2230→              <div className="space-y-2">
+  2231→                {gameState.gameLog.slice().reverse().map((log, i) => (
+  2232→                  <div key={i} className="text-[0.625rem] text-muted-foreground border-b border-border/30 pb-1">
+  2233→                    {log}
+  2234→                  </div>
+  2235→                ))}
+  2236→              </div>
+  2237→            </motion.div>
+  2238→          )}
+  2239→        </main>
+  2240→      </div>
+  2241→
+  2242→      {/* Footer */}
+  2243→      <footer className="bg-card/95 backdrop-blur mt-auto">
+  2244→        <div className="w-full h-0.5" style={{ backgroundColor: '#2E8B37' }} />
+  2245→        <div className="px-4 py-3">
+  2246→          <div className="flex items-center justify-between text-[0.625rem] text-muted-foreground max-w-7xl mx-auto">
+  2247→            <span className="flex items-center gap-1">
+  2248→              <Gamepad2 className="h-3 w-3 text-amber-500" /> Make Great Zimbabwe Again — v1.0
+  2249→            </span>
+  2250→            <span>{MONTH_NAMES[(player?.month || 1) - 1]} {player?.year || 2025} | Turn {(player?.turn || 1)} | {(citizenSatisfaction?.overall || 0).toFixed(0)}% Satisfaction</span>
+  2251→          </div>
+  2252→        </div>
+  2253→      </footer>
+  2254→
+  2255→      {/* Event Modal */}
+  2256→      <EventModal />
+  2257→      <MinisterReplacementDialog />
+  2258→      <NewGameDialog open={showNewGameDialog} onOpenChange={setShowNewGameDialog} />
+  2259→      <SettingsDialog open={showSettings} onOpenChange={setShowSettings} />
+  2260→    </div>
+  2261→  );
+  2262→}
+  2263→

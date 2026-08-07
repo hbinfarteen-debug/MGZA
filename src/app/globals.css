@@ -388,3 +388,158 @@
 .dark .zim-badge:hover {
   background: oklch(0.26 0.05 85 / 100%);
 }
+
+/* ═══════════════════════════════════════════════════════════════
+ *  🇿🇼  Premium "Wow" Visual Effects — MGZA
+ * ═══════════════════════════════════════════════════════════════ */
+
+/* ── Animated gradient background for Start Screen ─────────── */
+.zim-hero-bg {
+  position: relative;
+  overflow: hidden;
+}
+.zim-hero-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(ellipse at 20% 50%, rgba(46, 139, 55, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 50%, rgba(232, 168, 23, 0.08) 0%, transparent 50%);
+  animation: zim-bg-pulse 8s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+@keyframes zim-bg-pulse {
+  0% { opacity: 0.5; transform: scale(1); }
+  100% { opacity: 1; transform: scale(1.05); }
+}
+
+/* ── Animated shimmer/shine effect on the title ────────────── */
+.zim-title-shimmer {
+  position: relative;
+  display: inline-block;
+}
+.zim-title-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  animation: zim-shimmer 4s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes zim-shimmer {
+  0%, 100% { left: -100%; }
+  50% { left: 150%; }
+}
+
+/* ── Glow pulse effect for critical stats ──────────────────── */
+.zim-pulse-danger {
+  animation: zim-danger-pulse 2s ease-in-out infinite;
+}
+@keyframes zim-danger-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(204, 41, 54, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(204, 41, 54, 0); }
+}
+.zim-pulse-warning {
+  animation: zim-warning-pulse 2s ease-in-out infinite;
+}
+@keyframes zim-warning-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(232, 168, 23, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(232, 168, 23, 0); }
+}
+.zim-pulse-success {
+  animation: zim-success-pulse 3s ease-in-out infinite;
+}
+@keyframes zim-success-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(46, 139, 55, 0.3); }
+  50% { box-shadow: 0 0 0 6px rgba(46, 139, 55, 0); }
+}
+
+/* ── Animated gradient border on hover for cards ───────────── */
+.zim-glow-border {
+  position: relative;
+  transition: all 0.3s ease;
+}
+.zim-glow-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, var(--zim-green), var(--zim-gold), var(--zim-red), var(--zim-green));
+  background-size: 300% 300%;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  animation: zim-border-rotate 4s linear infinite;
+}
+.zim-glow-border:hover::before {
+  opacity: 1;
+}
+@keyframes zim-border-rotate {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ── Animated progress bar with shine ──────────────────────── */
+.zim-progress-bar {
+  position: relative;
+  overflow: hidden;
+}
+.zim-progress-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  animation: zim-bar-shine 3s ease-in-out infinite;
+}
+@keyframes zim-bar-shine {
+  0% { left: -50%; }
+  100% { left: 150%; }
+}
+
+/* ── 3D tilt card effect (CSS perspective) ─────────────────── */
+.zim-tilt-card {
+  transition: transform 0.3s ease;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+/* ── Floating animation for Start Screen feature icons ─────── */
+.zim-float {
+  animation: zim-float-anim 3s ease-in-out infinite;
+}
+.zim-float-delay-1 {
+  animation-delay: 0.5s;
+}
+.zim-float-delay-2 {
+  animation-delay: 1s;
+}
+@keyframes zim-float-anim {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+/* ── Screen shake for crisis events ────────────────────────── */
+@keyframes zim-shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+  20%, 40%, 60%, 80% { transform: translateX(2px); }
+}
+.zim-shake {
+  animation: zim-shake 0.5s ease-in-out;
+}
+
+/* ── Number count-up highlight flash ───────────────────────── */
+@keyframes zim-count-flash {
+  0% { color: var(--zim-gold); transform: scale(1.1); }
+  100% { color: inherit; transform: scale(1); }
+}
+.zim-count-flash {
+  animation: zim-count-flash 0.6s ease-out;
+}
