@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useGameStore, type GameScreen } from '@/store/game-store';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -307,35 +307,87 @@ const GAME_TIPS: Record<string, GameTip> = {
 
 // ═══════════════════════════════════════════════════════
 // HOVER TIP COMPONENT
+// Uses position:fixed + getBoundingClientRect to escape overflow:auto clipping.
+// Always renders wrapper div to prevent layout shift when toggling.
 // ═══════════════════════════════════════════════════════
 
-function HoverTip({ tipId, children, screenId, position = 'top' }: { tipId: string; children: React.ReactNode; screenId?: GameScreen; position?: 'top' | 'bottom' }) {
+function HoverTip({ tipId, children, screenId }: { tipId: string; children: React.ReactNode; screenId?: GameScreen }) {
   const { enableTips, currentScreen } = useGameStore();
   const [show, setShow] = useState(false);
+  const [coords, setCoords] = useState({ top: 0, left: 0, arrowSide: 'top' as 'top' | 'bottom' });
   const tip = GAME_TIPS[tipId];
+  const triggerRef = useRef<HTMLDivElement>(null);
 
-  if (!enableTips || !tip) return <>{children}</>;
+  // Check if tip should render at all
+  const isActive = enableTips && tip && (!tip.screen || tip.screen === screenId || tip.screen === currentScreen);
 
-  // Optionally filter by screen
-  if (tip.screen && tip.screen !== screenId && tip.screen !== currentScreen) return <>{children}</>;
+  const updatePosition = useCallback(() => {
+    const el = triggerRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const tipWidth = 320; // w-80 = 20rem = 320px
+    const tipHeight = 180; // approximate
+    const gap = 8;
+    const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
 
-  const isBottom = position === 'bottom';
+    // Prefer showing above, but flip below if no room
+    const showAbove = rect.top > tipHeight + gap + 50; // 50px buffer for header
+    const arrowSide = showAbove ? 'top' : 'bottom';
+
+    let top: number;
+    if (showAbove) {
+      top = rect.top - tipHeight - gap;
+    } else {
+      top = rect.bottom + gap;
+    }
+
+    // Center horizontally, but clamp to viewport edges
+    let left = rect.left + rect.width / 2 - tipWidth / 2;
+    left = Math.max(8, Math.min(left, viewportWidth - tipWidth - 8));
+
+    setCoords({ top: Math.max(4, top), left, arrowSide });
+  }, []);
+
+  const handleEnter = useCallback(() => {
+    if (!isActive) return;
+    updatePosition();
+    setShow(true);
+  }, [isActive, updatePosition]);
+
+  const handleLeave = useCallback(() => setShow(false), []);
+
+  // Update position on scroll / resize while visible
+  useEffect(() => {
+    if (!show) return;
+    updatePosition();
+    const onScroll = () => updatePosition();
+    const onResize = () => updatePosition();
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', onResize);
+    };
+  }, [show, updatePosition]);
 
   return (
     <div
-      className="relative inline-flex"
-      onMouseEnter={() => setShow(true)}
-      onMouseLeave={() => setShow(false)}
+      ref={triggerRef}
+      className="contents"
+      onMouseEnter={handleEnter}
+      onMouseLeave={handleLeave}
     >
       {children}
       <AnimatePresence>
-        {show && (
+        {show && isActive && (
           <motion.div
-            initial={{ opacity: 0, y: isBottom ? -6 : 6, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: isBottom ? -6 : 6, scale: 0.95 }}
-            transition={{ duration: 0.15, ease: 'easeOut' }}
-            className={`absolute z-[200] left-1/2 -translate-x-1/2 w-72 sm:w-80 pointer-events-none ${isBottom ? 'top-full mt-2' : 'bottom-full mb-2'}`}
+            initial={{ opacity: 0, scale: 0.92 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.92 }}
+            transition={{ duration: 0.12, ease: 'easeOut' }}
+            style={{ position: 'fixed', top: coords.top, left: coords.left, width: 320, zIndex: 9999 }}
+            className="pointer-events-none"
           >
             <div className="bg-popover border border-border rounded-lg shadow-xl p-3.5 text-left">
               {/* Header */}
@@ -357,12 +409,12 @@ function HoverTip({ tipId, children, screenId, position = 'top' }: { tipId: stri
               </div>
             </div>
             {/* Arrow */}
-            {isBottom ? (
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 -mb-px">
+            {coords.arrowSide === 'bottom' ? (
+              <div className="absolute bottom-full left-[var(--arrow-x)] -translate-x-1/2 -mb-px">
                 <div className="w-2 h-2 bg-popover border-l border-t border-border rotate-45" />
               </div>
             ) : (
-              <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px">
+              <div className="absolute top-full left-[var(--arrow-x)] -translate-x-1/2 -mt-px">
                 <div className="w-2 h-2 bg-popover border-r border-b border-border rotate-45" />
               </div>
             )}
@@ -1695,7 +1747,7 @@ export default function GamePage() {
             </Button>
 
             {/* End Turn Button */}
-            <HoverTip tipId="end_turn" position="bottom">
+            <HoverTip tipId="end_turn">
               <Button
                 size="sm"
                 onClick={endTurn}

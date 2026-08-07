@@ -168,3 +168,24 @@ Stage Summary:
 - All screens tested: Dashboard, Budget, Energy, Elections, Ministers, Map
 - Zero lint errors, zero browser errors
 - Game is playable with improved visual design
+
+---
+Task ID: 4
+Agent: Main Agent
+Task: Fix tip cards clipping under header and layout shift when toggling tips
+
+Work Log:
+- Root cause 1: `<main className="overflow-auto">` creates a clipping context that traps absolutely-positioned tooltips. No z-index can escape this.
+- Root cause 2: HoverTip returned `<>{children}</>` (React fragment, no wrapper) when tips disabled, but wrapped in `<div className="relative inline-flex">` when enabled. This changed flex/grid sizing.
+- Fix 1: Rewrote HoverTip to use `position: fixed` with `useRef` + `getBoundingClientRect()`. Tooltip is now positioned relative to the viewport, completely bypassing overflow clipping. z-index set to 9999.
+- Fix 1b: Auto-detects whether to show above or below based on available viewport space (with 50px header buffer). Arrow flips accordingly.
+- Fix 1c: Listens to scroll and resize events to reposition while visible.
+- Fix 1d: Clamps horizontal position to stay within viewport edges.
+- Fix 2: Changed wrapper from `relative inline-flex` to `contents` (CSS display:contents). This makes the wrapper invisible to layout — children layout exactly as if no wrapper exists. Zero layout shift whether tips are on or off.
+- Removed the `position` prop since auto-detection handles it now.
+- Verified: End Turn tip shows below header, Budget Allocate tip shows correctly, dashboard card tips show correctly, toggling tips ON/OFF causes zero layout changes, zero lint errors, zero browser errors.
+
+Stage Summary:
+- Tip cards no longer clip under any element including the sticky header
+- Toggling tips on/off produces zero layout shift (graphs, cards, everything stays identical)
+- Tooltip auto-positions above or below based on available space
