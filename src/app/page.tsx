@@ -409,15 +409,15 @@ function HoverTip({ tipId, children, screenId }: { tipId: string; children: Reac
                   <Lightbulb className="h-3.5 w-3.5" />
                 </div>
                 <h4 className="text-xs font-bold text-foreground">{tip.title}</h4>
-                <Badge variant="secondary" className="text-[8px] px-1.5 py-0 ml-auto bg-amber-500/10 text-amber-600 border-amber-500/20">TIP</Badge>
+                <Badge variant="secondary" className="text-[0.5rem] px-1.5 py-0 ml-auto bg-amber-500/10 text-amber-600 border-amber-500/20">TIP</Badge>
               </div>
               {/* Description */}
-              <p className="text-[11px] text-muted-foreground leading-relaxed mb-2">{tip.description}</p>
+              <p className="text-[0.6875rem] text-muted-foreground leading-relaxed mb-2">{tip.description}</p>
               {/* Strategy */}
               <div className="border-t border-border/50 pt-2">
                 <div className="flex items-start gap-1.5">
                   <Info className="h-3 w-3 text-amber-500 mt-0.5 shrink-0" />
-                  <p className="text-[10px] text-amber-600 font-medium leading-relaxed">{tip.strategy}</p>
+                  <p className="text-[0.625rem] text-amber-600 font-medium leading-relaxed">{tip.strategy}</p>
                 </div>
               </div>
             </div>
@@ -528,7 +528,7 @@ function DashboardScreen() {
               {recentNews.map((article) => (
                 <div key={article.id} className="pb-3 border-b border-border/50 last:border-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <Badge variant={article.isBreaking ? 'destructive' : article.sentiment === 'positive' ? 'default' : article.sentiment === 'negative' ? 'destructive' : 'secondary'} className="text-[10px] px-1.5 py-0">
+                    <Badge variant={article.isBreaking ? 'destructive' : article.sentiment === 'positive' ? 'default' : article.sentiment === 'negative' ? 'destructive' : 'secondary'} className="text-[0.625rem] px-1.5 py-0">
                       {article.isBreaking ? 'BREAKING' : article.category}
                     </Badge>
                   </div>
@@ -552,7 +552,7 @@ function DashboardScreen() {
                 <p className="text-sm text-muted-foreground">No active events this month.</p>
               ) : activeEvents.map((event) => (
                 <div key={event.id} className="pb-3 border-b border-border/50 last:border-0">
-                  <Badge variant={event.severity === 'crisis' ? 'destructive' : event.severity === 'major' ? 'default' : 'secondary'} className="text-[10px] px-1.5 py-0 mb-1">
+                  <Badge variant={event.severity === 'crisis' ? 'destructive' : event.severity === 'major' ? 'default' : 'secondary'} className="text-[0.625rem] px-1.5 py-0 mb-1">
                     {event.severity.toUpperCase()}
                   </Badge>
                   <p className="text-sm font-medium">{event.title}</p>
@@ -651,14 +651,14 @@ function BudgetScreen() {
                   <span className="text-lg">{item.icon}</span>
                   <div>
                     <h4 className="text-sm font-bold">{item.displayName}</h4>
-                    <p className="text-[10px] text-muted-foreground">Min: ${item.minimumRequired}M | Rec: ${item.recommended}M</p>
+                    <p className="text-[0.625rem] text-muted-foreground">Min: ${item.minimumRequired}M | Rec: ${item.recommended}M</p>
                   </div>
                 </div>
                 <div className="text-right">
                   <span className={`text-sm font-bold ${!meetsMin ? 'text-red-500' : ''}`}>
                     ${localBudget[item.category]?.toLocaleString() || 0}M
                   </span>
-                  <p className="text-[10px] text-muted-foreground">{pct.toFixed(1)}%</p>
+                  <p className="text-[0.625rem] text-muted-foreground">{pct.toFixed(1)}%</p>
                 </div>
               </div>
               <div className="mb-1">
@@ -672,10 +672,10 @@ function BudgetScreen() {
                   className="w-full h-2 bg-muted rounded-full appearance-none cursor-pointer accent-amber-500"
                 />
               </div>
-              <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+              <div className="flex items-center gap-3 text-[0.625rem] text-muted-foreground">
                 <span>Efficiency: {item.efficiency}%</span>
                 <span>Corruption: {item.corruptionLeakage}%</span>
-                {!meetsMin && <Badge variant="destructive" className="text-[9px] px-1">Below Min</Badge>}
+                {!meetsMin && <Badge variant="destructive" className="text-[0.5625rem] px-1">Below Min</Badge>}
               </div>
             </div>
           );
@@ -715,7 +715,7 @@ function InfrastructureScreen() {
               <div className="flex items-start justify-between mb-2">
                 <div>
                   <h4 className="text-sm font-bold">{project.name}</h4>
-                  <Badge variant="secondary" className="text-[10px] mt-1">{project.category}</Badge>
+                  <Badge variant="secondary" className="text-[0.625rem] mt-1">{project.category}</Badge>
                 </div>
                 <Button size="sm" onClick={() => approveProject(project.id)} className="bg-amber-600 hover:bg-amber-700 text-xs">
                   Approve
@@ -727,7 +727,7 @@ function InfrastructureScreen() {
                 <div><span className="text-muted-foreground">Time:</span> <span className="font-bold">{project.completionTime} mo</span></div>
                 <div><span className="text-muted-foreground">Jobs:</span> <span className="font-bold">{project.employmentCreated.toLocaleString()}</span></div>
               </div>
-              <div className="flex gap-3 mt-2 text-[10px] text-muted-foreground">
+              <div className="flex gap-3 mt-2 text-[0.625rem] text-muted-foreground">
                 <span>Popularity: {project.politicalPopularity > 0 ? '+' : ''}{project.politicalPopularity}</span>
                 <span>Economic: {project.economicImpact > 0 ? '+' : ''}{project.economicImpact}</span>
                 <span>Corruption Risk: {project.corruptionRisk}%</span>
@@ -798,16 +798,16 @@ function PoliticsScreen() {
         {/* Parliament Seat Visualization */}
         <div className="flex h-8 rounded-lg overflow-hidden gap-0.5">
           <div className="bg-amber-500 rounded-l-md flex items-center justify-center" style={{ width: `${parliament.rulingPartySeats / parliament.totalSeats * 100}%` }}>
-            <span className="text-[10px] font-bold text-black">{parliament.rulingPartySeats}</span>
+            <span className="text-[0.625rem] font-bold text-black">{parliament.rulingPartySeats}</span>
           </div>
           <div className="bg-red-500 flex items-center justify-center" style={{ width: `${parliament.oppositionSeats / parliament.totalSeats * 100}%` }}>
-            <span className="text-[10px] font-bold">{parliament.oppositionSeats}</span>
+            <span className="text-[0.625rem] font-bold">{parliament.oppositionSeats}</span>
           </div>
           <div className="bg-gray-400 rounded-r-md flex items-center justify-center" style={{ width: `${parliament.independentSeats / parliament.totalSeats * 100}%` }}>
-            <span className="text-[10px] font-bold">{parliament.independentSeats}</span>
+            <span className="text-[0.625rem] font-bold">{parliament.independentSeats}</span>
           </div>
         </div>
-        <div className="flex gap-4 mt-2 text-[10px] text-muted-foreground">
+        <div className="flex gap-4 mt-2 text-[0.625rem] text-muted-foreground">
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500" /> Ruling Party</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" /> Opposition</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gray-400" /> Independent</span>
@@ -833,7 +833,7 @@ function PoliticsScreen() {
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground mb-2">{faction.ideology}</p>
-              <p className="text-[10px] text-muted-foreground">Leader: {faction.leaderName}</p>
+              <p className="text-[0.625rem] text-muted-foreground">Leader: {faction.leaderName}</p>
               <div className="mt-2">
                 <div className="flex items-center justify-between text-xs mb-1">
                   <span>Support</span>
@@ -851,7 +851,7 @@ function PoliticsScreen() {
               </div>
               <div className="mt-2 space-y-1">
                 {faction.demands.map((demand, i) => (
-                  <div key={i} className="text-[10px] text-muted-foreground flex items-center gap-1">
+                  <div key={i} className="text-[0.625rem] text-muted-foreground flex items-center gap-1">
                     <ChevronRight className="h-2 w-2" /> {demand}
                   </div>
                 ))}
@@ -887,9 +887,9 @@ function MinistersScreen() {
               <div className="flex items-start justify-between mb-2">
                 <div>
                   <h4 className="text-sm font-bold">{minister.name}</h4>
-                  <Badge variant="secondary" className="text-[10px] mt-1">{minister.portfolio}</Badge>
+                  <Badge variant="secondary" className="text-[0.625rem] mt-1">{minister.portfolio}</Badge>
                 </div>
-                <HoverTip tipId="fire_minister" screenId="ministers"><Button size="sm" variant="destructive" className="text-[10px] px-2 py-0 h-6" onClick={() => fireMinister(minister.id)}>
+                <HoverTip tipId="fire_minister" screenId="ministers"><Button size="sm" variant="destructive" className="text-[0.625rem] px-2 py-0 h-6" onClick={() => fireMinister(minister.id)}>
                   Fire
                 </Button></HoverTip>
               </div>
@@ -899,7 +899,7 @@ function MinistersScreen() {
                 <MiniStat label="Corruption" value={minister.corruption} inverted />
                 <MiniStat label="Popularity" value={minister.popularity} />
               </div>
-              <p className="text-[10px] text-muted-foreground mt-2">Faction: {minister.faction} | Age: {minister.age}</p>
+              <p className="text-[0.625rem] text-muted-foreground mt-2">Faction: {minister.faction} | Age: {minister.age}</p>
             </div>
           ))}
         </div>
@@ -912,7 +912,7 @@ function MinistersScreen() {
             {inactiveMinisters.map((minister) => (
               <div key={minister.id} className="bg-card border border-border/50 rounded-lg p-4 opacity-50">
                 <h4 className="text-sm font-bold">{minister.name} — {minister.portfolio}</h4>
-                <p className="text-[10px] text-muted-foreground">Previously dismissed</p>
+                <p className="text-[0.625rem] text-muted-foreground">Previously dismissed</p>
               </div>
             ))}
           </div>
@@ -949,7 +949,7 @@ function EnergyScreen() {
           {[0,1,2,3,4,5,6,7,8].map(stage => (
             <div
               key={stage}
-              className={`flex-1 h-8 rounded flex items-center justify-center text-[10px] font-bold ${
+              className={`flex-1 h-8 rounded flex items-center justify-center text-[0.625rem] font-bold ${
                 stage <= energy.loadSheddingStage
                   ? stage <= 2 ? 'bg-green-500/80 text-white' : stage <= 5 ? 'bg-yellow-500/80 text-black' : 'bg-red-500/80 text-white'
                   : 'bg-muted text-muted-foreground'
@@ -983,7 +983,7 @@ function EnergyScreen() {
                   style={{ width: `${(data.output / data.capacity) * 100}%` }}
                 />
               </div>
-              <div className="grid grid-cols-3 gap-2 text-[10px] text-muted-foreground">
+              <div className="grid grid-cols-3 gap-2 text-[0.625rem] text-muted-foreground">
                 <span>Reliability: {data.reliability}%</span>
                 <span>Cost: ${data.costPerMW}/MW</span>
                 <span>Env: {data.environmentalImpact}/100</span>
@@ -1110,7 +1110,7 @@ function EventsScreen() {
                 <Badge variant={event.severity === 'crisis' ? 'destructive' : event.severity === 'major' ? 'default' : 'secondary'}>
                   {event.severity.toUpperCase()}
                 </Badge>
-                <Badge variant="secondary" className="text-[10px]">{event.category}</Badge>
+                <Badge variant="secondary" className="text-[0.625rem]">{event.category}</Badge>
               </div>
               <h4 className="text-sm font-bold mb-1">{event.title}</h4>
               <p className="text-xs text-muted-foreground mb-3">{event.description}</p>
@@ -1134,7 +1134,7 @@ function EventsScreen() {
               <div className="flex items-center gap-2">
                 <Check className="h-3 w-3 text-green-500" />
                 <span className="text-xs font-medium">{event.title}</span>
-                <span className="text-[10px] text-muted-foreground">{MONTH_NAMES[event.month - 1]} {event.year}</span>
+                <span className="text-[0.625rem] text-muted-foreground">{MONTH_NAMES[event.month - 1]} {event.year}</span>
               </div>
             </div>
           ))}
@@ -1167,7 +1167,7 @@ function MapScreen() {
                   className="bg-muted hover:bg-muted/80 border border-border rounded-lg p-4 text-left transition-colors"
                 >
                   <h4 className="text-sm font-bold">{province.name}</h4>
-                  <div className="grid grid-cols-2 gap-2 mt-2 text-[10px]">
+                  <div className="grid grid-cols-2 gap-2 mt-2 text-[0.625rem]">
                     <span>Pop: {(province.population / 1e6).toFixed(1)}M</span>
                     <span>Urban: {province.urbanization.toFixed(0)}%</span>
                     <span>Support: {province.politicalSupport.toFixed(0)}%</span>
@@ -1196,7 +1196,7 @@ function MapScreen() {
               {gameState.provinces.map((province) => (
                 <div key={province.id} className="pb-3 border-b border-border/50 last:border-0">
                   <h4 className="text-xs font-bold mb-1">{province.name}</h4>
-                  <div className="grid grid-cols-2 gap-1 text-[10px] text-muted-foreground">
+                  <div className="grid grid-cols-2 gap-1 text-[0.625rem] text-muted-foreground">
                     <span>Health: {province.healthIndex.toFixed(0)}</span>
                     <span>Education: {province.educationIndex.toFixed(0)}</span>
                     <span>Infrastructure: {province.infrastructureIndex.toFixed(0)}</span>
@@ -1233,10 +1233,10 @@ function NewsScreen() {
         {gameState.newsHistory.map((article) => (
           <div key={article.id} className="bg-card border border-border rounded-lg p-4">
             <div className="flex items-center gap-2 mb-2">
-              <Badge variant={article.isBreaking ? 'destructive' : article.sentiment === 'positive' ? 'default' : article.sentiment === 'negative' ? 'destructive' : 'secondary'} className="text-[10px]">
+              <Badge variant={article.isBreaking ? 'destructive' : article.sentiment === 'positive' ? 'default' : article.sentiment === 'negative' ? 'destructive' : 'secondary'} className="text-[0.625rem]">
                 {article.isBreaking ? 'BREAKING' : article.sentiment.toUpperCase()}
               </Badge>
-              <span className="text-[10px] text-muted-foreground">{MONTH_NAMES[article.month - 1]} {article.year}</span>
+              <span className="text-[0.625rem] text-muted-foreground">{MONTH_NAMES[article.month - 1]} {article.year}</span>
             </div>
             <h4 className="text-sm font-bold mb-1">{article.headline}</h4>
             <p className="text-xs text-muted-foreground">{article.subheadline}</p>
@@ -1306,15 +1306,15 @@ function ElectionsScreen() {
           {election.isOver && (
             <div className="mt-4 flex justify-center gap-8">
               <div>
-                <p className="text-[10px] text-muted-foreground">Your Votes</p>
+                <p className="text-[0.625rem] text-muted-foreground">Your Votes</p>
                 <p className="text-lg font-bold text-amber-500">{(election.playerVotes / 1e6).toFixed(1)}M</p>
               </div>
               <div>
-                <p className="text-[10px] text-muted-foreground">Opposition Votes</p>
+                <p className="text-[0.625rem] text-muted-foreground">Opposition Votes</p>
                 <p className="text-lg font-bold text-red-500">{(election.opponentVotes / 1e6).toFixed(1)}M</p>
               </div>
               <div>
-                <p className="text-[10px] text-muted-foreground">Turnout</p>
+                <p className="text-[0.625rem] text-muted-foreground">Turnout</p>
                 <p className="text-lg font-bold">{election.turnoutPercent.toFixed(0)}%</p>
               </div>
             </div>
@@ -1341,7 +1341,7 @@ function ElectionsScreen() {
                 <div className="flex-1 bg-amber-500 rounded-t" style={{ height: `${poll.playerPercent}%` }} />
                 <div className="flex-1 bg-red-500 rounded-t" style={{ height: `${poll.opponentPercent}%` }} />
               </div>
-              <span className="text-[8px] text-center text-muted-foreground">T{poll.turn}</span>
+              <span className="text-[0.5625rem] text-center text-muted-foreground">T{poll.turn}</span>
             </div>
           ))}
         </div>
@@ -1356,10 +1356,10 @@ function ElectionsScreen() {
                   <span className="text-xs w-12">{result.year}</span>
                   <div className="flex-1 flex h-4 rounded overflow-hidden">
                     <div className="bg-amber-500 flex items-center justify-center" style={{ width: `${result.playerParty}%` }}>
-                      <span className="text-[8px] font-bold">{result.playerParty}%</span>
+                      <span className="text-[0.5625rem] font-bold">{result.playerParty}%</span>
                     </div>
                     <div className="bg-red-500 flex items-center justify-center" style={{ width: `${result.opposition}%` }}>
-                      <span className="text-[8px] font-bold">{result.opposition}%</span>
+                      <span className="text-[0.5625rem] font-bold">{result.opposition}%</span>
                     </div>
                   </div>
                 </div>
@@ -1418,27 +1418,27 @@ function GameOverScreen() {
 
         <div className="grid grid-cols-2 gap-3 mb-6 text-left">
           <div className="bg-muted rounded p-3">
-            <p className="text-[10px] text-muted-foreground">Turns Survived</p>
+            <p className="text-[0.625rem] text-muted-foreground">Turns Survived</p>
             <p className="text-lg font-bold">{turnsSurvived}</p>
           </div>
           <div className="bg-muted rounded p-3">
-            <p className="text-[10px] text-muted-foreground">Years in Office</p>
+            <p className="text-[0.625rem] text-muted-foreground">Years in Office</p>
             <p className="text-lg font-bold">{yearsSurvived.toFixed(1)}</p>
           </div>
           <div className="bg-muted rounded p-3">
-            <p className="text-[10px] text-muted-foreground">Final GDP</p>
+            <p className="text-[0.625rem] text-muted-foreground">Final GDP</p>
             <p className="text-lg font-bold">${economic.gdp.toFixed(1)}B</p>
           </div>
           <div className="bg-muted rounded p-3">
-            <p className="text-[10px] text-muted-foreground">Final Popularity</p>
+            <p className="text-[0.625rem] text-muted-foreground">Final Popularity</p>
             <p className="text-lg font-bold">{player.popularity.toFixed(0)}%</p>
           </div>
           <div className="bg-muted rounded p-3">
-            <p className="text-[10px] text-muted-foreground">Population</p>
+            <p className="text-[0.625rem] text-muted-foreground">Population</p>
             <p className="text-lg font-bold">{(national.population / 1e6).toFixed(1)}M</p>
           </div>
           <div className="bg-muted rounded p-3">
-            <p className="text-[10px] text-muted-foreground">Satisfaction</p>
+            <p className="text-[0.625rem] text-muted-foreground">Satisfaction</p>
             <p className="text-lg font-bold">{citizenSatisfaction.overall.toFixed(0)}%</p>
           </div>
         </div>
@@ -1540,7 +1540,7 @@ function StartScreen() {
                     }`}>
                       Aa
                     </span>
-                    <span className="text-[10px] text-muted-foreground mt-1 block capitalize">{size}</span>
+                    <span className="text-[0.625rem] text-muted-foreground mt-1 block capitalize">{size}</span>
                   </button>
                 ))}
               </div>
@@ -1581,17 +1581,17 @@ function StartScreen() {
             <div className="bg-card border border-border rounded-lg p-3 text-center shadow-sm">
               <div className="text-2xl mb-1">🇿🇼</div>
               <p className="text-xs font-bold">Lead Zimbabwe</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">From Councillor to President</p>
+              <p className="text-[0.625rem] text-muted-foreground mt-0.5">From Councillor to President</p>
             </div>
             <div className="bg-card border border-border rounded-lg p-3 text-center shadow-sm">
               <div className="text-2xl mb-1">📊</div>
               <p className="text-xs font-bold">Manage Economy</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">Balance budgets &amp; trade</p>
+              <p className="text-[0.625rem] text-muted-foreground mt-0.5">Balance budgets &amp; trade</p>
             </div>
             <div className="bg-card border border-border rounded-lg p-3 text-center shadow-sm">
               <div className="text-2xl mb-1">🗳️</div>
               <p className="text-xs font-bold">Win Elections</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">Secure the people&apos;s mandate</p>
+              <p className="text-[0.625rem] text-muted-foreground mt-0.5">Secure the people&apos;s mandate</p>
             </div>
           </div>
 
@@ -1610,7 +1610,7 @@ function StartScreen() {
             <Play className="h-5 w-5 mr-2" /> Start New Game
           </Button>
 
-          <p className="text-[10px] text-muted-foreground/50 mt-6">
+          <p className="text-[0.625rem] text-muted-foreground/50 mt-6">
             v1.0 — Made with ❤️ for Zimbabwe
           </p>
         </motion.div>
@@ -1675,7 +1675,7 @@ function NewGameDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o
               </div>
               <div>
                 <p className="text-sm font-medium">Enable Hover Tips</p>
-                <p className="text-[10px] text-muted-foreground">Show strategy tips when hovering over game elements</p>
+                <p className="text-[0.625rem] text-muted-foreground">Show strategy tips when hovering over game elements</p>
               </div>
             </div>
             <Switch checked={enableTips} onCheckedChange={setEnableTips} />
@@ -1718,7 +1718,7 @@ function EventModal() {
             <Badge variant={event.severity === 'crisis' ? 'destructive' : event.severity === 'major' ? 'default' : 'secondary'}>
               {event.severity.toUpperCase()}
             </Badge>
-            <Badge variant="secondary" className="text-[10px]">{event.category}</Badge>
+            <Badge variant="secondary" className="text-[0.625rem]">{event.category}</Badge>
           </div>
           <DialogTitle className="text-lg">{event.title}</DialogTitle>
           <DialogDescription className="text-sm leading-relaxed">{event.description}</DialogDescription>
@@ -1738,10 +1738,10 @@ function EventModal() {
               <h4 className="text-sm font-bold mb-1">{choice.text}</h4>
               <p className="text-xs text-muted-foreground">{choice.shortDescription}</p>
               <div className="flex gap-3 mt-2">
-                <span className={`text-[10px] ${choice.popularityImpact > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                <span className={`text-[0.625rem] ${choice.popularityImpact > 0 ? 'text-green-500' : 'text-red-500'}`}>
                   Popularity: {choice.popularityImpact > 0 ? '+' : ''}{choice.popularityImpact}
                 </span>
-                <span className={`text-[10px] ${choice.politicalRisk > 0 ? 'text-green-500' : choice.politicalRisk < 0 ? 'text-red-500' : 'text-muted-foreground'}`}>
+                <span className={`text-[0.625rem] ${choice.politicalRisk > 0 ? 'text-green-500' : choice.politicalRisk < 0 ? 'text-red-500' : 'text-muted-foreground'}`}>
                   Influence: {choice.politicalRisk > 0 ? '+' : ''}{choice.politicalRisk}
                 </span>
               </div>
@@ -1809,7 +1809,7 @@ function MinisterReplacementDialog() {
               <div className="flex items-center justify-between mb-2">
                 <div>
                   <h4 className="text-sm font-bold">{candidate.name}</h4>
-                  <p className="text-[10px] text-muted-foreground">{candidate.faction} • Age {candidate.age}</p>
+                  <p className="text-[0.625rem] text-muted-foreground">{candidate.faction} • Age {candidate.age}</p>
                 </div>
                 <span className={`text-xs font-bold ${candidate.popularityImpact > 0 ? 'text-green-500' : candidate.popularityImpact < 0 ? 'text-red-500' : 'text-muted-foreground'}`}>
                   {candidate.popularityImpact > 0 ? '+' : ''}{candidate.popularityImpact} Popularity
@@ -1864,7 +1864,7 @@ function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
               </div>
               <div>
                 <p className="text-sm font-medium">Dark Mode</p>
-                <p className="text-[10px] text-muted-foreground">Switch between light and dark theme</p>
+                <p className="text-[0.625rem] text-muted-foreground">Switch between light and dark theme</p>
               </div>
             </div>
             <Switch checked={darkMode} onCheckedChange={setDarkMode} />
@@ -1878,7 +1878,7 @@ function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
               </div>
               <div>
                 <p className="text-sm font-medium">Text Size</p>
-                <p className="text-[10px] text-muted-foreground">Choose text size that is comfortable for you</p>
+                <p className="text-[0.625rem] text-muted-foreground">Choose text size that is comfortable for you</p>
               </div>
             </div>
             <div className="grid grid-cols-4 gap-2">
@@ -1897,7 +1897,7 @@ function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
                   }`}>
                     Aa
                   </span>
-                  <span className="text-[10px] text-muted-foreground mt-1 block capitalize">{size}</span>
+                  <span className="text-[0.625rem] text-muted-foreground mt-1 block capitalize">{size}</span>
                 </button>
               ))}
             </div>
@@ -1919,7 +1919,7 @@ function StatCard({ label, value, icon, color = 'text-foreground' }: { label: st
   return (
     <div className="bg-card border border-border rounded-lg p-4" style={{ borderLeftWidth: '3px', borderLeftColor: color.startsWith('text-green') ? '#2E8B37' : color.startsWith('text-yellow') ? '#E8A817' : color.startsWith('text-red') ? '#CC2936' : '#888' }}>
       <div className="flex items-center justify-between">
-        <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">{label}</span>
+        <span className="text-[0.625rem] text-muted-foreground uppercase tracking-wider font-medium">{label}</span>
         {icon && <span className={color}>{icon}</span>}
       </div>
       <p className={`text-xl font-bold mt-1.5 ${color}`}>{value}</p>
@@ -1930,7 +1930,7 @@ function StatCard({ label, value, icon, color = 'text-foreground' }: { label: st
 function MetricCard({ title, items }: { title: string; items: { label: string; value: string }[] }) {
   return (
     <div className="bg-card border border-border rounded-lg p-4" style={{ borderTopWidth: '2px', borderTopColor: '#E8A817' }}>
-      <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-3">{title}</h3>
+      <h3 className="text-[0.625rem] font-bold text-muted-foreground uppercase tracking-wider mb-3">{title}</h3>
       <div className="space-y-2.5">
         {items.map((item, i) => (
           <div key={i} className="flex items-center justify-between">
@@ -1949,7 +1949,7 @@ function MiniStat({ label, value, suffix = '', inverted = false }: { label: stri
     : value > 60 ? 'text-green-500' : value > 30 ? 'text-yellow-500' : 'text-red-500';
   return (
     <div>
-      <span className="text-[10px] text-muted-foreground">{label}</span>
+      <span className="text-[0.625rem] text-muted-foreground">{label}</span>
       <p className={`text-xs font-bold ${color}`}>{value}{suffix}</p>
     </div>
   );
@@ -1959,13 +1959,13 @@ function TrendCard({ title, data, color, formatValue }: { title: string; data: {
   const maxVal = Math.max(...data.map(d => d.value), 1);
   return (
     <div className="bg-card border border-border rounded-lg p-4">
-      <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-3">{title}</h3>
+      <h3 className="text-[0.625rem] font-bold text-muted-foreground uppercase tracking-wider mb-3">{title}</h3>
       <div className="flex items-end gap-1 h-24">
         {data.map((point, i) => (
           <div key={i} className="flex-1 flex flex-col items-center gap-1">
-            <span className="text-[8px] text-muted-foreground font-medium">{formatValue(point.value)}</span>
+            <span className="text-[0.5625rem] text-muted-foreground font-medium">{formatValue(point.value)}</span>
             <div className="w-full rounded-t" style={{ height: `${(point.value / maxVal) * 80}px`, background: `linear-gradient(to top, ${color}, ${color}88)` }} />
-            <span className="text-[7px] text-muted-foreground font-medium">{point.label}</span>
+            <span className="text-[0.5rem] text-muted-foreground font-medium">{point.label}</span>
           </div>
         ))}
       </div>
@@ -2056,14 +2056,14 @@ export default function GamePage() {
             </div>
             <Separator orientation="vertical" className="h-5 hidden sm:block" />
             <div className="hidden sm:flex items-center gap-2">
-              <Badge variant="secondary" className="text-[10px]">{MONTH_NAMES[(player?.month || 1) - 1]} {player?.year || 2025}</Badge>
-              <Badge variant="secondary" className="text-[10px]">Turn {player?.turn || 1}</Badge>
+              <Badge variant="secondary" className="text-[0.625rem]">{MONTH_NAMES[(player?.month || 1) - 1]} {player?.year || 2025}</Badge>
+              <Badge variant="secondary" className="text-[0.625rem]">Turn {player?.turn || 1}</Badge>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             {/* Quick Stats */}
-            <div className="hidden md:flex items-center gap-3 text-[10px]">
+            <div className="hidden md:flex items-center gap-3 text-[0.625rem]">
               <span className="flex items-center gap-1">
                 <Heart className="h-3 w-3 text-red-400" />
                 <span className="font-bold">{(player?.popularity || 0).toFixed(0)}%</span>
@@ -2082,18 +2082,18 @@ export default function GamePage() {
 
             {/* Event Alert */}
             {gameState && gameState.events.filter(e => !e.resolved).length > 0 && (
-              <Button variant="destructive" size="sm" className="text-[10px] h-7 px-2 animate-pulse" onClick={() => setScreen('events')}>
+              <Button variant="destructive" size="sm" className="text-[0.625rem] h-7 px-2 animate-pulse" onClick={() => setScreen('events')}>
                 <AlertTriangle className="h-3 w-3 mr-1" /> {gameState.events.filter(e => !e.resolved).length}
               </Button>
             )}
 
             {/* Game Log Toggle */}
-            <Button variant="ghost" size="sm" className="text-[10px] h-7 px-2" onClick={() => setShowLog(!showLog)} title="Game Log">
+            <Button variant="ghost" size="sm" className="text-[0.625rem] h-7 px-2" onClick={() => setShowLog(!showLog)} title="Game Log">
               <Newspaper className="h-3 w-3" />
             </Button>
 
             {/* Settings */}
-            <Button variant="ghost" size="sm" className="text-[10px] h-7 px-2" onClick={() => setShowSettings(true)} title="Settings">
+            <Button variant="ghost" size="sm" className="text-[0.625rem] h-7 px-2" onClick={() => setShowSettings(true)} title="Settings">
               <Settings className="h-3 w-3" />
             </Button>
 
@@ -2134,8 +2134,8 @@ export default function GamePage() {
             {gameState && (
               <div className="p-3 border-b border-border">
                 <p className="text-xs font-bold">{gameState.player.name}</p>
-                <p className="text-[10px] text-muted-foreground">{gameState.player.partyName}</p>
-                <Badge variant="secondary" className="text-[10px] mt-1">
+                <p className="text-[0.625rem] text-muted-foreground">{gameState.player.partyName}</p>
+                <Badge variant="secondary" className="text-[0.625rem] mt-1">
                   {gameState.player.careerLevel.replace('_', ' ').toUpperCase()}
                 </Badge>
               </div>
@@ -2156,7 +2156,7 @@ export default function GamePage() {
                     {item.icon}
                     <span>{item.label}</span>
                     {item.id === 'events' && gameState && gameState.events.filter(e => !e.resolved).length > 0 && (
-                      <span className="ml-auto bg-red-500 text-white text-[9px] rounded-full w-4 h-4 flex items-center justify-center">
+                      <span className="ml-auto bg-red-500 text-white text-[0.5625rem] rounded-full w-4 h-4 flex items-center justify-center">
                         {gameState.events.filter(e => !e.resolved).length}
                       </span>
                     )}
@@ -2169,7 +2169,7 @@ export default function GamePage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <Lightbulb className="h-3 w-3 text-amber-500" />
-                  <span className="text-[10px] text-muted-foreground">Tips</span>
+                  <span className="text-[0.625rem] text-muted-foreground">Tips</span>
                 </div>
                 <Switch checked={enableTips} onCheckedChange={setEnableTips} className="scale-75" />
               </div>
@@ -2229,7 +2229,7 @@ export default function GamePage() {
               </div>
               <div className="space-y-2">
                 {gameState.gameLog.slice().reverse().map((log, i) => (
-                  <div key={i} className="text-[10px] text-muted-foreground border-b border-border/30 pb-1">
+                  <div key={i} className="text-[0.625rem] text-muted-foreground border-b border-border/30 pb-1">
                     {log}
                   </div>
                 ))}
@@ -2243,7 +2243,7 @@ export default function GamePage() {
       <footer className="bg-card/95 backdrop-blur mt-auto">
         <div className="w-full h-0.5" style={{ backgroundColor: '#2E8B37' }} />
         <div className="px-4 py-3">
-          <div className="flex items-center justify-between text-[10px] text-muted-foreground max-w-7xl mx-auto">
+          <div className="flex items-center justify-between text-[0.625rem] text-muted-foreground max-w-7xl mx-auto">
             <span className="flex items-center gap-1">
               <Gamepad2 className="h-3 w-3 text-amber-500" /> Make Great Zimbabwe Again — v1.0
             </span>

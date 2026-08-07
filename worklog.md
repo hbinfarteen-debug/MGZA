@@ -26,3 +26,29 @@ Stage Summary:
 - Fixed infinite loop: changed bidirectional dark mode sync to one-way (store → next-themes only)
 - Browser verified: dark mode toggle works, text size changes apply correctly, no runtime errors
 - Lint passes with zero errors and zero warnings
+---
+Task ID: 3
+Agent: Main Agent
+Task: Fix text not scaling with font size setting — convert hardcoded px to rem
+
+Work Log:
+- Identified root cause: all font sizes used absolute pixel values (text-[10px], text-[8px], text-[7px], text-[9px], text-[11px]) that don't scale with root font-size
+- Converted ALL hardcoded pixel font sizes to rem equivalents:
+  - text-[10px] → text-[0.625rem]
+  - text-[9px] → text-[0.5625rem]
+  - text-[8px] → text-[0.5rem]
+  - text-[7px] → text-[0.4375rem]
+  - text-[11px] → text-[0.6875rem]
+- Bumped up chart label sizes that were still too small:
+  - Election poll T-labels: text-[0.5rem] → text-[0.5625rem]
+  - Election bar percentages: text-[0.5rem] → text-[0.5625rem]
+  - TrendCard value labels: text-[0.5rem] → text-[0.5625rem]
+  - TrendCard axis labels: text-[0.4375rem] → text-[0.5rem]
+- Verified with Agent Browser: at small (14px root) → 8.75px computed, at xlarge (20px root) → 12.5px computed
+- VLM analysis confirmed all text now scales properly across all 4 size settings
+
+Stage Summary:
+- All ~80+ instances of hardcoded pixel font sizes converted to rem units
+- Text scaling now works universally across header stats, badges, chart labels, metric cards, tips, etc.
+- No remaining text-[Npx] patterns in page.tsx
+- Dev server compiles cleanly with no errors
