@@ -24,6 +24,25 @@ export type GameScreen =
   | 'elections'
   | 'game_over';
 
+interface ReplacementCandidate {
+  id: string;
+  name: string;
+  portfolio: string;
+  competence: number;
+  loyalty: number;
+  corruption: number;
+  popularity: number;
+  faction: string;
+  age: number;
+  description: string;
+  popularityImpact: number;
+}
+
+interface ReplacementDialogState {
+  portfolio: string;
+  candidates: ReplacementCandidate[];
+}
+
 interface GameStore {
   // State
   gameState: GameState | null;
@@ -35,6 +54,7 @@ interface GameStore {
   availableProjects: InfrastructureProject[];
   showNewGameDialog: boolean;
   enableTips: boolean;
+  showReplacementDialog: ReplacementDialogState | null;
 
   // Actions
   startNewGame: (name: string, partyName: string, difficulty: 'easy' | 'normal' | 'hard') => void;
@@ -46,12 +66,14 @@ interface GameStore {
   allocateBudget: () => void;
   fireMinister: (ministerId: string) => void;
   appointMinister: (minister: Minister) => void;
+  replaceMinister: (candidateId: string, popularityImpact: number) => void;
   selectProvince: (provinceId: string | null) => void;
   setShowEventModal: (event: GameEvent | null) => void;
   dismissEvent: () => void;
   resetGame: () => void;
   setShowNewGameDialog: (show: boolean) => void;
   setEnableTips: (enable: boolean) => void;
+  setShowReplacementDialog: (state: ReplacementDialogState | null) => void;
 }
 
 export const useGameStore = create<GameStore>()(
@@ -66,6 +88,7 @@ export const useGameStore = create<GameStore>()(
       availableProjects: [],
       showNewGameDialog: false,
       enableTips: true,
+      showReplacementDialog: null,
 
       startNewGame: (name, partyName, difficulty) => {
         const state = createInitialGameState(difficulty);
@@ -189,11 +212,21 @@ export const useGameStore = create<GameStore>()(
 
         const newState = JSON.parse(JSON.stringify(gameState)) as GameState;
         const minister = newState.ministers.find(m => m.id === ministerId);
-        if (minister) {
-          minister.isActive = false;
-          newState.gameLog.push(`Minister fired: ${minister.name} (${minister.portfolio})`);
-        }
-        set({ gameState: newState });
+        if (!minister) return;
+
+        minister.isActive = false;
+        newState.gameLog.push(`Minister fired: ${minister.name} (${minister.portfolio})`);
+
+        // Generate 3 replacement candidates
+        const candidates = generateReplacementCandidates(minister.portfolio);
+
+        set({
+          gameState: newState,
+          showReplacementDialog: {
+            portfolio: minister.portfolio,
+            candidates,
+          },
+        });
       },
 
       appointMinister: (minister) => {
@@ -210,12 +243,48 @@ export const useGameStore = create<GameStore>()(
         set({ gameState: newState });
       },
 
+      replaceMinister: (candidateId, popularityImpact) => {
+        const { gameState, showReplacementDialog } = get();
+        if (!gameState || !showReplacementDialog) return;
+
+        const newState = JSON.parse(JSON.stringify(gameState)) as GameState;
+
+        if (candidateId && candidateId !== '') {
+          // Appoint the selected candidate
+          const candidate = showReplacementDialog.candidates.find(c => c.id === candidateId);
+          if (candidate) {
+            const newMinister: Minister = {
+              id: candidate.id,
+              name: candidate.name,
+              portfolio: candidate.portfolio,
+              competence: candidate.competence,
+              loyalty: candidate.loyalty,
+              corruption: candidate.corruption,
+              popularity: candidate.popularity,
+              faction: candidate.faction,
+              age: candidate.age,
+              isActive: true,
+            };
+            newState.ministers.push(newMinister);
+            newState.player.popularity = Math.max(0, Math.min(100, newState.player.popularity + candidate.popularityImpact));
+            newState.gameLog.push(`Minister appointed: ${candidate.name} (${candidate.portfolio}) — Popularity ${candidate.popularityImpact > 0 ? '+' : ''}${candidate.popularityImpact}`);
+          }
+        } else {
+          // Left vacant
+          newState.player.popularity = Math.max(0, Math.min(100, newState.player.popularity + popularityImpact));
+          newState.gameLog.push(`${showReplacementDialog.portfolio} portfolio left vacant — Popularity ${popularityImpact}`);
+        }
+
+        set({ gameState: newState, showReplacementDialog: null });
+      },
+
       selectProvince: (provinceId) => set({ selectedProvince: provinceId }),
       setShowEventModal: (event) => set({ showEventModal: event }),
       dismissEvent: () => set({ showEventModal: null }),
       resetGame: () => set({ gameState: null, currentScreen: 'start', historicalData: [], availableProjects: [] }),
       setShowNewGameDialog: (show) => set({ showNewGameDialog: show }),
       setEnableTips: (enable) => set({ enableTips: enable }),
+      setShowReplacementDialog: (state) => set({ showReplacementDialog: state }),
     }),
     {
       name: 'mgza-game-store',
@@ -278,4 +347,84 @@ function applyEffect(state: GameState, target: string, operation: string, value:
   } else if (target === 'budget') {
     // generic budget effect
   }
+}
+
+// ═══════════════════════════════════════════════════════
+// MINISTER REPLACEMENT CANDIDATE GENERATOR
+// ═══════════════════════════════════════════════════════
+
+const FIRST_NAMES = [
+  'Dr. Amos', 'Adv. Brenda', 'Prof. Chengetai', 'Cde. Danford', 'Ms. Eunice',
+  'Eng. Farai', 'Mrs. Grace', 'Mr. Happiness', 'Dr. Isaac', 'Ms. Joice',
+  'Mr. Knowledge', 'Mrs. Linnet', 'Dr. Maxwell', 'Ms. Nomathemba', 'Cde. Obert',
+  'Prof. Phineas', 'Mrs. Rufaro', 'Dr. Shadreck', 'Ms. Tambudzai', 'Mr. Webster',
+];
+
+const LAST_NAMES = [
+  'Banda', 'Chigumba', 'Dube', 'Gono', 'Hungwe', 'Jiri', 'Kaseke',
+  'Mlambo', 'Ncube', 'Nyoni', 'Phiri', 'Ruzvidzo', 'Sibanda', 'Tsvangirai',
+  'Moyo', 'Chikwata', 'Gumede', 'Mudzonga', 'Ndhlovu', 'Zindoga',
+];
+
+const FACTIONS = ['technocrats', 'reformers', 'old_guard', 'business', 'military'];
+const DESCRIPTIONS = [
+  'A seasoned administrator with deep experience in government operations.',
+  'A young, dynamic reformer who promises to modernize the portfolio.',
+  'A loyal party loyalist with strong connections to traditional structures.',
+  'A technocratic expert with an impressive academic background.',
+  'A pragmatic manager known for getting things done quietly.',
+  'A charismatic figure popular with the grassroots membership.',
+  'A former military officer with a reputation for discipline.',
+  'A controversial figure — bold but carries political baggage.',
+  'A compromise candidate acceptable to multiple factions.',
+  'A rising star with potential, but limited experience.',
+];
+
+function generateReplacementCandidates(portfolio: string): ReplacementCandidate[] {
+  const usedNames = new Set<string>();
+  const candidates: ReplacementCandidate[] = [];
+
+  // Generate 3 candidates with different profiles
+  const profiles = [
+    { competenceBias: [55, 75], loyaltyBias: [40, 65], corruptionBias: [15, 35], popularityBias: [50, 70], popImpactRange: [2, 8] }, // Good choice
+    { competenceBias: [40, 60], loyaltyBias: [55, 80], corruptionBias: [25, 45], popularityBias: [30, 50], popImpactRange: [-2, 4] }, // Loyal but mediocre
+    { competenceBias: [60, 85], loyaltyBias: [25, 45], corruptionBias: [30, 55], popularityBias: [35, 55], popImpactRange: [-5, 5] }, // Competent but risky
+  ];
+
+  for (const profile of profiles) {
+    let name: string;
+    do {
+      name = `${FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)]} ${LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)]}`;
+    } while (usedNames.has(name));
+    usedNames.add(name);
+
+    const competence = randomInt(profile.competenceBias[0], profile.competenceBias[1]);
+    const loyalty = randomInt(profile.loyaltyBias[0], profile.loyaltyBias[1]);
+    const corruption = randomInt(profile.corruptionBias[0], profile.corruptionBias[1]);
+    const popularity = randomInt(profile.popularityBias[0], profile.popularityBias[1]);
+    const popularityImpact = randomInt(profile.popImpactRange[0], profile.popImpactRange[1]);
+    const faction = FACTIONS[Math.floor(Math.random() * FACTIONS.length)];
+    const age = randomInt(35, 72);
+    const description = DESCRIPTIONS[Math.floor(Math.random() * DESCRIPTIONS.length)];
+
+    candidates.push({
+      id: `rep_${Math.random().toString(36).substring(2, 9)}`,
+      name,
+      portfolio,
+      competence,
+      loyalty,
+      corruption,
+      popularity,
+      faction,
+      age,
+      description,
+      popularityImpact,
+    });
+  }
+
+  return candidates;
+}
+
+function randomInt(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 }

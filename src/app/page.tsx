@@ -1243,33 +1243,86 @@ function ElectionsScreen() {
   const { gameState } = useGameStore();
   if (!gameState) return null;
 
-  const election = gameState.elections[0];
+  const election = gameState.elections[gameState.elections.length - 1];
   if (!election) return null;
 
   const monthsUntilElection = ((election.year - gameState.player.year) * 12 + election.month - gameState.player.month);
   const turnsUntilElection = Math.max(0, monthsUntilElection);
+  const latestPoll = election.polls[election.polls.length - 1];
+  const isUrgent = turnsUntilElection <= 0 && !election.isOver;
 
   return (
     <div className="space-y-6">
+      {/* Urgency banner */}
+      {isUrgent && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 text-center">
+          <p className="text-sm font-bold text-red-500">🗳️ THE ELECTION IS HERE!</p>
+          <p className="text-xs text-muted-foreground mt-1">The next time you press End Turn, the election will be held. Make sure you're ready!</p>
+        </div>
+      )}
+
       <HoverTip tipId="election_countdown" screenId="elections"><div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label="Election Type" value={election.type.charAt(0).toUpperCase() + election.type.slice(1)} color="text-amber-500" />
         <StatCard label="Election Date" value={`${MONTH_NAMES[election.month - 1]} ${election.year}`} color="text-foreground" />
         <StatCard label="Turns Until" value={`${turnsUntilElection}`} color={turnsUntilElection < 12 ? 'text-red-500' : 'text-green-500'} />
-        <StatCard label="Current Polls" value={`${election.polls[election.polls.length - 1]?.playerPercent.toFixed(0) || 48}%`} color={election.polls[election.polls.length - 1]?.playerPercent > 50 ? 'text-green-500' : 'text-yellow-500'} />
+        <StatCard label="Current Polls" value={`${latestPoll?.playerPercent.toFixed(0) || 48}%`} color={(latestPoll?.playerPercent || 0) > 50 ? 'text-green-500' : 'text-yellow-500'} />
       </div></HoverTip>
+
+      {/* Election Status */}
+      {election.isOver && (
+        <div className={`rounded-lg p-6 text-center ${election.playerWon ? 'bg-green-500/10 border border-green-500/30' : 'bg-red-500/10 border border-red-500/30'}`}>
+          {election.playerWon ? (
+            <>
+              <p className="text-2xl mb-2">🎉</p>
+              <h3 className="text-lg font-bold text-green-500">YOU WON THE ELECTION!</h3>
+              <p className="text-sm text-muted-foreground mt-2">
+                You secured {(election.playerVotes / (election.playerVotes + election.opponentVotes) * 100).toFixed(1)}% of the vote.
+                Your mandate is renewed!
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-2xl mb-2">😢</p>
+              <h3 className="text-lg font-bold text-red-500">YOU LOST THE ELECTION</h3>
+              <p className="text-sm text-muted-foreground mt-2">
+                The opposition won with {(election.opponentVotes / (election.playerVotes + election.opponentVotes) * 100).toFixed(1)}% of the vote.
+                Your presidency is over.
+              </p>
+            </>
+          )}
+          {election.isOver && (
+            <div className="mt-4 flex justify-center gap-8">
+              <div>
+                <p className="text-[10px] text-muted-foreground">Your Votes</p>
+                <p className="text-lg font-bold text-amber-500">{(election.playerVotes / 1e6).toFixed(1)}M</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground">Opposition Votes</p>
+                <p className="text-lg font-bold text-red-500">{(election.opponentVotes / 1e6).toFixed(1)}M</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground">Turnout</p>
+                <p className="text-lg font-bold">{election.turnoutPercent.toFixed(0)}%</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="bg-card border border-border rounded-lg p-6">
         <h3 className="text-lg font-bold uppercase tracking-wider mb-4">Campaign Status</h3>
         <p className="text-sm text-muted-foreground mb-4">
-          {turnsUntilElection > 24 ? 'The next election is still far away. Focus on governance to build popularity.' :
+          {election.isOver ? (election.playerWon ? 'Congratulations on your victory! A new election cycle has begun.' : 'The election has been decided. Your time in office is over.') :
+           turnsUntilElection > 24 ? 'The next election is still far away. Focus on governance to build popularity.' :
            turnsUntilElection > 12 ? 'Election season approaches. Start planning your campaign strategy.' :
            turnsUntilElection > 6 ? 'Campaign time! Start holding rallies and announcing your manifesto.' :
-           'The election is imminent! Final push for votes.'}
+           turnsUntilElection > 0 ? 'The election is imminent! Final push for votes.' :
+           'The election is THIS MONTH. Make every decision count!'}
         </p>
 
         {/* Polls Chart */}
         <div className="h-40 flex items-end gap-2 mb-4">
-          {election.polls.map((poll, i) => (
+          {election.polls.slice(-20).map((poll, i) => (
             <div key={i} className="flex-1 flex flex-col gap-0.5">
               <div className="flex gap-0.5 items-end h-32">
                 <div className="flex-1 bg-amber-500 rounded-t" style={{ height: `${poll.playerPercent}%` }} />
@@ -1302,6 +1355,21 @@ function ElectionsScreen() {
           </div>
         )}
       </div>
+
+      {/* Election Tips */}
+      {!election.isOver && (
+        <div className="bg-card border border-amber-500/20 rounded-lg p-4">
+          <h4 className="text-xs font-bold uppercase tracking-wider text-amber-500 mb-2 flex items-center gap-1.5">
+            <Lightbulb className="h-3.5 w-3.5" /> Election Strategy
+          </h4>
+          <ul className="space-y-1 text-xs text-muted-foreground">
+            <li>• Your poll numbers are based on popularity, satisfaction, and legitimacy</li>
+            <li>• Keep inflation low and GDP growing to boost your numbers</li>
+            <li>• Resolve crises quickly — unresolved events hurt your standing</li>
+            {turnsUntilElection <= 6 && <li className="text-red-500 font-bold">• ⚠️ URGENT: Focus all efforts on boosting popularity now!</li>}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
@@ -1314,7 +1382,8 @@ function GameOverScreen() {
   const { gameState, resetGame, setShowNewGameDialog } = useGameStore();
   if (!gameState) return null;
 
-  const { player, economic, citizenSatisfaction, national, infrastructure } = gameState;
+  const { player, economic, citizenSatisfaction, national } = gameState;
+  const isElectionLoss = gameState.gameOverReason?.includes('ELECTION');
 
   const turnsSurvived = player.turn;
   const yearsSurvived = turnsSurvived / 12;
@@ -1324,9 +1393,13 @@ function GameOverScreen() {
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="bg-card border border-red-500/30 rounded-lg p-8 max-w-lg text-center"
+        className={`rounded-lg p-8 max-w-lg text-center ${isElectionLoss ? 'bg-card border border-red-500/30' : 'bg-card border border-red-500/30'}`}
       >
-        <Skull className="h-16 w-16 text-red-500 mx-auto mb-4" />
+        {isElectionLoss ? (
+          <div className="text-6xl mb-4">🗳️</div>
+        ) : (
+          <Skull className="h-16 w-16 text-red-500 mx-auto mb-4" />
+        )}
         <h2 className="text-2xl font-bold mb-2">GAME OVER</h2>
         <p className="text-sm text-muted-foreground mb-4">{gameState.gameOverReason}</p>
 
@@ -1347,11 +1420,23 @@ function GameOverScreen() {
             <p className="text-[10px] text-muted-foreground">Final Popularity</p>
             <p className="text-lg font-bold">{player.popularity.toFixed(0)}%</p>
           </div>
+          <div className="bg-muted rounded p-3">
+            <p className="text-[10px] text-muted-foreground">Population</p>
+            <p className="text-lg font-bold">{(national.population / 1e6).toFixed(1)}M</p>
+          </div>
+          <div className="bg-muted rounded p-3">
+            <p className="text-[10px] text-muted-foreground">Satisfaction</p>
+            <p className="text-lg font-bold">{citizenSatisfaction.overall.toFixed(0)}%</p>
+          </div>
         </div>
+
+        <p className="text-xs text-muted-foreground/70 italic mb-6">
+          &ldquo;Rwendo rweupenyu haruna kudzoka&rdquo; — The journey of life has no return
+        </p>
 
         <div className="flex gap-3">
           <Button onClick={() => { resetGame(); setShowNewGameDialog(true); }} className="flex-1 bg-amber-600 hover:bg-amber-700">
-            New Game
+            <Gamepad2 className="h-4 w-4 mr-2" /> New Game
           </Button>
         </div>
       </motion.div>
@@ -1586,12 +1671,92 @@ function EventModal() {
 }
 
 // ═══════════════════════════════════════════════════════
+// MINISTER REPLACEMENT DIALOG
+// ═══════════════════════════════════════════════════════
+
+function MinisterReplacementDialog() {
+  const { gameState, showReplacementDialog, replaceMinister, setShowReplacementDialog } = useGameStore();
+  const [selectedCandidate, setSelectedCandidate] = useState<string | null>(null);
+
+  if (!showReplacementDialog || !gameState) return null;
+
+  const { portfolio, candidates } = showReplacementDialog;
+  const selected = candidates.find(c => c.id === selectedCandidate);
+
+  const handleReplace = () => {
+    if (selectedCandidate && selected) {
+      replaceMinister(selectedCandidate, selected.popularityImpact);
+      setSelectedCandidate(null);
+    }
+  };
+
+  const handleSkip = () => {
+    // Leave the position vacant — popularity penalty
+    replaceMinister('', -5);
+    setSelectedCandidate(null);
+  };
+
+  return (
+    <Dialog open={!!showReplacementDialog} onOpenChange={(open) => { if (!open) { setShowReplacementDialog(null); setSelectedCandidate(null); } }}>
+      <DialogContent className="sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle className="text-lg">Choose a Replacement — {portfolio}</DialogTitle>
+          <DialogDescription>
+            The previous minister has been dismissed. Select a replacement from 3 candidates. Your choice will affect your public standing.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3 py-2">
+          {candidates.map((candidate) => (
+            <button
+              key={candidate.id}
+              onClick={() => setSelectedCandidate(candidate.id)}
+              className={`w-full text-left rounded-lg border p-4 transition-all ${
+                selectedCandidate === candidate.id
+                  ? 'border-amber-500 bg-amber-500/10 ring-1 ring-amber-500'
+                  : 'border-border bg-card hover:border-amber-500/50'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <h4 className="text-sm font-bold">{candidate.name}</h4>
+                  <p className="text-[10px] text-muted-foreground">{candidate.faction} • Age {candidate.age}</p>
+                </div>
+                <span className={`text-xs font-bold ${candidate.popularityImpact > 0 ? 'text-green-500' : candidate.popularityImpact < 0 ? 'text-red-500' : 'text-muted-foreground'}`}>
+                  {candidate.popularityImpact > 0 ? '+' : ''}{candidate.popularityImpact} Popularity
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mb-2">{candidate.description}</p>
+              <div className="grid grid-cols-4 gap-2">
+                <MiniStat label="Competence" value={candidate.competence} />
+                <MiniStat label="Loyalty" value={candidate.loyalty} />
+                <MiniStat label="Corruption" value={candidate.corruption} inverted />
+                <MiniStat label="Public Image" value={candidate.popularity} />
+              </div>
+            </button>
+          ))}
+        </div>
+
+        <DialogFooter className="flex gap-2">
+          <Button variant="ghost" size="sm" onClick={handleSkip} className="text-xs">
+            Leave Vacant (-5 Popularity)
+          </Button>
+          <Button onClick={handleReplace} disabled={!selectedCandidate} className="bg-amber-600 hover:bg-amber-700 text-xs">
+            <Check className="h-3.5 w-3.5 mr-1" /> Appoint Selected
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
 // SHARED UI COMPONENTS
 // ═══════════════════════════════════════════════════════
 
 function StatCard({ label, value, icon, color = 'text-foreground' }: { label: string; value: string | number; icon?: React.ReactNode; color?: string }) {
   return (
-    <div className="bg-card border border-border rounded-lg p-4 shadow-sm" style={{ borderLeftWidth: '3px', borderLeftColor: color.startsWith('text-green') ? '#2E8B37' : color.startsWith('text-yellow') ? '#E8A817' : color.startsWith('text-red') ? '#CC2936' : '#888' }}>
+    <div className="bg-card border border-border rounded-lg p-4" style={{ borderLeftWidth: '3px', borderLeftColor: color.startsWith('text-green') ? '#2E8B37' : color.startsWith('text-yellow') ? '#E8A817' : color.startsWith('text-red') ? '#CC2936' : '#888' }}>
       <div className="flex items-center justify-between">
         <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">{label}</span>
         {icon && <span className={color}>{icon}</span>}
@@ -1603,7 +1768,7 @@ function StatCard({ label, value, icon, color = 'text-foreground' }: { label: st
 
 function MetricCard({ title, items }: { title: string; items: { label: string; value: string }[] }) {
   return (
-    <div className="bg-card border border-border rounded-lg p-4 transition-colors hover:bg-muted/50" style={{ borderTopWidth: '2px', borderTopColor: '#E8A817' }}>
+    <div className="bg-card border border-border rounded-lg p-4" style={{ borderTopWidth: '2px', borderTopColor: '#E8A817' }}>
       <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-3">{title}</h3>
       <div className="space-y-2.5">
         {items.map((item, i) => (
@@ -1900,6 +2065,7 @@ export default function GamePage() {
 
       {/* Event Modal */}
       <EventModal />
+      <MinisterReplacementDialog />
       <NewGameDialog open={showNewGameDialog} onOpenChange={setShowNewGameDialog} />
     </div>
   );

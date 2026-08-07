@@ -380,6 +380,9 @@ export function simulateTurn(state: GameState): GameState {
   // ─── Faction Dynamics ───
   simulateFactions(newState);
 
+  // ─── Elections ───
+  simulateElections(newState);
+
   // ─── Check for Game Over ───
   checkGameOver(newState);
 
@@ -937,6 +940,115 @@ function processBudgetFiscalYear(state: GameState): void {
   budget.previousYearActual = { ...budget.previousYearActual };
   for (const item of budget.items) {
     (budget.previousYearActual as any)[item.category] = item.allocated;
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// ELECTION SIMULATION
+// ═══════════════════════════════════════════════════════
+
+function simulateElections(state: GameState): void {
+  if (state.elections.length === 0) return;
+
+  const election = state.elections[state.elections.length - 1];
+
+  // If election is already over, don't process
+  if (election.isOver) return;
+
+  const { player, citizenSatisfaction, economic } = state;
+
+  // ─── Update Polls (every 3 turns) ───
+  if (player.turn % 3 === 0) {
+    // Calculate player poll percentage based on multiple factors
+    const basePopularity = player.popularity * 0.5;
+    const satisfactionBonus = citizenSatisfaction.overall * 0.2;
+    const legitimacyBonus = player.legitimacy * 0.15;
+    const economicBonus = (economic.gdpGrowth > 0 ? Math.min(economic.gdpGrowth * 2, 10) : economic.gdpGrowth * 2) * 0.1;
+    const inflationPenalty = economic.inflation > 30 ? -(economic.inflation - 30) * 0.1 : 0;
+    const loadSheddingPenalty = state.energy.loadSheddingHoursPerDay > 4 ? -(state.energy.loadSheddingHoursPerDay - 4) * 0.3 : 0;
+
+    let playerPercent = clamp(
+      basePopularity + satisfactionBonus + legitimacyBonus + economicBonus + inflationPenalty + loadSheddingPenalty + randomRange(-3, 3),
+      15, 75
+    );
+    const opponentPercent = clamp(100 - playerPercent + randomRange(-5, 5), 20, 80);
+
+    election.polls.push({
+      turn: player.turn,
+      playerPercent,
+      opponentPercent,
+    });
+  }
+
+  // ─── Check if Election Day Has Arrived ───
+  if (player.year === election.year && player.month === election.month) {
+    // Calculate final results
+    const latestPoll = election.polls[election.polls.length - 1];
+
+    // Base from latest polls
+    let playerVotePercent = latestPoll.playerPercent;
+
+    // Campaign funds bonus (more money = better outreach)
+    playerVotePercent += player.campaignFunds * 0.15;
+
+    // Turnout boost for high-satisfaction populations
+    const turnout = clamp(55 + citizenSatisfaction.overall * 0.3 + randomRange(-5, 5), 40, 85);
+    election.turnoutPercent = turnout;
+
+    // If turnout is high and satisfaction is low, opposition benefits
+    if (turnout > 70 && citizenSatisfaction.overall < 40) {
+      playerVotePercent -= 5;
+    }
+
+    // Final clamp with randomness (±5% swing on election day)
+    playerVotePercent = clamp(playerVotePercent + randomRange(-5, 5), 15, 80);
+    const opponentVotePercent = clamp(100 - playerVotePercent + randomRange(-3, 3), 15, 80);
+
+    // Total votes
+    const totalVotesCast = Math.round(election.totalVoters * (turnout / 100));
+    election.playerVotes = Math.round(totalVotesCast * (playerVotePercent / 100));
+    election.opponentVotes = totalVotesCast - election.playerVotes;
+
+    // Determine winner (need >50% to win outright, or >45% with 5% margin)
+    const playerWon = playerVotePercent > 50 || (playerVotePercent > 45 && playerVotePercent - opponentVotePercent > 5);
+    election.playerWon = playerWon;
+    election.isOver = true;
+    election.isCampaigning = false;
+
+    if (playerWon) {
+      // Record in historical results
+      election.historicalResults = [
+        ...(election.historicalResults || []),
+        { year: election.year, playerParty: Math.round(playerVotePercent), opposition: Math.round(opponentVotePercent) },
+      ];
+      state.gameLog.push(`🗳️ ELECTION VICTORY! You won with ${playerVotePercent.toFixed(1)}% of the vote in ${MONTH_NAMES[election.month - 1]} ${election.year}. Your mandate is renewed!`);
+      state.player.legitimacy = clamp(state.player.legitimacy + 15, 0, 100);
+      state.player.popularity = clamp(state.player.popularity + 5, 0, 100);
+
+      // Create next election (5 years later, in August)
+      const nextElection: typeof election = {
+        id: `e_${player.year + 5}`,
+        type: 'presidential',
+        year: election.year + 5,
+        month: 8,
+        isCampaigning: false,
+        campaignTurnsLeft: 0,
+        playerVotes: 0,
+        opponentVotes: 0,
+        totalVoters: Math.round(state.national.population * 0.45), // ~45% of population eligible
+        turnoutPercent: 0,
+        playerManifesto: [],
+        polls: [{ turn: player.turn, playerPercent: playerVotePercent - 2, opponentPercent: opponentVotePercent + 2 }],
+        isOver: false,
+        playerWon: false,
+        historicalResults: election.historicalResults || [],
+      };
+      state.elections.push(nextElection);
+    } else {
+      state.gameLog.push(`🗳️ ELECTION DEFEAT. The opposition won with ${opponentVotePercent.toFixed(1)}% of the vote. You received ${playerVotePercent.toFixed(1)}%. Your presidency is over.`);
+      state.isGameOver = true;
+      state.gameOverReason = `ELECTION DEFEAT — The opposition secured ${opponentVotePercent.toFixed(1)}% of the vote to your ${playerVotePercent.toFixed(1)}%. The people have spoken and chosen new leadership. After ${(player.turn / 12).toFixed(1)} years in power, your presidency comes to an end.`;
+    }
   }
 }
 
