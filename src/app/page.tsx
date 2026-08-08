@@ -81,7 +81,7 @@ const GAME_TIPS: Record<string, GameTip> = {
   load_shedding: {
     id: 'load_shedding',
     title: 'Load Shedding Hours',
-    description: 'Daily hours of scheduled power cuts. Citizens hate load shedding — it hurts businesses and daily life.',
+    description: 'Daily hours of scheduled power cuts. Citizens hate load shedding: it hurts businesses and daily life.',
     strategy: 'Invest in new power generation (solar, wind) and maintain existing infrastructure to reduce load shedding.',
     icon: 'Zap',
   },
@@ -107,7 +107,7 @@ const GAME_TIPS: Record<string, GameTip> = {
     id: 'dashboard_gdp_trend',
     screen: 'dashboard',
     title: 'GDP Trend',
-    description: 'Historical GDP growth over recent turns. Look for patterns — sustained decline needs urgent action.',
+    description: 'Historical GDP growth over recent turns. Look for patterns: sustained decline needs urgent action.',
     strategy: 'If GDP is dropping for 3+ consecutive months, increase investment in growth sectors immediately.',
     icon: 'TrendingUp',
   },
@@ -116,7 +116,7 @@ const GAME_TIPS: Record<string, GameTip> = {
     screen: 'dashboard',
     title: 'Popularity Trend',
     description: 'Your approval rating over time. This is the single most important metric for re-election.',
-    strategy: 'Popularity below 30% is danger territory — you may face a no-confidence vote or coup risk.',
+    strategy: 'Popularity below 30% is danger territory: you may face a no-confidence vote or coup risk.',
     icon: 'Heart',
   },
 
@@ -916,7 +916,7 @@ function MinistersScreen() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {inactiveMinisters.map((minister) => (
               <div key={minister.id} className="bg-card border border-border/50 rounded-lg p-4 opacity-50">
-                <h4 className="text-sm font-bold">{minister.name} — {minister.portfolio}</h4>
+                <h4 className="text-sm font-bold">{minister.name}: {minister.portfolio}</h4>
                 <p className="text-[0.625rem] text-muted-foreground">Previously dismissed</p>
               </div>
             ))}
@@ -966,9 +966,9 @@ function EnergyScreen() {
         </div>
         <p className="text-xs text-muted-foreground">
           Stage {energy.loadSheddingStage}: {energy.loadSheddingHoursPerDay.toFixed(0)} hours of load shedding per day
-          {energy.loadSheddingStage >= 6 && ' — CRITICAL: Major economic disruption'}
-          {energy.loadSheddingStage >= 3 && energy.loadSheddingStage < 6 && ' — Businesses severely affected'}
-          {energy.loadSheddingStage < 3 && ' — Managed load shedding'}
+          {energy.loadSheddingStage >= 6 && ' - CRITICAL: Major economic disruption'}
+          {energy.loadSheddingStage >= 3 && energy.loadSheddingStage < 6 && ' - Businesses severely affected'}
+          {energy.loadSheddingStage < 3 && ' - Managed load shedding'}
         </p>
       </div></HoverTip>
 
@@ -1404,7 +1404,7 @@ function ElectionsScreen() {
           <ul className="space-y-1 text-xs text-muted-foreground">
             <li>• Your poll numbers are based on popularity, satisfaction, and legitimacy</li>
             <li>• Keep inflation low and GDP growing to boost your numbers</li>
-            <li>• Resolve crises quickly — unresolved events hurt your standing</li>
+            <li>• Resolve crises quickly: unresolved events hurt your standing</li>
             {turnsUntilElection <= 6 && <li className="text-red-500 font-bold">• ⚠️ URGENT: Focus all efforts on boosting popularity now!</li>}
           </ul>
         </div>
@@ -1516,9 +1516,9 @@ function StartScreen() {
     <div className="flex flex-col min-h-[80vh] bg-gradient-to-b from-[#2E8B37]/5 via-background to-background zim-hero-bg">
       {/* Zimbabwe Flag Stripe Bar */}
       <div className="w-full flex flex-col">
-        <div className="w-full h-1" style={{ backgroundColor: '#2E8B37' }} />
-        <div className="w-full h-1" style={{ backgroundColor: '#FFFFFF' }} />
         <div className="w-full h-1" style={{ backgroundColor: '#CC2936' }} />
+        <div className="w-full h-1" style={{ backgroundColor: '#E8A817' }} />
+        <div className="w-full h-1" style={{ backgroundColor: '#2E8B37' }} />
       </div>
 
       {/* Settings bar */}
@@ -1608,7 +1608,10 @@ function StartScreen() {
           className="text-center max-w-xl px-4"
         >
           <div className="mb-6">
-            <div className="text-6xl mb-4">🇿🇼</div>
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <div className="text-6xl">🇿🇼</div>
+              <Badge variant="outline" className="text-sm font-black tracking-widest border-amber-500/40 text-amber-600">ZW</Badge>
+            </div>
             <h1 className="text-4xl md:text-5xl font-black tracking-tight mb-3">
               <div className="zim-title-shimmer">
                 <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#2E8B37] to-[#E8A817]">{t('start.title1')}</span><br />
@@ -1730,13 +1733,13 @@ function NewGameDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="easy">
-                  <div><span className="font-bold">Easy</span> — For new players. More forgiving.</div>
+                  <div><span className="font-bold">Easy</span>: For new players. More forgiving.</div>
                 </SelectItem>
                 <SelectItem value="normal">
-                  <div><span className="font-bold">Normal</span> — The intended experience.</div>
+                  <div><span className="font-bold">Normal</span>: The intended experience.</div>
                 </SelectItem>
                 <SelectItem value="hard">
-                  <div><span className="font-bold">Hard</span> — For experienced strategists.</div>
+                  <div><span className="font-bold">Hard</span>: For experienced strategists.</div>
                 </SelectItem>
               </SelectContent>
             </Select>
@@ -1863,7 +1866,7 @@ function MinisterReplacementDialog() {
     <Dialog open={!!showReplacementDialog} onOpenChange={(open) => { if (!open) { setShowReplacementDialog(null); setSelectedCandidate(null); } }}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle className="text-lg">Choose a Replacement — {portfolio}</DialogTitle>
+          <DialogTitle className="text-lg">Choose a Replacement: {portfolio}</DialogTitle>
           <DialogDescription>
             The previous minister has been dismissed. Select a replacement from 3 candidates. Your choice will affect your public standing.
           </DialogDescription>
@@ -2201,12 +2204,20 @@ function TrendCard({ title, data, color, formatValue }: { title: string; data: {
 
 export default function GamePage() {
   const { gameState, currentScreen, setScreen, endTurn, isProcessingTurn, showNewGameDialog, setShowNewGameDialog, resetGame, enableTips, setEnableTips, fontSize, darkMode, setDarkMode } = useGameStore();
-  const { t } = useTranslation();
+  const { t, getTip } = useTranslation();
   const { setTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showLog, setShowLog] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const mountedRef = useRef(false);
+
+  // Compute the active tip card for the sidebar (first matching tip for current screen)
+  const sidebarTip = enableTips ? (() => {
+    const match = Object.values(GAME_TIPS).find(
+      (tip) => !tip.screen || tip.screen === currentScreen
+    );
+    return match ? getTip(match.id) : null;
+  })() : null;
 
   const NAV_ITEMS = [
     { id: 'dashboard' as GameScreen, label: t('nav.dashboard'), icon: <LayoutDashboard className="h-4 w-4" /> },
@@ -2388,19 +2399,35 @@ export default function GamePage() {
                     )}
                   </button>
                 ))}
-                {/* Tips Toggle — right after Elections */}
+                {/* Tips Card — contextual advice below Elections */}
                 <Separator className="my-2" />
-                <div className="flex items-center justify-between px-3 py-2">
-                  <div className="flex items-center gap-1.5">
-                    <Lightbulb className="h-3 w-3 text-amber-500" />
-                    <span className="text-[0.625rem] text-muted-foreground">{t('common.tips')}</span>
-                  </div>
-                  <Switch checked={enableTips} onCheckedChange={setEnableTips} className="scale-75" />
-                </div>
+                {sidebarTip ? (
+                  <motion.div
+                    key={currentScreen}
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="mx-1 rounded-lg border border-amber-500/20 bg-amber-500/5 p-2.5"
+                  >
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Lightbulb className="h-3 w-3 text-amber-500" />
+                      <span className="text-[0.625rem] font-bold text-amber-500">{t('common.tip')}</span>
+                    </div>
+                    <p className="text-[0.625rem] font-bold">{sidebarTip.title}</p>
+                    <p className="text-[0.5625rem] text-muted-foreground mt-0.5 leading-snug">{sidebarTip.description}</p>
+                    <p className="text-[0.5625rem] text-amber-600/80 mt-1 italic leading-snug">{sidebarTip.strategy}</p>
+                  </motion.div>
+                ) : null}
               </nav>
             </ScrollArea>
 
             <div className="p-3 border-t border-border space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Lightbulb className="h-3 w-3 text-amber-500" />
+                  <span className="text-[0.625rem] text-muted-foreground">{t('common.tips')}</span>
+                </div>
+                <Switch checked={enableTips} onCheckedChange={setEnableTips} className="scale-75" />
+              </div>
               <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground" onClick={() => setShowSettings(true)}>
                 <Settings className="h-3 w-3 mr-1" /> {t('common.settings')}
               </Button>
@@ -2473,7 +2500,7 @@ export default function GamePage() {
         <div className="px-4 py-3">
           <div className="flex items-center justify-between text-[0.625rem] text-muted-foreground max-w-7xl mx-auto">
             <span className="flex items-center gap-1">
-              <Gamepad2 className="h-3 w-3 text-amber-500" /> Make Great Zimbabwe Again — v1.0
+              <Gamepad2 className="h-3 w-3 text-amber-500" /> Make Great Zimbabwe Again | v1.1
             </span>
             <span>{MONTH_NAMES[(player?.month || 1) - 1]} {player?.year || 2025} | Turn {(player?.turn || 1)} | {(citizenSatisfaction?.overall || 0).toFixed(0)}% Satisfaction</span>
           </div>

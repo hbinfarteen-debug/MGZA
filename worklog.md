@@ -75,3 +75,27 @@ Stage Summary:
 - All monetary values display in ZiG (Zimbabwe Gold) currency
 - Exchange rate set to 26.37 ZiG/USD with properly scaled simulation dynamics
 - Verified in browser: Dashboard shows "ZiG 28.5B" GDP, "26.37 ZiG/USD" exchange rate, Budget shows "ZiG 5,200M" Revenue
+---
+Task ID: 3
+Agent: main
+Task: Fix tips cards placement, ZW badge, em dashes, flag colors, version bump
+
+Work Log:
+- Moved tips toggle back to bottom sidebar section (with Settings & New Game buttons)
+- Added static tips card below Elections in sidebar nav: shows contextual tip (title, description, strategy) for current screen, changes with AnimatePresence when switching screens
+- Added "ZW" badge next to Zimbabwe flag emoji on hero page using Badge component with amber styling
+- Fixed hero flag stripe bar: removed white (#FFFFFF), replaced with Zimbabwe gold (#E8A817) - now red, yellow, green
+- Replaced all em dashes (—) with proper punctuation across all 3 languages:
+  - Proverbs: — → : (colon)
+  - Descriptions: — only → , only (comma)
+  - Footer: — Made with → | Made with
+  - Difficulty: Easy — → Easy:
+  - All i18n.ts (en/sn/nd) and page.tsx visible text
+- Bumped version from v1.0 to v1.1 in footer and all language translations
+
+Stage Summary:
+- Tips card visible below Elections with contextual advice, toggle at sidebar bottom
+- ZW badge shows next to flag on hero
+- No em dashes in user-visible text (only in code comments)
+- Flag stripe: red, yellow, green
+- Version: v1.1
