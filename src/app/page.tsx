@@ -326,119 +326,76 @@ const FONT_SIZE_MAP: Record<FontSize, string> = {
 // Always renders wrapper div to prevent layout shift when toggling.
 // ═══════════════════════════════════════════════════════
 
+// Context for shared hover tip state: renders tip card in sidebar below Elections
+const TipHoverContext = React.createContext<{
+  hoveredTipId: string | null;
+  setHoveredTipId: (id: string | null) => void;
+}>({ hoveredTipId: null, setHoveredTipId: () => {} });
+
 function HoverTip({ tipId, children, screenId }: { tipId: string; children: React.ReactNode; screenId?: GameScreen }) {
   const { enableTips, currentScreen } = useGameStore();
-  const { getTip } = useTranslation();
-  const [show, setShow] = useState(false);
-  const [coords, setCoords] = useState({ top: 0, left: 0, arrowSide: 'top' as 'top' | 'bottom' });
   const gameTip = GAME_TIPS[tipId];
   const isActive = enableTips && gameTip && (!gameTip.screen || gameTip.screen === screenId || gameTip.screen === currentScreen);
-  const tip = getTip(tipId);
-  const triggerRef = useRef<HTMLDivElement>(null);
-
-  // Check if tip should render at all
-  // isActive already computed above using gameTip for screen check, tip for display
-
-  const updatePosition = useCallback(() => {
-    const el = triggerRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const tipWidth = 320; // w-80 = 20rem = 320px
-    const tipHeight = 180; // approximate
-    const gap = 8;
-    const viewportHeight = window.innerHeight;
-    const viewportWidth = window.innerWidth;
-
-    // Prefer showing above, but flip below if no room
-    const showAbove = rect.top > tipHeight + gap + 50; // 50px buffer for header
-    const arrowSide = showAbove ? 'top' : 'bottom';
-
-    let top: number;
-    if (showAbove) {
-      top = rect.top - tipHeight - gap;
-    } else {
-      top = rect.bottom + gap;
-    }
-
-    // Center horizontally, but clamp to viewport edges
-    let left = rect.left + rect.width / 2 - tipWidth / 2;
-    left = Math.max(8, Math.min(left, viewportWidth - tipWidth - 8));
-
-    setCoords({ top: Math.max(4, top), left, arrowSide });
-  }, []);
+  const { setHoveredTipId } = React.useContext(TipHoverContext);
 
   const handleEnter = useCallback(() => {
     if (!isActive) return;
-    updatePosition();
-    setShow(true);
-  }, [isActive, updatePosition]);
+    setHoveredTipId(tipId);
+  }, [isActive, tipId, setHoveredTipId]);
 
-  const handleLeave = useCallback(() => setShow(false), []);
-
-  // Update position on scroll / resize while visible
-  useEffect(() => {
-    if (!show) return;
-    updatePosition();
-    const onScroll = () => updatePosition();
-    const onResize = () => updatePosition();
-    window.addEventListener('scroll', onScroll, true);
-    window.addEventListener('resize', onResize);
-    return () => {
-      window.removeEventListener('scroll', onScroll, true);
-      window.removeEventListener('resize', onResize);
-    };
-  }, [show, updatePosition]);
+  const handleLeave = useCallback(() => setHoveredTipId(null), [setHoveredTipId]);
 
   return (
     <div
-      ref={triggerRef}
       className="contents"
       onMouseEnter={handleEnter}
       onMouseLeave={handleLeave}
     >
       {children}
-      <AnimatePresence>
-        {show && isActive && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.92 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.92 }}
-            transition={{ duration: 0.12, ease: 'easeOut' }}
-            style={{ position: 'fixed', top: coords.top, left: coords.left, width: 320, zIndex: 9999 }}
-            className="pointer-events-none"
-          >
-            <div className="bg-popover border border-border rounded-lg shadow-xl p-3.5 text-left">
-              {/* Header */}
-              <div className="flex items-center gap-2 mb-2">
-                <div className="flex items-center justify-center w-6 h-6 rounded-md bg-amber-500/15 text-amber-500 shrink-0">
-                  <Lightbulb className="h-3.5 w-3.5" />
-                </div>
-                <h4 className="text-xs font-bold text-foreground">{tip.title}</h4>
-              </div>
-              {/* Description */}
-              <p className="text-[0.6875rem] text-muted-foreground leading-relaxed mb-2">{tip.description}</p>
-              {/* Strategy */}
-              <div className="border-t border-border/50 pt-2">
-                <div className="flex items-start gap-1.5">
-                  <Info className="h-3 w-3 text-amber-500 mt-0.5 shrink-0" />
-                  <p className="text-[0.625rem] text-amber-600 font-medium leading-relaxed">{tip.strategy}</p>
-                </div>
-              </div>
-            </div>
-            {/* Arrow */}
-            {coords.arrowSide === 'bottom' ? (
-              <div className="absolute bottom-full left-[var(--arrow-x)] -translate-x-1/2 -mb-px">
-                <div className="w-2 h-2 bg-popover border-l border-t border-border rotate-45" />
-              </div>
-            ) : (
-              <div className="absolute top-full left-[var(--arrow-x)] -translate-x-1/2 -mt-px">
-                <div className="w-2 h-2 bg-popover border-r border-b border-border rotate-45" />
-              </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
+// HOVER TIP CARD (renders in sidebar below Elections)
+// ═══════════════════════════════════════════════════════
+
+function HoverTipCard() {
+  const { enableTips } = useGameStore();
+  const { getTip } = useTranslation();
+  const { hoveredTipId } = React.useContext(TipHoverContext);
+  const gameTip = hoveredTipId ? GAME_TIPS[hoveredTipId] : null;
+  const tip = gameTip ? getTip(hoveredTipId) : null;
+
+  if (!enableTips || !tip) return null;
+
+  return (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={hoveredTipId}
+        initial={{ opacity: 0, height: 0 }}
+        animate={{ opacity: 1, height: 'auto' }}
+        exit={{ opacity: 0, height: 0 }}
+        transition={{ duration: 0.15 }}
+        className="mx-1 mb-1"
+      >
+        <div className="bg-popover border border-border rounded-lg shadow-sm p-2.5 text-left">
+          <div className="flex items-center gap-2 mb-1.5">
+            <div className="flex items-center justify-center w-5 h-5 rounded-md bg-amber-500/15 text-amber-500 shrink-0">
+              <Lightbulb className="h-3 w-3" />
+            </div>
+            <h4 className="text-[0.625rem] font-bold text-foreground">{tip.title}</h4>
+          </div>
+          <p className="text-[0.5625rem] text-muted-foreground leading-relaxed mb-1.5">{tip.description}</p>
+          <div className="border-t border-border/50 pt-1.5">
+            <div className="flex items-start gap-1">
+              <Info className="h-2.5 w-2.5 text-amber-500 mt-0.5 shrink-0" />
+              <p className="text-[0.5625rem] text-amber-600 font-medium leading-relaxed">{tip.strategy}</p>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </AnimatePresence>
   );
 }
 
@@ -1519,7 +1476,7 @@ function StartScreen() {
         <div className="w-full h-1" style={{ backgroundColor: '#2E8B37' }} />
         <div className="w-full h-1" style={{ backgroundColor: '#E8A817' }} />
         <div className="w-full h-1" style={{ backgroundColor: '#CC2936' }} />
-        <div className="w-full h-1" style={{ backgroundColor: '#1a1a1a' }} />
+        <div className="w-full h-1" style={{ backgroundColor: '#000000' }} />
       </div>
 
       {/* Settings bar */}
@@ -1612,7 +1569,7 @@ function StartScreen() {
             <div className="flex items-center justify-center gap-3 mb-4">
               <div className="relative">
                 <div className="text-6xl">🇿🇼</div>
-                <span className="absolute -bottom-1 -right-1 text-xs font-black text-[#1a1a1a]">ZW</span>
+                <span className="absolute -bottom-1 -right-1 text-xs font-black text-black">ZW</span>
               </div>
             </div>
             <h1 className="text-4xl md:text-5xl font-black tracking-tight mb-3">
@@ -1826,7 +1783,6 @@ function EventModal() {
   const { showEventModal, resolveEvent, setShowEventModal, endTurn } = useGameStore();
   const { t } = useTranslation();
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
-  const [penaltyApplied, setPenaltyApplied] = useState(false);
 
   const event = showEventModal;
 
@@ -2257,20 +2213,13 @@ function TrendCard({ title, data, color, formatValue }: { title: string; data: {
 
 export default function GamePage() {
   const { gameState, currentScreen, setScreen, endTurn, isProcessingTurn, showNewGameDialog, setShowNewGameDialog, resetGame, enableTips, setEnableTips, fontSize, darkMode, setDarkMode } = useGameStore();
-  const { t, getTip } = useTranslation();
+  const { t } = useTranslation();
   const { setTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showLog, setShowLog] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [hoveredTipId, setHoveredTipId] = useState<string | null>(null);
   const mountedRef = useRef(false);
-
-  // Compute the active tip card for the sidebar (first matching tip for current screen)
-  const sidebarTip = enableTips ? (() => {
-    const match = Object.values(GAME_TIPS).find(
-      (tip) => !tip.screen || tip.screen === currentScreen
-    );
-    return match ? getTip(match.id) : null;
-  })() : null;
 
   const NAV_ITEMS = [
     { id: 'dashboard' as GameScreen, label: t('nav.dashboard'), icon: <LayoutDashboard className="h-4 w-4" /> },
@@ -2325,6 +2274,7 @@ export default function GamePage() {
   const { player, economic, energy, citizenSatisfaction } = gameState || {};
 
   return (
+    <TipHoverContext.Provider value={{ hoveredTipId, setHoveredTipId }}>
     <div className="min-h-screen bg-background flex flex-col">
       {/* Top Header */}
       <header className="sticky top-0 z-50 bg-card/95 backdrop-blur border-b border-border px-3 py-2">
@@ -2452,33 +2402,8 @@ export default function GamePage() {
                     )}
                   </button>
                 ))}
-                {/* Hover Tip Card — contextual advice below Elections */}
-                <Separator className="my-2" />
-                {sidebarTip ? (
-                  <motion.div
-                    key={currentScreen}
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="mx-1"
-                  >
-                    <div className="bg-popover border border-border rounded-lg shadow-sm p-2.5 text-left">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <div className="flex items-center justify-center w-5 h-5 rounded-md bg-amber-500/15 text-amber-500 shrink-0">
-                          <Lightbulb className="h-3 w-3" />
-                        </div>
-                        <h4 className="text-[0.625rem] font-bold text-foreground">{sidebarTip.title}</h4>
-                      </div>
-                      <p className="text-[0.5625rem] text-muted-foreground leading-relaxed mb-1.5">{sidebarTip.description}</p>
-                      <div className="border-t border-border/50 pt-1.5">
-                        <div className="flex items-start gap-1">
-                          <Info className="h-2.5 w-2.5 text-amber-500 mt-0.5 shrink-0" />
-                          <p className="text-[0.5625rem] text-amber-600 font-medium leading-relaxed">{sidebarTip.strategy}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                ) : null}
+                {/* Hover Tip Card — appears below Elections when hovering on features */}
+                <HoverTipCard />
               </nav>
             </ScrollArea>
 
@@ -2558,11 +2483,12 @@ export default function GamePage() {
 
       {/* Footer */}
       <footer className="bg-card/95 backdrop-blur mt-auto">
-        <div className="w-full h-0.5" style={{ backgroundColor: '#2E8B37' }} />
+        <div className="w-full flex flex-col">
+          <div className="w-full h-0.5" style={{ backgroundColor: '#2E8B37' }} />\n          <div className="w-full h-0.5" style={{ backgroundColor: '#E8A817' }} />\n          <div className="w-full h-0.5" style={{ backgroundColor: '#CC2936' }} />\n          <div className="w-full h-0.5" style={{ backgroundColor: '#000000' }} />\n        </div>
         <div className="px-4 py-3">
           <div className="flex items-center justify-between text-[0.625rem] text-muted-foreground max-w-7xl mx-auto">
             <span className="flex items-center gap-1">
-              <Gamepad2 className="h-3 w-3 text-amber-500" /> Make Great Zimbabwe Again | v1.2
+              <Gamepad2 className="h-3 w-3 text-amber-500" /> Make Great Zimbabwe Again | v1.3
             </span>
             <span>{MONTH_NAMES[(player?.month || 1) - 1]} {player?.year || 2025} | Turn {(player?.turn || 1)} | {(citizenSatisfaction?.overall || 0).toFixed(0)}% Satisfaction</span>
           </div>
@@ -2575,5 +2501,6 @@ export default function GamePage() {
       <NewGameDialog open={showNewGameDialog} onOpenChange={setShowNewGameDialog} />
       <SettingsDialog open={showSettings} onOpenChange={setShowSettings} />
     </div>
+    </TipHoverContext.Provider>
   );
 }

@@ -118,3 +118,29 @@ Stage Summary:
 - Flag stripes: green, yellow, red, BLACK (4 stripes matching Zimbabwe flag)
 - ZW displayed in black text near flag (orange badge removed)
 - Version: v1.2
+---
+Task ID: 5
+Agent: main
+Task: Move hover tip card to sidebar below Elections, fix ZW/flag colors
+
+Work Log:
+- Added TipHoverContext (React.createContext) for shared hover state between HoverTip components and sidebar
+- Rewrote HoverTip component: removed floating fixed-position tooltip popup (motion.div with position:fixed), replaced with context-based approach that sets hoveredTipId on mouseEnter and clears on mouseLeave
+- Added HoverTipCard component: renders in sidebar below Elections, reads hoveredTipId from TipHoverContext, displays tip card with title/description/strategy using AnimatePresence animation
+- Wrapped GamePage return with TipHoverContext.Provider (hoveredTipId state in GamePage)
+- Removed static sidebarTip card (was showing unchanging tip based on current screen)
+- Removed sidebarTip computation variable from GamePage
+- Removed unused getTip from GamePage destructuring
+- Removed unused penaltyApplied state from EventModal
+- Fixed ZW text color from #1a1a1a (dark gray) to pure black (text-black)
+- Fixed flag 4th stripe from #1a1a1a to #000000 (pure black)
+- Added 4-stripe flag bar to game footer (green, yellow, red, black)
+- Bumped version from v1.2 to v1.3 in footer and all 3 language translations
+
+Stage Summary:
+- Hover tip cards now render inline in sidebar below Elections (not floating overlay)
+- Tip appears when hovering any HoverTip-wrapped element (stat cards, etc.) and disappears on mouse leave
+- No static tip card; tips are purely hover-driven
+- ZW text is pure black, flag 4th stripe is pure black
+- Footer has 4-stripe Zimbabwe flag bar
+- Version: v1.3
