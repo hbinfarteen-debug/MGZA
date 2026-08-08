@@ -470,9 +470,9 @@ function DashboardScreen() {
       {/* Key Metrics Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <HoverTip tipId="dashboard_economic" screenId="dashboard"><div><AnimatedMetricCard title={t('dash.economicIndicators')} index={0} items={[
-          { label: t('dash.gdp'), value: `$${economic.gdp.toFixed(1)}B` },
+          { label: t('dash.gdp'), value: `ZiG ${economic.gdp.toFixed(1)}B` },
           { label: t('dash.unemployment'), value: `${economic.unemploymentRate.toFixed(1)}%` },
-          { label: t('dash.exchangeRate'), value: `${economic.exchangeRate.toLocaleString()} ZWL/USD` },
+          { label: t('dash.exchangeRate'), value: `${economic.exchangeRate.toFixed(2)} ZiG/USD` },
           { label: t('dash.debtGdp'), value: `${economic.debtToGdp.toFixed(0)}%` },
           { label: t('dash.investorConfidence'), value: `${economic.investorConfidence.toFixed(0)}` },
           { label: t('dash.informalEconomy'), value: `${economic.informalEconomySize.toFixed(0)}%` },
@@ -499,7 +499,7 @@ function DashboardScreen() {
           { label: 'Parliament Seats', value: `${gameState.parliament.rulingPartySeats}/${gameState.parliament.totalSeats}` },
           { label: 'Dam Level', value: `${energy.damLevel.toFixed(0)}%` },
           { label: 'Water Reservoirs', value: `${water.reservoirLevels.toFixed(0)}%` },
-          { label: 'Funds Lost to Corruption', value: `$${corruption.fundsLostToCorruption.toFixed(0)}M/mo` },
+          { label: 'Funds Lost to Corruption', value: `ZiG ${corruption.fundsLostToCorruption.toFixed(0)}M/mo` },
         ]} /></div></HoverTip>
       </div>
 
@@ -510,7 +510,7 @@ function DashboardScreen() {
           title="GDP TREND"
           data={recentHistory.map(h => ({ label: `${h.month}/${h.year.toString().slice(2)}`, value: h.gdp }))}
           color="#4CAF50"
-          formatValue={(v) => `$${v.toFixed(1)}B`}
+          formatValue={(v) => `ZiG ${v.toFixed(1)}B`}
         /></div></HoverTip>
         <HoverTip tipId="dashboard_popularity_trend" screenId="dashboard"><div><TrendCard
           title="POPULARITY TREND"
@@ -632,10 +632,10 @@ function BudgetScreen() {
     <div className="space-y-6">
       {/* Budget Summary */}
       <HoverTip tipId="budget_overview" screenId="budget"><div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label="Revenue" value={`$${budget.totalRevenue.toLocaleString()}M`} icon={<DollarSign className="h-4 w-4" />} color="text-green-500" />
-        <StatCard label="Allocated" value={`$${totalAllocated.toLocaleString()}M`} icon={<DollarSign className="h-4 w-4" />} color={deficit > 0 ? 'text-red-500' : 'text-green-500'} />
-        <StatCard label="Deficit" value={`$${deficit.toLocaleString()}M`} icon={<AlertTriangle className="h-4 w-4" />} color={deficit > 0 ? 'text-red-500' : 'text-green-500'} />
-        <StatCard label="GDP" value={`$${economic.gdp.toFixed(1)}B`} icon={<TrendingUp className="h-4 w-4" />} color={economic.gdpGrowth > 0 ? 'text-green-500' : 'text-red-500'} />
+        <StatCard label="Revenue" value={`ZiG ${budget.totalRevenue.toLocaleString()}M`} icon={<DollarSign className="h-4 w-4" />} color="text-green-500" />
+        <StatCard label="Allocated" value={`ZiG ${totalAllocated.toLocaleString()}M`} icon={<DollarSign className="h-4 w-4" />} color={deficit > 0 ? 'text-red-500' : 'text-green-500'} />
+        <StatCard label="Deficit" value={`ZiG ${deficit.toLocaleString()}M`} icon={<AlertTriangle className="h-4 w-4" />} color={deficit > 0 ? 'text-red-500' : 'text-green-500'} />
+        <StatCard label="GDP" value={`ZiG ${economic.gdp.toFixed(1)}B`} icon={<TrendingUp className="h-4 w-4" />} color={economic.gdpGrowth > 0 ? 'text-green-500' : 'text-red-500'} />
       </div></HoverTip>
 
       <div className="flex justify-end">
@@ -656,12 +656,12 @@ function BudgetScreen() {
                   <span className="text-lg">{item.icon}</span>
                   <div>
                     <h4 className="text-sm font-bold">{item.displayName}</h4>
-                    <p className="text-[0.625rem] text-muted-foreground">Min: ${item.minimumRequired}M | Rec: ${item.recommended}M</p>
+                    <p className="text-[0.625rem] text-muted-foreground">Min: ZiG {item.minimumRequired}M | Rec: ZiG {item.recommended}M</p>
                   </div>
                 </div>
                 <div className="text-right">
                   <span className={`text-sm font-bold ${!meetsMin ? 'text-red-500' : ''}`}>
-                    ${localBudget[item.category]?.toLocaleString() || 0}M
+                    ZiG {localBudget[item.category]?.toLocaleString() || 0}M
                   </span>
                   <p className="text-[0.625rem] text-muted-foreground">{pct.toFixed(1)}%</p>
                 </div>
@@ -705,7 +705,7 @@ function InfrastructureScreen() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label="Active Projects" value={`${activeProjects.length}`} icon={<Building2 className="h-4 w-4" />} color="text-amber-500" />
         <StatCard label="Completed" value={`${gameState.projects.filter(p => p.status === 'completed').length}`} icon={<Trophy className="h-4 w-4" />} color="text-green-500" />
-        <StatCard label="Total Invested" value={`$${gameState.projects.reduce((s, p) => s + p.cost, 0).toLocaleString()}M`} icon={<DollarSign className="h-4 w-4" />} color="text-blue-500" />
+        <StatCard label="Total Invested" value={`ZiG ${gameState.projects.reduce((s, p) => s + p.cost, 0).toLocaleString()}M`} icon={<DollarSign className="h-4 w-4" />} color="text-blue-500" />
         <StatCard label="Jobs Created" value={`${gameState.projects.reduce((s, p) => s + p.employmentCreated, 0).toLocaleString()}`} icon={<Users className="h-4 w-4" />} color="text-green-500" />
       </div>
 
@@ -728,7 +728,7 @@ function InfrastructureScreen() {
               </div>
               <p className="text-xs text-muted-foreground mb-3">{project.description}</p>
               <div className="grid grid-cols-3 gap-2 text-xs">
-                <div><span className="text-muted-foreground">Cost:</span> <span className="font-bold">${project.cost}M</span></div>
+                <div><span className="text-muted-foreground">Cost:</span> <span className="font-bold">ZiG {project.cost}M</span></div>
                 <div><span className="text-muted-foreground">Time:</span> <span className="font-bold">{project.completionTime} mo</span></div>
                 <div><span className="text-muted-foreground">Jobs:</span> <span className="font-bold">{project.employmentCreated.toLocaleString()}</span></div>
               </div>
@@ -990,7 +990,7 @@ function EnergyScreen() {
               </div>
               <div className="grid grid-cols-3 gap-2 text-[0.625rem] text-muted-foreground">
                 <span>Reliability: {data.reliability}%</span>
-                <span>Cost: ${data.costPerMW}/MW</span>
+                <span>Cost: ZiG {data.costPerMW}/MW</span>
                 <span>Env: {data.environmentalImpact}/100</span>
               </div>
             </div>
@@ -1454,7 +1454,7 @@ function GameOverScreen() {
           </div>
           <div className="bg-muted rounded p-3">
             <p className="text-[0.625rem] text-muted-foreground">{t('gameOver.finalGDP')}</p>
-            <p className="text-lg font-bold">${economic.gdp.toFixed(1)}B</p>
+            <p className="text-lg font-bold">ZiG {economic.gdp.toFixed(1)}B</p>
           </div>
           <div className="bg-muted rounded p-3">
             <p className="text-[0.625rem] text-muted-foreground">{t('gameOver.finalPopularity')}</p>
@@ -2388,17 +2388,19 @@ export default function GamePage() {
                     )}
                   </button>
                 ))}
+                {/* Tips Toggle — right after Elections */}
+                <Separator className="my-2" />
+                <div className="flex items-center justify-between px-3 py-2">
+                  <div className="flex items-center gap-1.5">
+                    <Lightbulb className="h-3 w-3 text-amber-500" />
+                    <span className="text-[0.625rem] text-muted-foreground">{t('common.tips')}</span>
+                  </div>
+                  <Switch checked={enableTips} onCheckedChange={setEnableTips} className="scale-75" />
+                </div>
               </nav>
             </ScrollArea>
 
             <div className="p-3 border-t border-border space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <Lightbulb className="h-3 w-3 text-amber-500" />
-                  <span className="text-[0.625rem] text-muted-foreground">{t('common.tips')}</span>
-                </div>
-                <Switch checked={enableTips} onCheckedChange={setEnableTips} className="scale-75" />
-              </div>
               <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground" onClick={() => setShowSettings(true)}>
                 <Settings className="h-3 w-3 mr-1" /> {t('common.settings')}
               </Button>

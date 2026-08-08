@@ -45,3 +45,33 @@ Stage Summary:
 - Hover tips now display translated content
 - Untranslated items (metric card labels, section headings in sub-screens) gracefully fall back to English
 - ESLint: 0 errors, 0 warnings
+---
+Task ID: 2
+Agent: main
+Task: Move tips toggle below Elections in sidebar + Change currency to ZiG
+
+Work Log:
+- Moved tips toggle (Lightbulb icon + Switch) from sidebar footer to directly below Elections nav item with a Separator divider
+- Removed tips toggle from bottom sidebar section (kept only Settings and New Game buttons)
+- Changed all `$` currency displays in page.tsx to `ZiG` prefix:
+  - Dashboard: GDP, Funds Lost to Corruption, GDP Trend chart format
+  - Dashboard: Exchange rate display from `ZWL/USD` to `ZiG/USD` with 2 decimal places
+  - Budget screen: Revenue, Allocated, Deficit, GDP stat cards, budget item min/rec/allocated values
+  - Infrastructure screen: Total Invested, project costs
+  - Energy screen: power plant cost per MW
+  - Game Over screen: final GDP
+- Updated constants.ts: exchangeRate from 4500 to 26.37
+- Updated engine.ts:
+  - Exchange rate simulation thresholds: >3000→>30, >2000→>25, >5000→>35
+  - Exchange rate delta values scaled for ZiG range (±0.3-0.6 instead of ±20-100)
+  - Random exchange rate fluctuation: ±0.3 instead of ±50
+  - News article text: `$`→`ZiG` in project completion and project generation
+  - Event descriptions: `$2 billion`→`ZiG 2 billion`, `$45 million`→`ZiG 45 million`, `$4.5 billion`→`ZiG 4.5 billion`
+  - Smuggling rate threshold: >5000→>35
+- Updated types.ts: All `USD` and `ZWL` comments to `ZiG`
+
+Stage Summary:
+- Tips toggle now positioned in sidebar right after Elections nav item (with separator)
+- All monetary values display in ZiG (Zimbabwe Gold) currency
+- Exchange rate set to 26.37 ZiG/USD with properly scaled simulation dynamics
+- Verified in browser: Dashboard shows "ZiG 28.5B" GDP, "26.37 ZiG/USD" exchange rate, Budget shows "ZiG 5,200M" Revenue

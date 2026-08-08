@@ -25,7 +25,7 @@ export interface PlayerState {
   politicalInfluence: number; // 0-100
   legitimacy: number; // 0-100
   corruptionTolerance: number; // -50 to 50 (negative = anti-corruption stance)
-  campaignFunds: number; // in millions USD
+  campaignFunds: number; // in millions ZiG
   approvalByProvince: Record<string, number>;
   promises: Promise[];
   fulfilledPromises: string[];
@@ -58,14 +58,14 @@ export interface NationalStats {
 }
 
 export interface EconomicStats {
-  gdp: number; // in billions USD
+  gdp: number; // in billions ZiG
   gdpGrowth: number; // percentage
   gdpPerCapita: number;
   inflation: number; // percentage
   interestRate: number; // percentage
-  governmentDebt: number; // billions USD
+  governmentDebt: number; // billions ZiG
   debtToGdp: number; // percentage
-  exchangeRate: number; // ZWL per USD
+  exchangeRate: number; // ZiG per USD
   moneySupply: number; // billions
   investorConfidence: number; // 0-100
   consumerConfidence: number; // 0-100
@@ -73,7 +73,7 @@ export interface EconomicStats {
   governmentRevenue: number; // billions
   governmentSpending: number; // billions
   budgetDeficit: number; // billions
-  foreignReserves: number; // billions USD
+  foreignReserves: number; // billions ZiG
   informalEconomySize: number; // percentage of GDP
   unemploymentRate: number; // percentage
   youthUnemployment: number; // percentage
@@ -128,7 +128,7 @@ export interface InfrastructureProject {
   province: string;
   district?: string;
   description: string;
-  cost: number; // millions USD
+  cost: number; // millions ZiG
   maintenanceCost: number; // millions per turn
   completionTime: number; // turns
   progress: number; // 0-100 percentage
@@ -168,7 +168,7 @@ export interface EnergySystem {
     capacity: number; // MW
     output: number; // MW
     reliability: number; // 0-100
-    costPerMW: number; // USD
+    costPerMW: number; // ZiG
     environmentalImpact: number; // 0-100
   }>;
   damLevel: number; // percentage
@@ -305,7 +305,7 @@ export interface CorruptionCase {
   description: string;
   involvedOfficial: string;
   severity: 'minor' | 'major' | 'critical';
-  amountInvolved: number; // millions USD
+  amountInvolved: number; // millions ZiG
   discovered: boolean;
   investigated: boolean;
   prosecuted: boolean;
@@ -417,7 +417,7 @@ export interface BudgetItem {
   category: BudgetCategory;
   displayName: string;
   icon: string;
-  allocated: number; // millions USD
+  allocated: number; // millions ZiG
   minimumRequired: number;
   recommended: number;
   efficiency: number; // 0-100

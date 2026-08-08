@@ -281,7 +281,7 @@ export const INITIAL_ECONOMIC: EconomicStats = {
   interestRate: 35,
   governmentDebt: 18.2,
   debtToGdp: 64,
-  exchangeRate: 4500,
+  exchangeRate: 26.37,
   moneySupply: 85,
   investorConfidence: 35,
   consumerConfidence: 32,

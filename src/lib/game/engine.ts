@@ -72,7 +72,7 @@ const EVENT_TEMPLATES: {
     description: 'Foreign currency shortages have prevented fuel imports. Long queues have formed at filling stations across major cities. Transport costs are rising and businesses report disruptions.',
     category: 'economic',
     severity: 'major',
-    condition: (s) => s.economic.foreignReserves < 0.5 && s.economic.exchangeRate > 3000,
+    condition: (s) => s.economic.foreignReserves < 0.5 && s.economic.exchangeRate > 30,
     choices: [
       { text: 'Use foreign reserves to import fuel', shortDesc: 'Quick fix but drains reserves', effects: [{ target: 'economic.foreignReserves', op: 'subtract', value: 0.1, dur: 0 }, { target: 'citizenSatisfaction.economy', op: 'add', value: 5, dur: 3 }, { target: 'economic.inflation', op: 'add', value: 2, dur: 2 }], politicalRisk: 0, popularityImpact: 5 },
       { text: 'Allow fuel price increases', shortDesc: 'Market solution, unpopular', effects: [{ target: 'economic.inflation', op: 'add', value: 5, dur: 3 }, { target: 'citizenSatisfaction.economy', op: 'subtract', value: 10, dur: 4 }, { target: 'economic.investorConfidence', op: 'add', value: 5, dur: 6 }], politicalRisk: -8, popularityImpact: -15 },
@@ -134,7 +134,7 @@ const EVENT_TEMPLATES: {
   {
     id: 'foreign_investment_offer',
     title: 'Major Foreign Investment Proposal',
-    description: 'A consortium of international investors has proposed a $2 billion industrial development zone near Harare. The project promises 50,000 jobs but requires significant tax incentives and land allocation.',
+    description: 'A consortium of international investors has proposed a ZiG 2 billion industrial development zone near Harare. The project promises 50,000 jobs but requires significant tax incentives and land allocation.',
     category: 'economic',
     severity: 'major',
     condition: (s) => s.economic.investorConfidence > 35,
@@ -160,7 +160,7 @@ const EVENT_TEMPLATES: {
   {
     id: 'corruption_scandal',
     title: 'Senior Official Implicated in Corruption Scandal',
-    description: 'Leaked documents reveal that a senior government official has diverted $45 million from a road construction project. The media is demanding answers and opposition parties are calling for resignations.',
+    description: 'Leaked documents reveal that a senior government official has diverted ZiG 45 million from a road construction project. The media is demanding answers and opposition parties are calling for resignations.',
     category: 'political',
     severity: 'major',
     condition: (s) => s.corruption.nationalLevel > 55,
@@ -173,7 +173,7 @@ const EVENT_TEMPLATES: {
   {
     id: 'diplomatic_crisis',
     title: 'Diplomatic Tension with Key Trade Partner',
-    description: 'A diplomatic dispute with South Africa over trade regulations threatens to disrupt imports worth $4.5 billion. Supply chains are already being affected. Business leaders urge swift resolution.',
+    description: 'A diplomatic dispute with South Africa over trade regulations threatens to disrupt imports worth ZiG 4.5 billion. Supply chains are already being affected. Business leaders urge swift resolution.',
     category: 'international',
     severity: 'major',
     condition: () => Math.random() < 0.12,
@@ -202,7 +202,7 @@ const EVENT_TEMPLATES: {
     description: 'International visitor numbers have jumped 35% this quarter, driven by favorable exchange rates and successful marketing campaigns. Hotels are at capacity and tour operators report record bookings.',
     category: 'tourism',
     severity: 'minor',
-    condition: (s) => s.economic.exchangeRate > 2000 && s.infrastructure.airportCondition > 40,
+    condition: (s) => s.economic.exchangeRate > 25 && s.infrastructure.airportCondition > 40,
     choices: [
       { text: 'Invest in tourism infrastructure', shortDesc: 'Capitalize on momentum', effects: [{ target: 'economic.gdp', op: 'add', value: 0.8, dur: 12 }, { target: 'budget.tourism', op: 'subtract', value: 80, dur: 0 }, { target: 'economic.unemploymentRate', op: 'subtract', value: 1, dur: 6 }], politicalRisk: 0, popularityImpact: 8 },
       { text: 'Increase tourism taxes', shortDesc: 'Revenue boost, may slow growth', effects: [{ target: 'economic.taxRevenue', op: 'add', value: 0.2, dur: 12 }, { target: 'economic.gdp', op: 'add', value: 0.3, dur: 6 }, { target: 'citizenSatisfaction.economy', op: 'add', value: 3, dur: 4 }], politicalRisk: 0, popularityImpact: 3 },
@@ -260,7 +260,7 @@ function generateNews(state: GameState): NewsArticle[] {
     news.push({
       id: uid(), headline: `${proj.name} Completed`,
       subheadline: `New ${proj.category} infrastructure now operational in ${proj.province}`,
-      body: `The government has completed construction of ${proj.name} at a cost of $${proj.cost}M. The project is expected to create ${proj.employmentCreated} jobs and improve services for local residents.`,
+      body: `The government has completed construction of ${proj.name} at a cost of ZiG ${proj.cost}M. The project is expected to create ${proj.employmentCreated} jobs and improve services for local residents.`,
       category: 'infrastructure', turn: state.player.turn, month: state.player.month, year,
       sentiment: 'positive', impact: 3, isBreaking: false,
     });
@@ -444,20 +444,20 @@ function simulateEconomy(state: GameState, season: string): void {
   let inflationDelta = 0;
   if (budget.totalAllocated > budget.totalRevenue) inflationDelta += 0.5;
   if (economic.moneySupply > 100) inflationDelta += 0.3;
-  if (economic.exchangeRate > 5000) inflationDelta += 0.5;
+  if (economic.exchangeRate > 35) inflationDelta += 0.5;
   if (state.energy.loadSheddingHoursPerDay > 10) inflationDelta += 0.3;
 
   economic.inflation = clamp(economic.inflation + inflationDelta + randomRange(-1, 1), -5, 500);
 
-  // Exchange rate
+  // Exchange rate (ZiG/USD)
   let exchangeDelta = 0;
-  if (economic.inflation > 30) exchangeDelta += 50;
-  if (economic.inflation > 50) exchangeDelta += 100;
-  if (economic.foreignReserves > 1) exchangeDelta -= 30;
-  if (economic.foreignReserves < 0.3) exchangeDelta += 80;
-  if (economic.investorConfidence > 50) exchangeDelta -= 20;
+  if (economic.inflation > 30) exchangeDelta += 0.3;
+  if (economic.inflation > 50) exchangeDelta += 0.6;
+  if (economic.foreignReserves > 1) exchangeDelta -= 0.18;
+  if (economic.foreignReserves < 0.3) exchangeDelta += 0.47;
+  if (economic.investorConfidence > 50) exchangeDelta -= 0.12;
 
-  economic.exchangeRate = Math.max(1, economic.exchangeRate + exchangeDelta + randomRange(-50, 50));
+  economic.exchangeRate = Math.max(1, economic.exchangeRate + exchangeDelta + randomRange(-0.3, 0.3));
 
   // Black market
   economic.blackMarketPremium = clamp(
@@ -496,7 +496,7 @@ function simulateEconomy(state: GameState, season: string): void {
   state.trade.exports = economic.gdp * 0.25 * (1 + (state.commodities.gold - 1950) / 5000);
   state.trade.imports = economic.gdp * 0.3;
   state.trade.tradeBalance = state.trade.exports - state.trade.imports;
-  state.trade.smugglingRate = clamp(state.trade.smugglingRate + (economic.exchangeRate > 5000 ? 0.5 : -0.2) + randomRange(-0.3, 0.3), 5, 40);
+  state.trade.smugglingRate = clamp(state.trade.smugglingRate + (economic.exchangeRate > 35 ? 0.5 : -0.2) + randomRange(-0.3, 0.3), 5, 40);
 }
 
 function simulateEnergy(state: GameState, season: string): void {
@@ -1121,7 +1121,7 @@ export function generateAvailableProjects(state: GameState): InfrastructureProje
         name: `${template.name} — ${province.name}`,
         category: template.category,
         province: province.id,
-        description: `${template.name} project in ${province.name}. Cost: $${template.cost}M. Completion: ${template.time} turns.`,
+        description: `${template.name} project in ${province.name}. Cost: ZiG ${template.cost}M. Completion: ${template.time} turns.`,
         cost: template.cost,
         maintenanceCost: template.maintenance,
         completionTime: template.time,
