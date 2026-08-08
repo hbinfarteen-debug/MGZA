@@ -2273,6 +2273,12 @@ export default function GamePage() {
 
   const { player, economic, energy, citizenSatisfaction } = gameState || {};
 
+  // Compute next election countdown
+  const nextElection = gameState?.elections?.filter(e => !e.isOver)[0];
+  const monthsToElection = nextElection
+    ? ((nextElection.year - (player?.year || 2025)) * 12 + (nextElection.month - (player?.month || 1)))
+    : null;
+
   return (
     <TipHoverContext.Provider value={{ hoveredTipId, setHoveredTipId }}>
     <div className="min-h-screen bg-background flex flex-col">
@@ -2291,6 +2297,18 @@ export default function GamePage() {
             <div className="hidden sm:flex items-center gap-2">
               <Badge variant="secondary" className="text-[0.625rem]">{MONTH_NAMES[(player?.month || 1) - 1]} {player?.year || 2025}</Badge>
               <Badge variant="secondary" className="text-[0.625rem]">Turn {player?.turn || 1}</Badge>
+              {monthsToElection !== null && monthsToElection > 0 && (
+                <Badge variant="outline" className="text-[0.625rem] gap-1 border-amber-500/40 text-amber-600">
+                  <Vote className="h-2.5 w-2.5" />
+                  {monthsToElection}mo
+                </Badge>
+              )}
+              {monthsToElection === 0 && (
+                <Badge variant="destructive" className="text-[0.625rem] gap-1 animate-pulse">
+                  <Vote className="h-2.5 w-2.5" />
+                  ELECTION
+                </Badge>
+              )}
             </div>
           </div>
 
