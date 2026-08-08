@@ -595,6 +595,9 @@ function BudgetScreen() {
         <StatCard label="GDP" value={`ZiG ${economic.gdp.toFixed(1)}B`} icon={<TrendingUp className="h-4 w-4" />} color={economic.gdpGrowth > 0 ? 'text-green-500' : 'text-red-500'} />
       </div></HoverTip>
 
+      {/* Spacer (previously held Allocate Budget) */}
+      <div className="h-1" />
+
       {/* Budget Items */}
       <HoverTip tipId="budget_sliders" screenId="budget"><div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {budget.items.map((item) => {
