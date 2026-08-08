@@ -46,6 +46,18 @@ interface ReplacementDialogState {
 
 export type FontSize = 'small' | 'medium' | 'large' | 'xlarge';
 
+export interface ElectionResultData {
+  year: number;
+  month: number;
+  playerWon: boolean;
+  playerVotes: number;
+  opponentVotes: number;
+  totalVoters: number;
+  turnoutPercent: number;
+  playerVotePercent: number;
+  opponentVotePercent: number;
+}
+
 interface GameStore {
   // State
   gameState: GameState | null;
@@ -58,6 +70,7 @@ interface GameStore {
   showNewGameDialog: boolean;
   enableTips: boolean;
   showReplacementDialog: ReplacementDialogState | null;
+  showElectionResult: ElectionResultData | null;
   fontSize: FontSize;
   darkMode: boolean;
   language: Language;
@@ -80,6 +93,7 @@ interface GameStore {
   setShowNewGameDialog: (show: boolean) => void;
   setEnableTips: (enable: boolean) => void;
   setShowReplacementDialog: (state: ReplacementDialogState | null) => void;
+  setShowElectionResult: (data: ElectionResultData | null) => void;
   setFontSize: (size: FontSize) => void;
   setDarkMode: (dark: boolean) => void;
   setLanguage: (lang: Language) => void;
@@ -98,6 +112,7 @@ export const useGameStore = create<GameStore>()(
       showNewGameDialog: false,
       enableTips: true,
       showReplacementDialog: null,
+      showElectionResult: null,
       fontSize: 'medium' as FontSize,
       darkMode: false,
       language: 'en' as Language,
@@ -135,12 +150,32 @@ export const useGameStore = create<GameStore>()(
         // Check for unresolved events that need attention
         const unresolvedEvent = newState.events.find(e => !e.resolved && e.choices && e.choices.length > 0);
 
+        // Check if an election just concluded this turn
+        const finishedElection = newState.elections.find(e => e.isOver && !gameState.elections.find(ge => ge.id === e.id && ge.isOver));
+        let showElectionResult: ElectionResultData | null = null;
+        if (finishedElection && finishedElection.playerVotes > 0) {
+          const pvp = finishedElection.playerVotes / (finishedElection.playerVotes + finishedElection.opponentVotes) * 100;
+          const ovp = finishedElection.opponentVotes / (finishedElection.playerVotes + finishedElection.opponentVotes) * 100;
+          showElectionResult = {
+            year: finishedElection.year,
+            month: finishedElection.month,
+            playerWon: finishedElection.playerWon,
+            playerVotes: finishedElection.playerVotes,
+            opponentVotes: finishedElection.opponentVotes,
+            totalVoters: finishedElection.totalVoters,
+            turnoutPercent: finishedElection.turnoutPercent,
+            playerVotePercent: Math.round(pvp * 10) / 10,
+            opponentVotePercent: Math.round(ovp * 10) / 10,
+          };
+        }
+
         set({
           gameState: newState,
           historicalData: [...get().historicalData, historyPoint],
           availableProjects,
           isProcessingTurn: false,
           showEventModal: unresolvedEvent || null,
+          showElectionResult,
         });
       },
 
@@ -297,6 +332,7 @@ export const useGameStore = create<GameStore>()(
       setShowNewGameDialog: (show) => set({ showNewGameDialog: show }),
       setEnableTips: (enable) => set({ enableTips: enable }),
       setShowReplacementDialog: (state) => set({ showReplacementDialog: state }),
+      setShowElectionResult: (data) => set({ showElectionResult: data }),
       setFontSize: (size) => set({ fontSize: size }),
       setDarkMode: (dark) => set({ darkMode: dark }),
       setLanguage: (lang) => set({ language: lang }),

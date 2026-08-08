@@ -1858,6 +1858,122 @@ function EventModal() {
 }
 
 // ═══════════════════════════════════════════════════════
+// ELECTION RESULT DIALOG
+// ═══════════════════════════════════════════════════════
+
+function ElectionResultDialog() {
+  const { showElectionResult, setShowElectionResult, gameState } = useGameStore();
+  const { t } = useTranslation();
+
+  if (!showElectionResult) return null;
+
+  const result = showElectionResult;
+  const totalVotes = result.playerVotes + result.opponentVotes;
+
+  return (
+    <Dialog open={!!showElectionResult} onOpenChange={(open) => { if (!open) setShowElectionResult(null); }}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <div className="flex items-center gap-2">
+            {result.playerWon ? (
+              <Badge className="bg-green-600 text-white">VICTORY</Badge>
+            ) : (
+              <Badge variant="destructive">DEFEAT</Badge>
+            )}
+            <Badge variant="secondary" className="text-[0.625rem]">{MONTH_NAMES[result.month - 1]} {result.year}</Badge>
+          </div>
+          <DialogTitle className="text-lg">
+            {result.playerWon ? (
+              <span className="text-green-600">Congratulations! Election Victory!</span>
+            ) : (
+              <span className="text-red-600">Election Defeat</span>
+            )}
+          </DialogTitle>
+          <DialogDescription className="text-sm leading-relaxed">
+            {result.playerWon
+              ? 'The people have spoken! Your mandate is renewed for another term. Continue leading Zimbabwe to prosperity.'
+              : 'The opposition has won. Your presidency is over.'}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-2">
+          {/* Vote Share Bar */}
+          <div className="bg-card border border-border rounded-lg p-4">
+            <h4 className="text-xs font-bold uppercase tracking-wider mb-3">Vote Share</h4>
+            <div className="space-y-2">
+              <div>
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className="font-bold">{gameState?.player.partyName || 'Your Party'}</span>
+                  <span className="font-bold text-green-600">{result.playerVotePercent.toFixed(1)}%</span>
+                </div>
+                <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${result.playerVotePercent}%` }}
+                    transition={{ duration: 1, ease: 'easeOut' }}
+                    className="h-full bg-green-500 rounded-full"
+                  />
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className="font-bold">Opposition</span>
+                  <span className="font-bold text-red-500">{result.opponentVotePercent.toFixed(1)}%</span>
+                </div>
+                <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${result.opponentVotePercent}%` }}
+                    transition={{ duration: 1, ease: 'easeOut' }}
+                    className="h-full bg-red-500 rounded-full"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-card border border-border rounded-lg p-3 text-center">
+              <p className="text-[0.625rem] text-muted-foreground">Total Votes</p>
+              <p className="text-sm font-bold">{(totalVotes / 1000000).toFixed(1)}M</p>
+            </div>
+            <div className="bg-card border border-border rounded-lg p-3 text-center">
+              <p className="text-[0.625rem] text-muted-foreground">Turnout</p>
+              <p className="text-sm font-bold">{result.turnoutPercent.toFixed(0)}%</p>
+            </div>
+            <div className="bg-card border border-border rounded-lg p-3 text-center">
+              <p className="text-[0.625rem] text-muted-foreground">Margin</p>
+              <p className={`text-sm font-bold ${result.playerWon ? 'text-green-600' : 'text-red-500'}`}>
+                {Math.abs(result.playerVotePercent - result.opponentVotePercent).toFixed(1)}%
+              </p>
+            </div>
+          </div>
+
+          {/* Your Votes vs Opposition */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 text-center">
+              <p className="text-[0.625rem] text-muted-foreground">Your Votes</p>
+              <p className="text-lg font-bold text-green-600">{(result.playerVotes / 1000000).toFixed(1)}M</p>
+            </div>
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-center">
+              <p className="text-[0.625rem] text-muted-foreground">Opposition Votes</p>
+              <p className="text-lg font-bold text-red-500">{(result.opponentVotes / 1000000).toFixed(1)}M</p>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button onClick={() => setShowElectionResult(null)} className="bg-amber-600 hover:bg-amber-700">
+            {result.playerWon ? 'Continue Governing' : 'Accept Defeat'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
 // MINISTER REPLACEMENT DIALOG
 // ═══════════════════════════════════════════════════════
 
@@ -2309,16 +2425,22 @@ export default function GamePage() {
             <div className="hidden sm:flex items-center gap-2">
               <Badge variant="secondary" className="text-[0.625rem]">{MONTH_NAMES[(player?.month || 1) - 1]} {player?.year || 2025}</Badge>
               <Badge variant="secondary" className="text-[0.625rem]">Turn {player?.turn || 1}</Badge>
-              {monthsToElection !== null && monthsToElection > 0 && (
+              {monthsToElection !== null && monthsToElection > 1 && (
                 <Badge variant="outline" className="text-[0.625rem] gap-1 border-amber-500/40 text-amber-600">
                   <Vote className="h-2.5 w-2.5" />
-                  {monthsToElection}mo
+                  {monthsToElection} Months to Elections
+                </Badge>
+              )}
+              {monthsToElection === 1 && (
+                <Badge variant="outline" className="text-[0.625rem] gap-1 border-red-500/40 text-red-500">
+                  <Vote className="h-2.5 w-2.5" />
+                  1 Month to Elections
                 </Badge>
               )}
               {monthsToElection === 0 && (
                 <Badge variant="destructive" className="text-[0.625rem] gap-1 animate-pulse">
                   <Vote className="h-2.5 w-2.5" />
-                  ELECTION
+                  Election Month
                 </Badge>
               )}
             </div>
@@ -2531,6 +2653,7 @@ export default function GamePage() {
 
       {/* Event Modal */}
       <EventModal />
+      <ElectionResultDialog />
       <MinisterReplacementDialog />
       <NewGameDialog open={showNewGameDialog} onOpenChange={setShowNewGameDialog} />
       <SettingsDialog open={showSettings} onOpenChange={setShowSettings} />
