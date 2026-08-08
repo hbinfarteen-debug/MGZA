@@ -586,7 +586,7 @@ function BudgetScreen() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
       {/* Budget Summary */}
       <HoverTip tipId="budget_overview" screenId="budget"><div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label="Revenue" value={`ZiG ${budget.totalRevenue.toLocaleString()}M`} icon={<DollarSign className="h-4 w-4" />} color="text-green-500" />
@@ -594,12 +594,6 @@ function BudgetScreen() {
         <StatCard label="Deficit" value={`ZiG ${deficit.toLocaleString()}M`} icon={<AlertTriangle className="h-4 w-4" />} color={deficit > 0 ? 'text-red-500' : 'text-green-500'} />
         <StatCard label="GDP" value={`ZiG ${economic.gdp.toFixed(1)}B`} icon={<TrendingUp className="h-4 w-4" />} color={economic.gdpGrowth > 0 ? 'text-green-500' : 'text-red-500'} />
       </div></HoverTip>
-
-      <div className="flex justify-end">
-        <HoverTip tipId="allocate_button" screenId="budget"><Button onClick={handleAllocate} size="sm" className="bg-amber-600 hover:bg-amber-700">
-          <Check className="h-4 w-4 mr-1" /> Allocate Budget
-        </Button></HoverTip>
-      </div>
 
       {/* Budget Items */}
       <HoverTip tipId="budget_sliders" screenId="budget"><div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -643,6 +637,21 @@ function BudgetScreen() {
           );
         })}
       </div></HoverTip>
+
+      {/* Floating Allocate Button */}
+      <div className="sticky bottom-4 flex justify-end">
+        <HoverTip tipId="allocate_button" screenId="budget">
+          <motion.div
+            whileHover={{ scale: 1.05, boxShadow: '0 0 20px rgba(217, 119, 6, 0.4)' }}
+            whileTap={{ scale: 0.95 }}
+            className="inline-block"
+          >
+            <Button onClick={handleAllocate} size="sm" className="bg-amber-600 hover:bg-amber-700 shadow-lg shadow-amber-600/20">
+              <Check className="h-4 w-4 mr-1" /> Allocate Budget
+            </Button>
+          </motion.div>
+        </HoverTip>
+      </div>
     </div>
   );
 }
