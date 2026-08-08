@@ -67,7 +67,7 @@ const en: Record<string, string> = {
   'start.winElectionsDesc': "Secure the people's mandate",
   'start.description': 'Begin your political career from Councillor to President. Navigate corruption, manage infrastructure, balance budgets, and make impossible decisions that shape the future of millions. There are no perfect choices, only trade-offs.',
   'start.startNewGame': 'Start New Game',
-  'start.footer': 'v1.1 | Made with ❤️ for Zimbabwe',
+  'start.footer': 'v1.2 | Made with ❤️ for Zimbabwe',
 
   // NEW GAME DIALOG
   'newGame.title': 'Start New Game',
@@ -437,7 +437,7 @@ const sn: Record<string, string> = {
   'start.winElectionsDesc': 'Tora ruvambo rwevanhu',
   'start.description': 'Tangira mutambo wako wepolitiki kubva pa Councillor kusvika pa President. Rwadza urombo, tarisa mabasa okuvaka, simbisa bhajeti, uye gadza sarudzo dzisingawoneki dzinotsaurira hutano hwemilioni. Hakuna sarudzo yakakwana, kuchingwa chete.',
   'start.startNewGame': 'Tanga Mutambo Mutsva',
-  'start.footer': 'v1.1 | Yakagadzirwa ne ❤️ yeZimbabwe',
+  'start.footer': 'v1.2 | Yakagadzirwa ne ❤️ yeZimbabwe',
 
   // NEW GAME DIALOG
   'newGame.title': 'Tanga Mutambo Mutsva',
@@ -807,7 +807,7 @@ const nd: Record<string, string> = {
   'start.winElectionsDesc': 'Thola umvuzo walabo',
   'start.description': 'Qala umsebenzi wakho wobuso kuCouncilli kusiya kuMongameli. Qalisa ukubamba ubuthi, phatha imisebenzi yokwakha, thengisa ibhajethi, nomebenza amaqhinga ayingakanani atshintshe isimo yamawalamaphoyisa. Akukho nqopho elifanele, kunokukho kungako.',
   'start.startNewGame': 'Qala Umdlalo Omusha',
-  'start.footer': 'v1.1 | Yakhiwe nge ❤️ yeZimbabwe',
+  'start.footer': 'v1.2 | Yakhiwe nge ❤️ yeZimbabwe',
 
   // NEW GAME DIALOG
   'newGame.title': 'Qala Umdlalo Omusha',

@@ -99,3 +99,22 @@ Stage Summary:
 - No em dashes in user-visible text (only in code comments)
 - Flag stripe: red, yellow, green
 - Version: v1.1
+---
+Task ID: 4
+Agent: main
+Task: Fix tips card design, event timeout, flag colors, ZW badge, version bump
+
+Work Log:
+- Redesigned sidebar tips card below Elections to match the hover-tip popup design (bg-popover, border, lightbulb icon with amber bg, title, description, strategy section with info icon and border-t separator)
+- Added EventTimer component with 45-second countdown: shows timer in event modal header (clock icon + seconds), turns amber at 20s, red + pulse at 10s
+- Event timeout penalty: when timer hits 0, deducts 5 popularity, 3 legitimacy, 5 governance satisfaction, adds game log entry about indecision
+- Added 4th flag stripe bar: now green (#2E8B37), yellow (#E8A817), red (#CC2936), black (#1a1a1a)
+- Removed orange Badge ZW from hero page, replaced with black ZW text positioned absolutely near flag emoji (bottom-right)
+- Bumped version from v1.1 to v1.2 in footer and all 3 language translations
+
+Stage Summary:
+- Tips card now matches hover-tip design (popover style with lightbulb, title, desc, strategy)
+- Event decisions have 45s countdown with visible timer; indecision penalty applied
+- Flag stripes: green, yellow, red, BLACK (4 stripes matching Zimbabwe flag)
+- ZW displayed in black text near flag (orange badge removed)
+- Version: v1.2

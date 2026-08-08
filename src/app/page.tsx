@@ -1516,9 +1516,10 @@ function StartScreen() {
     <div className="flex flex-col min-h-[80vh] bg-gradient-to-b from-[#2E8B37]/5 via-background to-background zim-hero-bg">
       {/* Zimbabwe Flag Stripe Bar */}
       <div className="w-full flex flex-col">
-        <div className="w-full h-1" style={{ backgroundColor: '#CC2936' }} />
-        <div className="w-full h-1" style={{ backgroundColor: '#E8A817' }} />
         <div className="w-full h-1" style={{ backgroundColor: '#2E8B37' }} />
+        <div className="w-full h-1" style={{ backgroundColor: '#E8A817' }} />
+        <div className="w-full h-1" style={{ backgroundColor: '#CC2936' }} />
+        <div className="w-full h-1" style={{ backgroundColor: '#1a1a1a' }} />
       </div>
 
       {/* Settings bar */}
@@ -1609,8 +1610,10 @@ function StartScreen() {
         >
           <div className="mb-6">
             <div className="flex items-center justify-center gap-3 mb-4">
-              <div className="text-6xl">🇿🇼</div>
-              <Badge variant="outline" className="text-sm font-black tracking-widest border-amber-500/40 text-amber-600">ZW</Badge>
+              <div className="relative">
+                <div className="text-6xl">🇿🇼</div>
+                <span className="absolute -bottom-1 -right-1 text-xs font-black text-[#1a1a1a]">ZW</span>
+              </div>
             </div>
             <h1 className="text-4xl md:text-5xl font-black tracking-tight mb-3">
               <div className="zim-title-shimmer">
@@ -1768,17 +1771,66 @@ function NewGameDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o
 }
 
 // ═══════════════════════════════════════════════════════
+// EVENT TIMER — countdown with indecision penalty
+// ═══════════════════════════════════════════════════════
+
+function EventTimer({ eventId, eventTitle }: { eventId: string; eventTitle: string }) {
+  const [seconds, setSeconds] = useState(45);
+  const penaltyRef = useRef(false);
+
+  useEffect(() => {
+    penaltyRef.current = false;
+    const id = setInterval(() => {
+      setSeconds((p) => {
+        const n = p - 1;
+        if (n <= 0) {
+          clearInterval(id);
+          if (!penaltyRef.current) {
+            penaltyRef.current = true;
+            const store = useGameStore.getState();
+            if (store.gameState) {
+              const gs = { ...store.gameState };
+              gs.player.popularity = Math.max(0, gs.player.popularity - 5);
+              gs.player.legitimacy = Math.max(0, gs.player.legitimacy - 3);
+              gs.citizenSatisfaction = {
+                ...gs.citizenSatisfaction,
+                governance: Math.max(0, gs.citizenSatisfaction.governance - 5),
+              };
+              gs.gameLog.push(`Indecision penalty: People lose confidence (-5 popularity, -3 legitimacy) for failing to address "${eventTitle}" promptly.`);
+              useGameStore.setState({ gameState: gs });
+            }
+          }
+          return 0;
+        }
+        return n;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [eventId]);
+
+  return (
+    <div className="ml-auto flex items-center gap-1">
+      <Clock className={`h-3 w-3 ${seconds <= 10 ? 'text-red-500 animate-pulse' : seconds <= 20 ? 'text-amber-500' : 'text-muted-foreground'}`} />
+      <span className={`text-[0.625rem] font-mono font-bold ${seconds <= 10 ? 'text-red-500' : seconds <= 20 ? 'text-amber-500' : 'text-muted-foreground'}`}>
+        {seconds}s
+      </span>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
 // EVENT MODAL
 // ═══════════════════════════════════════════════════════
 
 function EventModal() {
-  const { showEventModal, resolveEvent, setShowEventModal } = useGameStore();
+  const { showEventModal, resolveEvent, setShowEventModal, endTurn } = useGameStore();
   const { t } = useTranslation();
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
-
-  if (!showEventModal || !showEventModal.choices || showEventModal.choices.length === 0) return null;
+  const [penaltyApplied, setPenaltyApplied] = useState(false);
 
   const event = showEventModal;
+
+  if (!showEventModal || !showEventModal.choices || showEventModal.choices.length === 0) return null;
 
   const handleResolve = () => {
     if (selectedChoice) {
@@ -1796,6 +1848,7 @@ function EventModal() {
               {event.severity.toUpperCase()}
             </Badge>
             <Badge variant="secondary" className="text-[0.625rem]">{event.category}</Badge>
+            <EventTimer eventId={event.id} eventTitle={event.title} />
           </div>
           <DialogTitle className="text-lg">{event.title}</DialogTitle>
           <DialogDescription className="text-sm leading-relaxed">{event.description}</DialogDescription>
@@ -2399,22 +2452,31 @@ export default function GamePage() {
                     )}
                   </button>
                 ))}
-                {/* Tips Card — contextual advice below Elections */}
+                {/* Hover Tip Card — contextual advice below Elections */}
                 <Separator className="my-2" />
                 {sidebarTip ? (
                   <motion.div
                     key={currentScreen}
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
-                    className="mx-1 rounded-lg border border-amber-500/20 bg-amber-500/5 p-2.5"
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mx-1"
                   >
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <Lightbulb className="h-3 w-3 text-amber-500" />
-                      <span className="text-[0.625rem] font-bold text-amber-500">{t('common.tip')}</span>
+                    <div className="bg-popover border border-border rounded-lg shadow-sm p-2.5 text-left">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <div className="flex items-center justify-center w-5 h-5 rounded-md bg-amber-500/15 text-amber-500 shrink-0">
+                          <Lightbulb className="h-3 w-3" />
+                        </div>
+                        <h4 className="text-[0.625rem] font-bold text-foreground">{sidebarTip.title}</h4>
+                      </div>
+                      <p className="text-[0.5625rem] text-muted-foreground leading-relaxed mb-1.5">{sidebarTip.description}</p>
+                      <div className="border-t border-border/50 pt-1.5">
+                        <div className="flex items-start gap-1">
+                          <Info className="h-2.5 w-2.5 text-amber-500 mt-0.5 shrink-0" />
+                          <p className="text-[0.5625rem] text-amber-600 font-medium leading-relaxed">{sidebarTip.strategy}</p>
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-[0.625rem] font-bold">{sidebarTip.title}</p>
-                    <p className="text-[0.5625rem] text-muted-foreground mt-0.5 leading-snug">{sidebarTip.description}</p>
-                    <p className="text-[0.5625rem] text-amber-600/80 mt-1 italic leading-snug">{sidebarTip.strategy}</p>
                   </motion.div>
                 ) : null}
               </nav>
@@ -2500,7 +2562,7 @@ export default function GamePage() {
         <div className="px-4 py-3">
           <div className="flex items-center justify-between text-[0.625rem] text-muted-foreground max-w-7xl mx-auto">
             <span className="flex items-center gap-1">
-              <Gamepad2 className="h-3 w-3 text-amber-500" /> Make Great Zimbabwe Again | v1.1
+              <Gamepad2 className="h-3 w-3 text-amber-500" /> Make Great Zimbabwe Again | v1.2
             </span>
             <span>{MONTH_NAMES[(player?.month || 1) - 1]} {player?.year || 2025} | Turn {(player?.turn || 1)} | {(citizenSatisfaction?.overall || 0).toFixed(0)}% Satisfaction</span>
           </div>
