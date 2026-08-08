@@ -2484,7 +2484,11 @@ export default function GamePage() {
       {/* Footer */}
       <footer className="bg-card/95 backdrop-blur mt-auto">
         <div className="w-full flex flex-col">
-          <div className="w-full h-0.5" style={{ backgroundColor: '#2E8B37' }} />\n          <div className="w-full h-0.5" style={{ backgroundColor: '#E8A817' }} />\n          <div className="w-full h-0.5" style={{ backgroundColor: '#CC2936' }} />\n          <div className="w-full h-0.5" style={{ backgroundColor: '#000000' }} />\n        </div>
+          <div className="w-full h-0.5" style={{ backgroundColor: '#2E8B37' }} />
+          <div className="w-full h-0.5" style={{ backgroundColor: '#E8A817' }} />
+          <div className="w-full h-0.5" style={{ backgroundColor: '#CC2936' }} />
+          <div className="w-full h-0.5" style={{ backgroundColor: '#000000' }} />
+        </div>
         <div className="px-4 py-3">
           <div className="flex items-center justify-between text-[0.625rem] text-muted-foreground max-w-7xl mx-auto">
             <span className="flex items-center gap-1">
