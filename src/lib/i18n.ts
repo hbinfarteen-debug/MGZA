@@ -33,6 +33,7 @@ const en: Record<string, string> = {
   'nav.events': 'Events',
   'nav.news': 'News',
   'nav.elections': 'Elections',
+  'nav.leaderboard': 'Leaderboard',
   'nav.endTurn': 'End Turn',
   'nav.endTurnShort': 'End',
 
@@ -67,7 +68,7 @@ const en: Record<string, string> = {
   'start.winElectionsDesc': "Secure the people's mandate",
   'start.description': 'Begin your political career from Councillor to President. Navigate corruption, manage infrastructure, balance budgets, and make impossible decisions that shape the future of millions. There are no perfect choices, only trade-offs.',
   'start.startNewGame': 'Start New Game',
-  'start.footer': 'v1.3 | Made with ❤️ for Zimbabwe',
+  'start.footer': 'v1.5 | Made with ❤️ for Zimbabwe',
 
   // NEW GAME DIALOG
   'newGame.title': 'Start New Game',
@@ -94,6 +95,26 @@ const en: Record<string, string> = {
   'gameOver.satisfaction': 'Satisfaction',
   'gameOver.proverb': '"Rwendo rweupenyu haruna kudzoka": The journey of life has no return',
   'gameOver.playAgain': 'Play Again',
+
+  // LEADERBOARD
+  'leaderboard.title': 'Leaderboard',
+  'leaderboard.description': 'How does your presidency compare? Rankings refresh once every 24 hours.',
+  'leaderboard.easy': 'Easy',
+  'leaderboard.normal': 'Normal',
+  'leaderboard.hard': 'Hard',
+  'leaderboard.rank': 'Rank',
+  'leaderboard.playerName': 'President',
+  'leaderboard.score': 'Score',
+  'leaderboard.popularity': 'Popularity',
+  'leaderboard.satisfaction': 'Satisfaction',
+  'leaderboard.gdp': 'GDP',
+  'leaderboard.years': 'Years',
+  'leaderboard.turns': 'Turns',
+  'leaderboard.lastUpdated': 'Board updated',
+  'leaderboard.nextUpdate': 'Next update',
+  'leaderboard.empty': 'No results yet. Finish a game to claim the top spot!',
+  'leaderboard.yourRank': 'Your Rank',
+  'leaderboard.submitted': 'Your result has been recorded.',
 
   // DASHBOARD
   'dash.popularity': 'Popularity',
@@ -403,6 +424,7 @@ const sn: Record<string, string> = {
   'nav.events': 'Zviitiko',
   'nav.news': 'Nhetembo',
   'nav.elections': 'Makhoti',
+  'nav.leaderboard': 'Runyorwa Rwemashure',
   'nav.endTurn': 'Pedza Chinja',
   'nav.endTurnShort': 'Pedza',
 
@@ -437,7 +459,7 @@ const sn: Record<string, string> = {
   'start.winElectionsDesc': 'Tora ruvambo rwevanhu',
   'start.description': 'Tangira mutambo wako wepolitiki kubva pa Councillor kusvika pa President. Rwadza urombo, tarisa mabasa okuvaka, simbisa bhajeti, uye gadza sarudzo dzisingawoneki dzinotsaurira hutano hwemilioni. Hakuna sarudzo yakakwana, kuchingwa chete.',
   'start.startNewGame': 'Tanga Mutambo Mutsva',
-  'start.footer': 'v1.3 | Yakagadzirwa ne ❤️ yeZimbabwe',
+  'start.footer': 'v1.5 | Yakagadzirwa ne ❤️ yeZimbabwe',
 
   // NEW GAME DIALOG
   'newGame.title': 'Tanga Mutambo Mutsva',
@@ -464,6 +486,26 @@ const sn: Record<string, string> = {
   'gameOver.satisfaction': 'Kufara',
   'gameOver.proverb': '"Rwendo rweupenyu haruna kudzoka": Rwendo rwaupenyu haruna kudzoka',
   'gameOver.playAgain': 'Tanga Zvakare',
+
+  // LEADERBOARD
+  'leaderboard.title': 'Runyorwa Rwemashure',
+  'leaderboard.description': 'Hupenyu hwako hunofanirwa kufananidzwa sei? Zviwero zvinovandudzwa kamwe chete pavhiki.',
+  'leaderboard.easy': 'Nyore',
+  'leaderboard.normal': 'Tsika',
+  'leaderboard.hard': 'Zvakaoma',
+  'leaderboard.rank': 'Chinzvimbo',
+  'leaderboard.playerName': 'Mutungamiri',
+  'leaderboard.score': 'Zvibodzwa',
+  'leaderboard.popularity': 'Mukurumbira',
+  'leaderboard.satisfaction': 'Kufara',
+  'leaderboard.gdp': 'GDP',
+  'leaderboard.years': 'Makore',
+  'leaderboard.turns': 'Maitiro',
+  'leaderboard.lastUpdated': 'Runyorwa rwakagadzirwa',
+  'leaderboard.nextUpdate': 'Kugadziriswa kunotevera',
+  'leaderboard.empty': 'Hapana mienzaniso yacho futi. Pedza mutambo utore nzvimbo yepamusoro!',
+  'leaderboard.yourRank': 'Chinzimbo Chako',
+  'leaderboard.submitted': 'Mhedzisiro yako yakanyorwa.',
 
   // DASHBOARD
   'dash.popularity': 'Ruzivo Rwemtu',
@@ -773,6 +815,7 @@ const nd: Record<string, string> = {
   'nav.events': 'Imicimbi',
   'nav.news': 'Iindaba',
   'nav.elections': 'Ukuvota',
+  'nav.leaderboard': 'Uhlu Lokufanisa',
   'nav.endTurn': 'Qedela Isikhathi',
   'nav.endTurnShort': 'Qedela',
 
@@ -807,7 +850,7 @@ const nd: Record<string, string> = {
   'start.winElectionsDesc': 'Thola umvuzo walabo',
   'start.description': 'Qala umsebenzi wakho wobuso kuCouncilli kusiya kuMongameli. Qalisa ukubamba ubuthi, phatha imisebenzi yokwakha, thengisa ibhajethi, nomebenza amaqhinga ayingakanani atshintshe isimo yamawalamaphoyisa. Akukho nqopho elifanele, kunokukho kungako.',
   'start.startNewGame': 'Qala Umdlalo Omusha',
-  'start.footer': 'v1.3 | Yakhiwe nge ❤️ yeZimbabwe',
+  'start.footer': 'v1.5 | Yakhiwe nge ❤️ yeZimbabwe',
 
   // NEW GAME DIALOG
   'newGame.title': 'Qala Umdlalo Omusha',
@@ -834,6 +877,26 @@ const nd: Record<string, string> = {
   'gameOver.satisfaction': 'Injabulo',
   'gameOver.proverb': '"Rwendo rweupenyu haruna kudzoka": Indlela yempilo ayipheli',
   'gameOver.playAgain': 'Dlala Kabuhlungu',
+
+  // LEADERBOARD
+  'leaderboard.title': 'Uhlu Lokufanisa',
+  'leaderboard.description': 'Kumelene njani ubuso bakho? Izilinganiso zivuselelwa kanye ngosuku.',
+  'leaderboard.easy': 'Lula',
+  'leaderboard.normal': 'Tsika',
+  'leaderboard.hard': 'Mzimba',
+  'leaderboard.rank': 'Isikhundla',
+  'leaderboard.playerName': 'UMongameli',
+  'leaderboard.score': 'Amaphuzu',
+  'leaderboard.popularity': 'Ukuthandwa',
+  'leaderboard.satisfaction': 'Injabulo',
+  'leaderboard.gdp': 'GDP',
+  'leaderboard.years': 'Iminyaka',
+  'leaderboard.turns': 'Izikhathi',
+  'leaderboard.lastUpdated': 'Uhlu luvuselelwe',
+  'leaderboard.nextUpdate': 'Ukurujera okulandelayo',
+  'leaderboard.empty': 'Azikho iziphumela okwamanje. Qeda umdlalo uzothatha indawo yokuqala!',
+  'leaderboard.yourRank': 'Isikhundla Sakho',
+  'leaderboard.submitted': 'Isibuyelo sakho sibhalisiwe.',
 
   // DASHBOARD
   'dash.popularity': 'Ukuthandwa',

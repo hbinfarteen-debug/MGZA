@@ -4,7 +4,7 @@
 
 import type {
   GameState, GameEvent, NewsArticle, InfrastructureProject,
-  HistoricalDataPoint, EventChoice, Province,
+  HistoricalDataPoint, EventChoice, Province, BudgetCategory,
 } from './types';
 import {
   MONTH_NAMES, SEASON_FROM_MONTH, CAREER_LEVELS, CAREER_ORDER,
@@ -44,7 +44,7 @@ function uid(): string {
 // EVENT TEMPLATES
 // ═══════════════════════════════════════════════════════
 
-const EVENT_TEMPLATES: {
+export const EVENT_TEMPLATES: {
   id: string;
   title: string;
   description: string;
@@ -62,7 +62,7 @@ const EVENT_TEMPLATES: {
     condition: (s) => s.water.droughtRisk > 40 && (s.player.month >= 4 && s.player.month <= 10),
     choices: [
       { text: 'Declare national emergency, import grain', shortDesc: 'Expensive but saves lives', effects: [{ target: 'economic.governmentDebt', op: 'add', value: 0.5, dur: 0 }, { target: 'citizenSatisfaction.overall', op: 'add', value: 5, dur: 6 }, { target: 'economic.inflation', op: 'add', value: 3, dur: 3 }], politicalRisk: 5, popularityImpact: 8 },
-      { text: 'Ration water, limit agricultural use', shortDesc: 'Manages shortage but unpopular', effects: [{ target: 'water.totalSupply', op: 'subtract', value: 100, dur: 6 }, { target: 'citizenSatisfaction.overall', op: 'subtract', value: 8, dur: 4 }, { target: 'agricultural production', op: 'subtract', value: 15, dur: 6 }], politicalRisk: -10, popularityImpact: -12 },
+      { text: 'Ration water, limit agricultural use', shortDesc: 'Manages shortage but unpopular', effects: [{ target: 'water.totalSupply', op: 'subtract', value: 100, dur: 6 }, { target: 'citizenSatisfaction.overall', op: 'subtract', value: 8, dur: 4 }, { target: 'economic.gdpGrowth', op: 'subtract', value: 1, dur: 6 }], politicalRisk: -10, popularityImpact: -12 },
       { text: 'Invest in emergency borehole drilling', shortDesc: 'Long-term thinking, slow results', effects: [{ target: 'water.boreholeCount', op: 'add', value: 5000, dur: 0 }, { target: 'budget.energy', op: 'subtract', value: 80, dur: 0 }, { target: 'water.ruralAccess', op: 'add', value: 3, dur: 12 }], politicalRisk: -3, popularityImpact: -5 },
     ],
   },
@@ -76,7 +76,7 @@ const EVENT_TEMPLATES: {
     choices: [
       { text: 'Use foreign reserves to import fuel', shortDesc: 'Quick fix but drains reserves', effects: [{ target: 'economic.foreignReserves', op: 'subtract', value: 0.1, dur: 0 }, { target: 'citizenSatisfaction.economy', op: 'add', value: 5, dur: 3 }, { target: 'economic.inflation', op: 'add', value: 2, dur: 2 }], politicalRisk: 0, popularityImpact: 5 },
       { text: 'Allow fuel price increases', shortDesc: 'Market solution, unpopular', effects: [{ target: 'economic.inflation', op: 'add', value: 5, dur: 3 }, { target: 'citizenSatisfaction.economy', op: 'subtract', value: 10, dur: 4 }, { target: 'economic.investorConfidence', op: 'add', value: 5, dur: 6 }], politicalRisk: -8, popularityImpact: -15 },
-      { text: 'Negotiate fuel credit with neighbors', shortDesc: 'Diplomatic, may come with conditions', effects: [{ target: 'trade.mainImportPartners', op: 'add', value: 0, dur: 0 }, { target: 'economic.debtToGdp', op: 'add', value: 2, dur: 0 }, { target: 'citizenSatisfaction.overall', op: 'add', value: 2, dur: 3 }], politicalRisk: -3, popularityImpact: 3 },
+      { text: 'Negotiate fuel credit with neighbors', shortDesc: 'Diplomatic, may come with conditions', effects: [{ target: 'trade.imports', op: 'add', value: 0.1, dur: 3 }, { target: 'economic.debtToGdp', op: 'add', value: 2, dur: 0 }, { target: 'citizenSatisfaction.overall', op: 'add', value: 2, dur: 3 }], politicalRisk: -3, popularityImpact: 3 },
     ],
   },
   {
@@ -89,7 +89,7 @@ const EVENT_TEMPLATES: {
     choices: [
       { text: 'Grant partial salary increase (20%)', shortDesc: 'Compromise, costly but avoids crisis', effects: [{ target: 'budget.education', op: 'subtract', value: 150, dur: 0 }, { target: 'publicServices.schools', op: 'add', value: 5, dur: 6 }, { target: 'citizenSatisfaction.services', op: 'add', value: 4, dur: 4 }], politicalRisk: -3, popularityImpact: 5 },
       { text: 'Reject demands, hold firm on budget', shortDesc: 'Fiscally responsible but unpopular', effects: [{ target: 'publicServices.schools', op: 'subtract', value: 10, dur: 4 }, { target: 'citizenSatisfaction.services', op: 'subtract', value: 12, dur: 6 }, { target: 'citizenSatisfaction.future', op: 'subtract', value: 8, dur: 8 }], politicalRisk: -15, popularityImpact: -18 },
-      { text: 'Negotiate non-salary benefits', shortDesc: 'Creative compromise', effects: [{ target: 'budget.education', op: 'subtract', value: 60, dur: 0 }, { target: 'publicServices.schools', op: 'add', value: 2, dur: 4 }, { target: 'national.educationIndex', op: 'add', value: 1, dur: 6 }], politicalRisk: -2, popularityImpact: 2 },
+      { text: 'Negotiate non-salary benefits', shortDesc: 'Creative compromise', effects: [{ target: 'budget.education', op: 'subtract', value: 60, dur: 0 }, { target: 'publicServices.schools', op: 'add', value: 2, dur: 4 }, { target: 'citizenSatisfaction.services', op: 'add', value: 3, dur: 6 }], politicalRisk: -2, popularityImpact: 2 },
     ],
   },
   {
@@ -100,9 +100,9 @@ const EVENT_TEMPLATES: {
     severity: 'crisis',
     condition: () => Math.random() < 0.15,
     choices: [
-      { text: 'Mobilize military for rescue operation', shortDesc: 'Shows decisive leadership', effects: [{ target: 'citizenSatisfaction.governance', op: 'add', value: 8, dur: 3 }, { target: 'budget.military', op: 'subtract', value: 30, dur: 0 }, { target: 'economic.miningOutput', op: 'subtract', value: 5, dur: 3 }], politicalRisk: 0, popularityImpact: 12 },
+      { text: 'Mobilize military for rescue operation', shortDesc: 'Shows decisive leadership', effects: [{ target: 'citizenSatisfaction.governance', op: 'add', value: 8, dur: 3 }, { target: 'budget.military', op: 'subtract', value: 30, dur: 0 }, { target: 'economic.gdpGrowth', op: 'subtract', value: 0.5, dur: 3 }], politicalRisk: 0, popularityImpact: 12 },
       { text: 'Let mining company handle it', shortDesc: 'Private responsibility', effects: [{ target: 'citizenSatisfaction.governance', op: 'subtract', value: 10, dur: 6 }, { target: 'corruption.publicPerception', op: 'add', value: 5, dur: 4 }, { target: 'citizenSatisfaction.overall', op: 'subtract', value: 5, dur: 3 }], politicalRisk: -10, popularityImpact: -8 },
-      { text: 'Order immediate safety audit of all mines', shortDesc: 'Prevents future, angers industry', effects: [{ target: 'economic.miningOutput', op: 'subtract', value: 3, dur: 6 }, { target: 'citizenSatisfaction.governance', op: 'add', value: 5, dur: 6 }, { target: 'budget.mines', op: 'subtract', value: 40, dur: 0 }], politicalRisk: -5, popularityImpact: 5 },
+      { text: 'Order immediate safety audit of all mines', shortDesc: 'Prevents future, angers industry', effects: [{ target: 'economic.gdpGrowth', op: 'subtract', value: 0.3, dur: 6 }, { target: 'citizenSatisfaction.governance', op: 'add', value: 5, dur: 6 }, { target: 'budget.mining', op: 'subtract', value: 40, dur: 0 }], politicalRisk: -5, popularityImpact: 5 },
     ],
   },
   {
@@ -153,7 +153,7 @@ const EVENT_TEMPLATES: {
     condition: (s) => s.energy.maintenanceBacklog > 50,
     choices: [
       { text: 'Emergency repair — divert funds', shortDesc: 'Fast fix, expensive', effects: [{ target: 'energy.totalSupply', op: 'subtract', value: 200, dur: 3 }, { target: 'budget.energy', op: 'subtract', value: 150, dur: 0 }, { target: 'energy.loadSheddingHoursPerDay', op: 'add', value: 4, dur: 3 }], politicalRisk: 0, popularityImpact: -5 },
-      { text: 'Import more electricity temporarily', shortDesc: 'Quick, requires foreign currency', effects: [{ target: 'energy.sources.imported.output', op: 'add', value: 200, dur: 4 }, { target: 'economic.foreignReserves', op: 'subtract', value: 0.05, dur: 0 }, { target: 'economic.inflation', op: 'add', value: 2, dur: 2 }], politicalRisk: -2, popularityImpact: -3 },
+      { text: 'Import more electricity temporarily', shortDesc: 'Quick, requires foreign currency', effects: [{ target: 'economic.foreignReserves', op: 'subtract', value: 0.1, dur: 0 }, { target: 'economic.inflation', op: 'add', value: 2, dur: 2 }, { target: 'citizenSatisfaction.services', op: 'add', value: 2, dur: 3 }], politicalRisk: -2, popularityImpact: -3 },
       { text: 'Implement severe load shedding schedule', shortDesc: 'Saves money, angers citizens', effects: [{ target: 'energy.loadSheddingHoursPerDay', op: 'add', value: 6, dur: 4 }, { target: 'citizenSatisfaction.services', op: 'subtract', value: 12, dur: 4 }, { target: 'economic.gdp', op: 'subtract', value: 0.3, dur: 3 }], politicalRisk: -10, popularityImpact: -15 },
     ],
   },
@@ -217,12 +217,568 @@ const EVENT_TEMPLATES: {
     severity: 'major',
     condition: (s) => s.economic.unemploymentRate > 25 && s.citizenSatisfaction.future < 30,
     choices: [
-      { text: 'Retention bonuses for key professionals', shortDesc: 'Costly but targeted', effects: [{ target: 'budget.healthcare', op: 'subtract', value: 80, dur: 0 }, { target: 'national.deathRate', op: 'subtract', value: 0.5, dur: 12 }, { target: 'publicServices.hospitals', op: 'add', value: 3, dur: 8 }], politicalRisk: 0, popularityImpact: 5 },
-      { text: 'Implement bonding requirements', shortDesc: 'Controversial, may deter new graduates', effects: [{ target: 'national.netMigration', op: 'add', value: 5000, dur: 0 }, { target: 'citizenSatisfaction.freedom', op: 'subtract', value: 5, dur: 6 }, { target: 'national.educationIndex', op: 'add', value: 1, dur: 6 }], politicalRisk: -8, popularityImpact: -5 },
+      { text: 'Retention bonuses for key professionals', shortDesc: 'Costly but targeted', effects: [{ target: 'budget.hospitals', op: 'subtract', value: 80, dur: 0 }, { target: 'national.deathRate', op: 'subtract', value: 0.5, dur: 12 }, { target: 'publicServices.hospitals', op: 'add', value: 3, dur: 8 }], politicalRisk: 0, popularityImpact: 5 },
+      { text: 'Implement bonding requirements', shortDesc: 'Controversial, may deter new graduates', effects: [{ target: 'national.netMigration', op: 'add', value: 5000, dur: 0 }, { target: 'citizenSatisfaction.freedom', op: 'subtract', value: 5, dur: 6 }, { target: 'publicServices.schools', op: 'add', value: 2, dur: 6 }], politicalRisk: -8, popularityImpact: -5 },
       { text: 'Create diaspora incentive program', shortDesc: 'Long-term strategy', effects: [{ target: 'national.netMigration', op: 'subtract', value: 1000, dur: 12 }, { target: 'budget.administration', op: 'subtract', value: 30, dur: 0 }, { target: 'economic.investorConfidence', op: 'add', value: 3, dur: 12 }], politicalRisk: 0, popularityImpact: 2 },
     ],
   },
+  {
+    id: 'currency_crisis',
+    title: 'Currency Collapse: ZiG Plunges to Record Low',
+    description: 'The ZiG has plunged to a record low against the dollar on parallel markets. Prices are repriced daily, savings are evaporating, and importers cannot secure hard currency.',
+    category: 'economic',
+    severity: 'crisis',
+    condition: (s) => s.economic.exchangeRate > 40 || (s.economic.inflation > 60 && Math.random() < 0.2),
+    choices: [
+      { text: 'Raise interest rates sharply', shortDesc: 'Defends currency, punishes borrowers', effects: [{ target: 'economic.interestRate', op: 'add', value: 4, dur: 6 }, { target: 'economic.gdpGrowth', op: 'subtract', value: 1, dur: 6 }], politicalRisk: -6, popularityImpact: -8 },
+      { text: 'Drain reserves to prop up the ZiG', shortDesc: 'Burns reserves fast', effects: [{ target: 'economic.foreignReserves', op: 'subtract', value: 0.5, dur: 0 }, { target: 'economic.investorConfidence', op: 'add', value: 3, dur: 6 }], politicalRisk: -4, popularityImpact: -2 },
+      { text: 'Let the market find its level', shortDesc: 'Painful but honest', effects: [{ target: 'economic.inflation', op: 'add', value: 8, dur: 4 }, { target: 'economic.informalEconomySize', op: 'add', value: 3, dur: 8 }], politicalRisk: -10, popularityImpact: -12 },
+    ],
+  },
+  {
+    id: 'bank_collapse',
+    title: 'A Major Commercial Bank Is on the Brink',
+    description: 'Rumors of insolvency have triggered a run on one of the country\u0027s largest banks. Depositors are queueing overnight and the sector is under strain.',
+    category: 'economic',
+    severity: 'crisis',
+    condition: (s) => s.economic.inflation > 40 && Math.random() < 0.2,
+    choices: [
+      { text: 'Full government bailout', shortDesc: 'Costly but stabilizes the system', effects: [{ target: 'economic.governmentDebt', op: 'add', value: 1, dur: 0 }, { target: 'economic.consumerConfidence', op: 'add', value: 8, dur: 8 }, { target: 'economic.investorConfidence', op: 'add', value: 5, dur: 6 }], politicalRisk: -5, popularityImpact: 3 },
+      { text: 'Let the bank fail', shortDesc: 'Depositors lose savings', effects: [{ target: 'citizenSatisfaction.economy', op: 'subtract', value: 12, dur: 8 }, { target: 'economic.informalEconomySize', op: 'add', value: 5, dur: 10 }, { target: 'economic.unemploymentRate', op: 'add', value: 1.5, dur: 8 }], politicalRisk: -12, popularityImpact: -15 },
+      { text: 'Broker a private rescue', shortDesc: 'Behind the scenes deal', effects: [{ target: 'economic.governmentDebt', op: 'add', value: 0.3, dur: 0 }, { target: 'economic.investorConfidence', op: 'add', value: 3, dur: 6 }, { target: 'politicalInfluence', op: 'add', value: 3, dur: 4 }], politicalRisk: 3, popularityImpact: 1 },
+    ],
+  },
+  {
+    id: 'border_crisis',
+    title: 'Border Crisis: Thousands Mass at the Crossings',
+    description: 'Frustrated citizens are massing at border posts attempting to leave. Smugglers are charging fortunes and tensions are rising with neighboring states over the influx.',
+    category: 'security',
+    severity: 'crisis',
+    condition: (s) => s.economic.unemploymentRate > 30 && Math.random() < 0.15,
+    choices: [
+      { text: 'Deploy border patrols and stem the flow', shortDesc: 'Strict, but curbs departures', effects: [{ target: 'citizenSatisfaction.freedom', op: 'subtract', value: 8, dur: 6 }, { target: 'trade.smugglingRate', op: 'subtract', value: 8, dur: 6 }, { target: 'national.netMigration', op: 'add', value: 2000, dur: 4 }], politicalRisk: -6, popularityImpact: -5 },
+      { text: 'Open talks with neighbors on labor mobility', shortDesc: 'Diplomatic, uncertain result', effects: [{ target: 'trade.borderEfficiency', op: 'add', value: 10, dur: 8 }, { target: 'citizenSatisfaction.future', op: 'add', value: 4, dur: 6 }, { target: 'politicalInfluence', op: 'add', value: 3, dur: 4 }], politicalRisk: 2, popularityImpact: 4 },
+      { text: 'Acknowledge the exodus, promise reform', shortDesc: 'Words without money', effects: [{ target: 'citizenSatisfaction.governance', op: 'add', value: 3, dur: 3 }, { target: 'citizenSatisfaction.future', op: 'subtract', value: 3, dur: 6 }, { target: 'politicalInfluence', op: 'subtract', value: 2, dur: 4 }], politicalRisk: -2, popularityImpact: 2 },
+    ],
+  },
+  {
+    id: 'power_grid_collapse',
+    title: 'National Grid Collapses',
+    description: 'Years of deferred maintenance have caught up. Two major stations have tripped offline and the grid has blacked out across most provinces.',
+    category: 'energy',
+    severity: 'crisis',
+    condition: (s) => s.energy.maintenanceBacklog > 70,
+    choices: [
+      { text: 'Emergency imports and rentals', shortDesc: 'Fast power, huge foreign currency cost', effects: [{ target: 'economic.foreignReserves', op: 'subtract', value: 0.4, dur: 0 }, { target: 'economic.inflation', op: 'add', value: 4, dur: 3 }, { target: 'citizenSatisfaction.governance', op: 'add', value: 4, dur: 3 }], politicalRisk: -3, popularityImpact: -4 },
+      { text: 'Rotating blackouts across provinces', shortDesc: 'Fair sharing of pain', effects: [{ target: 'citizenSatisfaction.infrastructure', op: 'subtract', value: 10, dur: 5 }, { target: 'economic.gdpGrowth', op: 'subtract', value: 1.5, dur: 5 }, { target: 'economic.unemploymentRate', op: 'add', value: 1, dur: 5 }], politicalRisk: -8, popularityImpact: -10 },
+      { text: 'Fast-track independent power producers', shortDesc: 'Long-term fix, short-term cost', effects: [{ target: 'economic.taxRevenue', op: 'subtract', value: 0.4, dur: 12 }, { target: 'energy.maintenanceBacklog', op: 'subtract', value: 10, dur: 8 }, { target: 'economic.investorConfidence', op: 'add', value: 6, dur: 10 }], politicalRisk: 0, popularityImpact: 2 },
+    ],
+  },
+  {
+    id: 'epidemic_outbreak',
+    title: 'Influenza Epidemic Overwhelms Hospitals',
+    description: 'A fast-spreading influenza strain has overwhelmed hospitals. Corridors are lined with patients and medical supplies are running out.',
+    category: 'health',
+    severity: 'crisis',
+    condition: (s) => s.publicServices.hospitals < 45,
+    choices: [
+      { text: 'Mass vaccination and public clinics', shortDesc: 'Expensive, saves lives', effects: [{ target: 'budget.hospitals', op: 'subtract', value: 120, dur: 0 }, { target: 'national.deathRate', op: 'subtract', value: 2, dur: 3 }, { target: 'citizenSatisfaction.governance', op: 'add', value: 6, dur: 4 }], politicalRisk: -2, popularityImpact: 8 },
+      { text: 'Mobilize military field hospitals', shortDesc: 'Swift but controversial', effects: [{ target: 'budget.military', op: 'subtract', value: 60, dur: 0 }, { target: 'national.deathRate', op: 'subtract', value: 1, dur: 3 }, { target: 'citizenSatisfaction.freedom', op: 'subtract', value: 4, dur: 5 }], politicalRisk: -6, popularityImpact: 4 },
+      { text: 'Advise hygiene and wait it out', shortDesc: 'Zero cost, heavy toll', effects: [{ target: 'national.deathRate', op: 'add', value: 4, dur: 3 }, { target: 'citizenSatisfaction.governance', op: 'subtract', value: 10, dur: 6 }], politicalRisk: -10, popularityImpact: -12 },
+    ],
+  },
+  {
+    id: 'food_riot',
+    title: 'Food Riots Erupt in High-Density Suburbs',
+    description: 'Shoppers clashed with police over empty shelves and unaffordable mealie meal. Riots have spread across the high-density suburbs.',
+    category: 'social',
+    severity: 'crisis',
+    condition: (s) => s.economic.inflation > 45 && s.citizenSatisfaction.economy < 30,
+    choices: [
+      { text: 'Release strategic grain reserves', shortDesc: 'Calms prices, depletes stores', effects: [{ target: 'budget.agriculture', op: 'subtract', value: 100, dur: 0 }, { target: 'economic.inflation', op: 'subtract', value: 5, dur: 4 }, { target: 'citizenSatisfaction.economy', op: 'add', value: 8, dur: 5 }], politicalRisk: -3, popularityImpact: 6 },
+      { text: 'Impose curfew and reinforce police', shortDesc: 'Order first, freedom later', effects: [{ target: 'citizenSatisfaction.freedom', op: 'subtract', value: 12, dur: 6 }, { target: 'citizenSatisfaction.security', op: 'add', value: 6, dur: 4 }, { target: 'economic.gdpGrowth', op: 'subtract', value: 0.5, dur: 4 }], politicalRisk: -12, popularityImpact: -10 },
+      { text: 'Address the nation and pledge relief', shortDesc: 'Buys a few days', effects: [{ target: 'citizenSatisfaction.governance', op: 'add', value: 4, dur: 3 }, { target: 'citizenSatisfaction.future', op: 'add', value: 3, dur: 3 }, { target: 'budget.social_welfare', op: 'subtract', value: 50, dur: 0 }], politicalRisk: -2, popularityImpact: 3 },
+    ],
+  },
+  {
+    id: 'wildfire_crisis',
+    title: 'Wildfires Ravage the Eastern Highlands',
+    description: 'Out-of-control wildfires are destroying farmland and timber plantations in Manicaland. Smoke has closed roads and the air is unbreathable.',
+    category: 'natural_disaster',
+    severity: 'crisis',
+    condition: (s) => s.water.droughtRisk > 50 && s.player.month >= 8 && s.player.month <= 11,
+    choices: [
+      { text: 'Deploy army and air support', shortDesc: 'Decisive, expensive', effects: [{ target: 'budget.military', op: 'subtract', value: 80, dur: 0 }, { target: 'national.deathRate', op: 'subtract', value: 2, dur: 2 }, { target: 'citizenSatisfaction.governance', op: 'add', value: 6, dur: 4 }], politicalRisk: 0, popularityImpact: 7 },
+      { text: 'Fund volunteer fire brigades', shortDesc: 'Cheaper, slower', effects: [{ target: 'budget.administration', op: 'subtract', value: 40, dur: 0 }, { target: 'economic.taxRevenue', op: 'subtract', value: 0.2, dur: 6 }, { target: 'citizenSatisfaction.governance', op: 'add', value: 2, dur: 3 }], politicalRisk: -2, popularityImpact: 3 },
+      { text: 'Let nature take its course', shortDesc: 'Reckless gamble', effects: [{ target: 'national.deathRate', op: 'add', value: 3, dur: 2 }, { target: 'economic.gdpGrowth', op: 'subtract', value: 1, dur: 4 }, { target: 'citizenSatisfaction.governance', op: 'subtract', value: 8, dur: 5 }], politicalRisk: -8, popularityImpact: -14 },
+    ],
+  },
+  {
+    id: 'capital_flight',
+    title: 'Capital Flight: Investors Exit in Droves',
+    description: 'International investors are liquidating holdings and transferring funds abroad. The stock exchange has tumbled and hard currency is leaving the country.',
+    category: 'economic',
+    severity: 'crisis',
+    condition: (s) => s.economic.investorConfidence < 30,
+    choices: [
+      { text: 'Impose temporary capital controls', shortDesc: 'Stems the flow, scares investors', effects: [{ target: 'economic.informalEconomySize', op: 'add', value: 4, dur: 8 }, { target: 'economic.foreignReserves', op: 'add', value: 0.2, dur: 4 }, { target: 'economic.investorConfidence', op: 'subtract', value: 5, dur: 8 }], politicalRisk: -6, popularityImpact: -5 },
+      { text: 'Guarantee investor protection', shortDesc: 'Confidence play', effects: [{ target: 'economic.investorConfidence', op: 'add', value: 10, dur: 8 }, { target: 'economic.taxRevenue', op: 'subtract', value: 0.3, dur: 12 }], politicalRisk: 2, popularityImpact: 1 },
+      { text: 'Pursue currency reform', shortDesc: 'Painful reset', effects: [{ target: 'economic.inflation', op: 'add', value: 10, dur: 3 }, { target: 'economic.investorConfidence', op: 'add', value: 6, dur: 10 }], politicalRisk: -10, popularityImpact: -8 },
+    ],
+  },
+  {
+    id: 'general_strike',
+    title: 'General Strike Paralyzes the Country',
+    description: 'Trade unions have called a general strike over wages and governance. Factories are silent, markets are shut, and civil servants have downed tools.',
+    category: 'social',
+    severity: 'crisis',
+    condition: (s) => s.corruption.publicPerception > 60 && s.citizenSatisfaction.governance < 30,
+    choices: [
+      { text: 'Meet union leadership and negotiate', shortDesc: 'Unlocks wages, burns budget', effects: [{ target: 'budget.administration', op: 'subtract', value: 90, dur: 0 }, { target: 'citizenSatisfaction.governance', op: 'add', value: 8, dur: 6 }, { target: 'citizenSatisfaction.economy', op: 'add', value: 5, dur: 4 }], politicalRisk: 3, popularityImpact: 7 },
+      { text: 'Declare the strike illegal', shortDesc: 'Hard line, deep resentment', effects: [{ target: 'citizenSatisfaction.freedom', op: 'subtract', value: 10, dur: 8 }, { target: 'citizenSatisfaction.governance', op: 'subtract', value: 6, dur: 6 }, { target: 'politicalInfluence', op: 'add', value: 4, dur: 4 }], politicalRisk: -8, popularityImpact: -12 },
+      { text: 'Announce an anti-corruption purge', shortDesc: 'Redirects anger upward', effects: [{ target: 'corruption.nationalLevel', op: 'subtract', value: 6, dur: 8 }, { target: 'corruption.publicPerception', op: 'subtract', value: 10, dur: 8 }, { target: 'politicalInfluence', op: 'subtract', value: 5, dur: 6 }], politicalRisk: -4, popularityImpact: 6 },
+    ],
+  },
+  {
+    id: 'rail_collapse_crisis',
+    title: 'Fatal Rail Derailment Near Gweru',
+    description: 'An overloaded freight train has derailed near Gweru, blocking the main trade corridor. Scores are injured and the line will be closed for weeks.',
+    category: 'infrastructure',
+    severity: 'crisis',
+    condition: (s) => s.infrastructure.railwayCondition < 45,
+    choices: [
+      { text: 'Emergency repairs around the clock', shortDesc: 'Costly, restores trade fast', effects: [{ target: 'budget.roads', op: 'subtract', value: 120, dur: 0 }, { target: 'infrastructure.railwayCondition', op: 'add', value: 8, dur: 6 }, { target: 'trade.exports', op: 'add', value: 0.3, dur: 6 }], politicalRisk: -2, popularityImpact: 4 },
+      { text: 'Divert freight through Mozambique', shortDesc: 'Keeps trade moving', effects: [{ target: 'trade.borderEfficiency', op: 'add', value: 6, dur: 6 }, { target: 'economic.inflation', op: 'add', value: 2, dur: 3 }, { target: 'trade.smugglingRate', op: 'add', value: 3, dur: 4 }], politicalRisk: -3, popularityImpact: -2 },
+      { text: 'Hold a public inquiry, repair slowly', shortDesc: 'Cheap, slow, unpopular', effects: [{ target: 'infrastructure.railwayCondition', op: 'subtract', value: 2, dur: 6 }, { target: 'citizenSatisfaction.infrastructure', op: 'subtract', value: 8, dur: 6 }, { target: 'economic.gdpGrowth', op: 'subtract', value: 1, dur: 4 }], politicalRisk: -6, popularityImpact: -8 },
+    ],
+  },
+  {
+    id: 'hospital_strike',
+    title: 'Nurses Announce Indefinite Strike',
+    description: 'Nurses have walked out over unpaid allowances and unsafe staffing levels. Emergency wards are operating at a fraction of capacity.',
+    category: 'health',
+    severity: 'major',
+    condition: (s) => s.publicServices.hospitals < 55 && Math.random() < 0.25,
+    choices: [
+      { text: 'Grant allowances and staff bonuses', shortDesc: 'Costly but keeps care running', effects: [{ target: 'budget.hospitals', op: 'subtract', value: 120, dur: 0 }, { target: 'publicServices.hospitals', op: 'add', value: 4, dur: 6 }, { target: 'national.deathRate', op: 'subtract', value: 1, dur: 3 }], politicalRisk: -3, popularityImpact: 5 },
+      { text: 'Recruit foreign nurses temporarily', shortDesc: 'Fast relief, high cost', effects: [{ target: 'budget.administration', op: 'subtract', value: 80, dur: 0 }, { target: 'publicServices.hospitals', op: 'add', value: 3, dur: 5 }, { target: 'national.netMigration', op: 'add', value: 1500, dur: 4 }], politicalRisk: -2, popularityImpact: 3 },
+      { text: 'Hold the line on wages', shortDesc: 'Fiscally firm, deadly gamble', effects: [{ target: 'national.deathRate', op: 'add', value: 3, dur: 4 }, { target: 'publicServices.hospitals', op: 'subtract', value: 5, dur: 6 }, { target: 'citizenSatisfaction.services', op: 'subtract', value: 8, dur: 6 }], politicalRisk: -8, popularityImpact: -10 },
+    ],
+  },
+  {
+    id: 'land_reform_dispute',
+    title: 'Land Reform Tensions Boil Over',
+    description: 'Disputes over resettlement have escalated on commercial farms. New settlers and established growers are at odds, and international partners are watching nervously.',
+    category: 'agriculture',
+    severity: 'major',
+    condition: () => Math.random() < 0.1,
+    choices: [
+      { text: 'Accelerate resettlement', shortDesc: 'Popular at home, risky abroad', effects: [{ target: 'politicalInfluence', op: 'add', value: 5, dur: 6 }, { target: 'economic.investorConfidence', op: 'subtract', value: 6, dur: 10 }, { target: 'economic.gdpGrowth', op: 'subtract', value: 0.5, dur: 4 }], politicalRisk: -5, popularityImpact: 8 },
+      { text: 'Protect existing commercial farms', shortDesc: 'Keeps investors, angers settlers', effects: [{ target: 'economic.investorConfidence', op: 'add', value: 6, dur: 10 }, { target: 'citizenSatisfaction.governance', op: 'subtract', value: 6, dur: 6 }, { target: 'budget.agriculture', op: 'subtract', value: 60, dur: 0 }], politicalRisk: 2, popularityImpact: -6 },
+      { text: 'Commission an independent review', shortDesc: 'Buy time, look busy', effects: [{ target: 'budget.administration', op: 'subtract', value: 40, dur: 0 }, { target: 'citizenSatisfaction.governance', op: 'add', value: 3, dur: 4 }, { target: 'economic.gdpGrowth', op: 'subtract', value: 0.2, dur: 3 }], politicalRisk: 0, popularityImpact: 1 },
+    ],
+  },
+  {
+    id: 'telecom_outage',
+    title: 'Nationwide Telecom Outage',
+    description: 'A failed network upgrade has knocked out mobile and internet services nationwide. Payments, banking apps, and business systems are down.',
+    category: 'infrastructure',
+    severity: 'major',
+    condition: (s) => s.infrastructure.internetPenetration > 30 && Math.random() < 0.12,
+    choices: [
+      { text: 'Fast-track repairs with incentives', shortDesc: 'Quick fix, generous terms', effects: [{ target: 'budget.ict', op: 'subtract', value: 80, dur: 0 }, { target: 'infrastructure.internetPenetration', op: 'add', value: 5, dur: 6 }, { target: 'economic.investorConfidence', op: 'add', value: 4, dur: 6 }], politicalRisk: -2, popularityImpact: 3 },
+      { text: 'Regulate and penalize the operator', shortDesc: 'Popular, slows recovery', effects: [{ target: 'economic.investorConfidence', op: 'subtract', value: 4, dur: 6 }, { target: 'infrastructure.internetPenetration', op: 'subtract', value: 2, dur: 5 }, { target: 'citizenSatisfaction.governance', op: 'add', value: 4, dur: 4 }], politicalRisk: -4, popularityImpact: 6 },
+      { text: 'Accept the outage and wait', shortDesc: 'Cheapest, worst outcome', effects: [{ target: 'infrastructure.internetPenetration', op: 'subtract', value: 4, dur: 6 }, { target: 'economic.gdpGrowth', op: 'subtract', value: 0.8, dur: 4 }, { target: 'citizenSatisfaction.economy', op: 'subtract', value: 5, dur: 5 }], politicalRisk: -6, popularityImpact: -8 },
+    ],
+  },
+  {
+    id: 'tobacco_bonanza',
+    title: 'Record Tobacco Auction Prices',
+    description: 'Golden leaf is fetching record prices at the auction floors. Farmers are celebrating their best season in years.',
+    category: 'agriculture',
+    severity: 'minor',
+    condition: (s) => s.commodities.tobacco > 6.5,
+    choices: [
+      { text: 'Reinvest in irrigation support', shortDesc: 'Spend today, grow tomorrow', effects: [{ target: 'budget.agriculture', op: 'subtract', value: 60, dur: 0 }, { target: 'economic.gdpGrowth', op: 'add', value: 0.3, dur: 6 }, { target: 'citizenSatisfaction.economy', op: 'add', value: 3, dur: 4 }], politicalRisk: 0, popularityImpact: 3 },
+      { text: 'Levy a windfall export tax', shortDesc: 'Fills coffers, annoys farmers', effects: [{ target: 'economic.taxRevenue', op: 'add', value: 0.3, dur: 4 }, { target: 'economic.foreignReserves', op: 'add', value: 0.2, dur: 4 }, { target: 'citizenSatisfaction.economy', op: 'subtract', value: 2, dur: 4 }], politicalRisk: -2, popularityImpact: -2 },
+      { text: 'Celebrate and do nothing', shortDesc: 'Let the market run', effects: [{ target: 'economic.gdpGrowth', op: 'add', value: 0.2, dur: 4 }, { target: 'economic.inflation', op: 'subtract', value: 1, dur: 3 }], politicalRisk: 0, popularityImpact: 1 },
+    ],
+  },
+  {
+    id: 'sme_credit',
+    title: 'Banks Unveil SME Credit Drive',
+    description: 'Commercial banks have announced a lending program for small businesses, backed by a development finance partnership.',
+    category: 'economic',
+    severity: 'minor',
+    condition: () => Math.random() < 0.08,
+    choices: [
+      { text: 'Provide government guarantees', shortDesc: 'Stimulus with risk', effects: [{ target: 'economic.unemploymentRate', op: 'subtract', value: 0.5, dur: 6 }, { target: 'economic.governmentDebt', op: 'add', value: 0.2, dur: 0 }, { target: 'citizenSatisfaction.future', op: 'add', value: 4, dur: 6 }], politicalRisk: -3, popularityImpact: 4 },
+      { text: 'Regulate the terms closely', shortDesc: 'Safe, slow', effects: [{ target: 'economic.investorConfidence', op: 'add', value: 2, dur: 6 }, { target: 'economic.unemploymentRate', op: 'subtract', value: 0.2, dur: 6 }], politicalRisk: 0, popularityImpact: 1 },
+      { text: 'Endorse it publicly', shortDesc: 'Free publicity', effects: [{ target: 'citizenSatisfaction.economy', op: 'add', value: 2, dur: 4 }, { target: 'citizenSatisfaction.future', op: 'add', value: 2, dur: 4 }], politicalRisk: 0, popularityImpact: 2 },
+    ],
+  },
+  {
+    id: 'new_dam',
+    title: 'New Dam Commissioned in Matabeleland',
+    description: 'A long-delayed dam project has finally been commissioned, promising irrigation and water security for drought-prone districts.',
+    category: 'water',
+    severity: 'minor',
+    condition: () => Math.random() < 0.08,
+    choices: [
+      { text: 'Connect irrigation schemes', shortDesc: 'Boost agriculture', effects: [{ target: 'budget.agriculture', op: 'subtract', value: 40, dur: 0 }, { target: 'water.ruralAccess', op: 'add', value: 3, dur: 8 }, { target: 'economic.gdpGrowth', op: 'add', value: 0.3, dur: 6 }], politicalRisk: 0, popularityImpact: 3 },
+      { text: 'Prioritize urban supply lines', shortDesc: 'Help the cities', effects: [{ target: 'water.urbanAccess', op: 'add', value: 3, dur: 8 }, { target: 'citizenSatisfaction.services', op: 'add', value: 3, dur: 5 }], politicalRisk: 0, popularityImpact: 2 },
+      { text: 'Balance both with modest funding', shortDesc: 'Everyone gets a little', effects: [{ target: 'water.urbanAccess', op: 'add', value: 1, dur: 6 }, { target: 'water.ruralAccess', op: 'add', value: 1, dur: 6 }, { target: 'citizenSatisfaction.services', op: 'add', value: 2, dur: 4 }], politicalRisk: 0, popularityImpact: 1 },
+    ],
+  },
+  {
+    id: 'solar_village',
+    title: 'Community Solar Projects Exceed Targets',
+    description: 'Community solar installations are generating more power than expected, cutting diesel use in rural business hubs.',
+    category: 'energy',
+    severity: 'minor',
+    condition: () => Math.random() < 0.08,
+    choices: [
+      { text: 'Fund a national rollout', shortDesc: 'Expand the win', effects: [{ target: 'budget.energy', op: 'subtract', value: 70, dur: 0 }, { target: 'energy.maintenanceBacklog', op: 'subtract', value: 6, dur: 6 }, { target: 'citizenSatisfaction.infrastructure', op: 'add', value: 3, dur: 5 }], politicalRisk: 0, popularityImpact: 4 },
+      { text: 'Offer tax incentives to developers', shortDesc: 'Cheaper, slower', effects: [{ target: 'economic.taxRevenue', op: 'subtract', value: 0.15, dur: 8 }, { target: 'energy.maintenanceBacklog', op: 'subtract', value: 3, dur: 6 }], politicalRisk: 0, popularityImpact: 1 },
+      { text: 'Publicize the success story', shortDesc: 'Zero cost, small boost', effects: [{ target: 'citizenSatisfaction.future', op: 'add', value: 3, dur: 4 }, { target: 'economic.investorConfidence', op: 'add', value: 2, dur: 4 }], politicalRisk: 0, popularityImpact: 2 },
+    ],
+  },
+  {
+    id: 'youth_artisans',
+    title: 'Youth Artisan Program Produces Results',
+    description: 'Thousands of young people have completed vocational training through the artisan program, with many landing contracts in construction and manufacturing.',
+    category: 'social',
+    severity: 'minor',
+    condition: () => Math.random() < 0.08,
+    choices: [
+      { text: 'Scale the program nationally', shortDesc: 'Invest in youth', effects: [{ target: 'budget.youth_development', op: 'subtract', value: 60, dur: 0 }, { target: 'economic.youthUnemployment', op: 'subtract', value: 2, dur: 6 }, { target: 'citizenSatisfaction.future', op: 'add', value: 4, dur: 6 }], politicalRisk: 0, popularityImpact: 5 },
+      { text: 'Link graduates to export markets', shortDesc: 'Trade ties, modest cost', effects: [{ target: 'trade.exports', op: 'add', value: 0.2, dur: 6 }, { target: 'economic.taxRevenue', op: 'add', value: 0.1, dur: 6 }], politicalRisk: 0, popularityImpact: 2 },
+      { text: 'Praise the initiative publicly', shortDesc: 'Words only', effects: [{ target: 'citizenSatisfaction.future', op: 'add', value: 2, dur: 4 }, { target: 'citizenSatisfaction.governance', op: 'add', value: 2, dur: 4 }], politicalRisk: 0, popularityImpact: 2 },
+    ],
+  },
+  {
+    id: 'border_upgrade',
+    title: 'Border Post Upgrade Cuts Crossing Times',
+    description: 'A modernized border post has cut crossing times for trucks and travelers, easing a chronic trade bottleneck.',
+    category: 'infrastructure',
+    severity: 'minor',
+    condition: () => Math.random() < 0.08,
+    choices: [
+      { text: 'Digitalize customs at all major posts', shortDesc: 'Efficiency investment', effects: [{ target: 'budget.ict', op: 'subtract', value: 50, dur: 0 }, { target: 'trade.borderEfficiency', op: 'add', value: 8, dur: 8 }, { target: 'economic.gdpGrowth', op: 'add', value: 0.3, dur: 6 }], politicalRisk: 0, popularityImpact: 2 },
+      { text: 'Hire additional customs officers', shortDesc: 'More hands, more payroll', effects: [{ target: 'budget.administration', op: 'subtract', value: 40, dur: 0 }, { target: 'trade.borderEfficiency', op: 'add', value: 5, dur: 6 }], politicalRisk: 0, popularityImpact: 1 },
+      { text: 'Maintain the single upgraded post', shortDesc: 'Wait and see', effects: [{ target: 'trade.borderEfficiency', op: 'add', value: 3, dur: 6 }], politicalRisk: 0, popularityImpact: 0 },
+    ],
+  },
+  {
+    id: 'wildlife_returns',
+    title: 'Wildlife Conservation Drives Tourism Revenue',
+    description: 'Successful conservation efforts have boosted wildlife populations, drawing more safari tourists and conservation grants.',
+    category: 'tourism',
+    severity: 'minor',
+    condition: () => Math.random() < 0.08,
+    choices: [
+      { text: 'Reinvest in park infrastructure', shortDesc: 'Grow the sector', effects: [{ target: 'budget.tourism', op: 'subtract', value: 50, dur: 0 }, { target: 'economic.foreignReserves', op: 'add', value: 0.15, dur: 6 }, { target: 'trade.exports', op: 'add', value: 0.2, dur: 6 }], politicalRisk: 0, popularityImpact: 2 },
+      { text: 'Share revenue with local communities', shortDesc: 'Builds goodwill', effects: [{ target: 'citizenSatisfaction.governance', op: 'add', value: 4, dur: 6 }, { target: 'budget.tourism', op: 'subtract', value: 20, dur: 0 }], politicalRisk: 0, popularityImpact: 3 },
+      { text: 'Bank the gains quietly', shortDesc: 'Prudent but invisible', effects: [{ target: 'economic.foreignReserves', op: 'add', value: 0.2, dur: 4 }], politicalRisk: 0, popularityImpact: 0 },
+    ],
+  },
+  {
+    id: 'remittance_surge',
+    title: 'Diaspora Remittances Hit New High',
+    description: 'Money sent home by Zimbabweans abroad has surged, giving families a lifeline and easing the foreign currency squeeze.',
+    category: 'economic',
+    severity: 'minor',
+    condition: () => Math.random() < 0.08,
+    choices: [
+      { text: 'Cut transfer costs via digital channels', shortDesc: 'More money in pockets', effects: [{ target: 'budget.ict', op: 'subtract', value: 40, dur: 0 }, { target: 'economic.foreignReserves', op: 'add', value: 0.2, dur: 6 }, { target: 'citizenSatisfaction.economy', op: 'add', value: 3, dur: 5 }], politicalRisk: 0, popularityImpact: 3 },
+      { text: 'Issue diaspora bonds', shortDesc: 'Raise capital, add debt', effects: [{ target: 'economic.governmentDebt', op: 'add', value: 0.3, dur: 0 }, { target: 'economic.foreignReserves', op: 'add', value: 0.3, dur: 6 }], politicalRisk: 0, popularityImpact: 0 },
+      { text: 'Let the market handle it', shortDesc: 'No interference', effects: [{ target: 'economic.informalEconomySize', op: 'add', value: 1, dur: 4 }], politicalRisk: 0, popularityImpact: 0 },
+    ],
+  },
+  {
+    id: 'reading_initiative',
+    title: 'Mobile Libraries Reach Rural Schools',
+    description: 'A mobile library program has brought books to rural schools, boosting reading habits among learners.',
+    category: 'education',
+    severity: 'minor',
+    condition: () => Math.random() < 0.08,
+    choices: [
+      { text: 'Fund a national expansion', shortDesc: 'Read to lead', effects: [{ target: 'budget.education', op: 'subtract', value: 50, dur: 0 }, { target: 'national.literacyRate', op: 'add', value: 1, dur: 8 }, { target: 'publicServices.schools', op: 'add', value: 2, dur: 6 }], politicalRisk: 0, popularityImpact: 3 },
+      { text: 'Train teacher-librarians first', shortDesc: 'Quality over quantity', effects: [{ target: 'budget.education', op: 'subtract', value: 30, dur: 0 }, { target: 'publicServices.schools', op: 'add', value: 2, dur: 8 }], politicalRisk: 0, popularityImpact: 2 },
+      { text: 'Celebrate the pilot, hold steady', shortDesc: 'No expansion', effects: [{ target: 'citizenSatisfaction.future', op: 'add', value: 2, dur: 4 }], politicalRisk: 0, popularityImpact: 1 },
+    ],
+  },
 ];
+
+// ═══════════════════════════════════════════════════════
+// ZERO BUDGET CRISES
+// ═══════════════════════════════════════════════════════
+
+interface BudgetCrisis {
+  threshold: number; // consecutive turns at zero before the crisis fires
+  headline: string;
+  logMessage: string;
+  category: NewsArticle['category'];
+  impact: number;
+  repeat?: boolean; // if set, the counter keeps growing and the crisis re-fires every `threshold` turns
+  gameOverAt?: number; // if the counter reaches this, the game ends
+  gameOverReason?: string; // reason used when gameOverAt is reached
+  apply: (state: GameState) => void;
+}
+
+const BUDGET_CRISES: Partial<Record<BudgetCategory, BudgetCrisis>> = {
+  military: {
+    threshold: 3,
+    headline: 'MILITARY COUP: The armed forces seized power after the defense budget was cut to zero.',
+    logMessage: 'MILITARY COUP: With the defense budget cut to zero, the armed forces seized power without warning.',
+    category: 'security',
+    impact: -20,
+    gameOverAt: 3,
+    gameOverReason: 'MILITARY COUP: With the defense budget cut to zero, the armed forces seized power without warning. Your presidency is over.',
+    apply: () => {},
+  },
+  police: {
+    threshold: 4,
+    headline: 'CRIME WAVE: With no police funding, lawlessness spreads across the nation.',
+    logMessage: 'CRISIS: A national crime wave has erupted with the police force defunded. Citizens are on their own.',
+    category: 'security',
+    impact: -8,
+    repeat: true,
+    gameOverAt: 10,
+    gameOverReason: 'ANARCHY: With the police force defunded for too long, the state has collapsed into anarchy. Your presidency is over.',
+    apply: (state) => {
+      for (const p of state.provinces) {
+        p.safetyIndex = clamp(p.safetyIndex - 6, 0, 100);
+        for (const d of p.districts) d.crime = clamp(d.crime + 5, 0, 100);
+      }
+      state.citizenSatisfaction.security = clamp(state.citizenSatisfaction.security - 8, 5, 95);
+      state.corruption.nationalLevel = clamp(state.corruption.nationalLevel + 3, 0, 100);
+    },
+  },
+  hospitals: {
+    threshold: 4,
+    headline: 'PUBLIC HEALTH CRISIS: Hospitals run without essential funding as patients are turned away.',
+    logMessage: 'CRISIS: Hospitals have collapsed without funding. Preventable deaths are climbing.',
+    category: 'health',
+    impact: -10,
+    apply: (state) => {
+      state.national.deathRate = clamp(state.national.deathRate + 1.5, 0, 50);
+      state.national.lifeExpectancy = clamp(state.national.lifeExpectancy - 1, 40, 90);
+      state.publicServices.hospitals = clamp(state.publicServices.hospitals - 5, 10, 95);
+    },
+  },
+  water: {
+    threshold: 4,
+    headline: 'WATERBORNE DISEASE OUTBREAK: Cholera cases surge in communities without water services.',
+    logMessage: 'CRISIS: A waterborne disease outbreak is spreading through communities with no sanitation funding.',
+    category: 'water',
+    impact: -10,
+    apply: (state) => {
+      state.water.waterQuality = clamp(state.water.waterQuality - 6, 0, 100);
+      state.water.urbanAccess = clamp(state.water.urbanAccess - 3, 0, 100);
+      state.water.ruralAccess = clamp(state.water.ruralAccess - 3, 0, 100);
+      state.national.deathRate = clamp(state.national.deathRate + 1, 0, 50);
+    },
+  },
+  energy: {
+    threshold: 4,
+    headline: 'NATIONAL BLACKOUT: Power generation grinds to a halt without utility funding.',
+    logMessage: 'CRISIS: The national grid is failing. Power plants sit unmaintained and blackouts are spreading.',
+    category: 'energy',
+    impact: -8,
+    apply: (state) => {
+      state.energy.maintenanceBacklog = clamp(state.energy.maintenanceBacklog + 8, 0, 100);
+      state.economic.gdpGrowth = clamp(state.economic.gdpGrowth - 1, -15, 20);
+      state.citizenSatisfaction.infrastructure = clamp(state.citizenSatisfaction.infrastructure - 6, 5, 95);
+    },
+  },
+  education: {
+    threshold: 5,
+    headline: 'NATIONAL TEACHERS STRIKE: Schools close indefinitely over unpaid salaries.',
+    logMessage: 'CRISIS: Teachers have gone on strike nationwide. Schools are shut with no funding in sight.',
+    category: 'education',
+    impact: -8,
+    apply: (state) => {
+      state.national.literacyRate = clamp(state.national.literacyRate - 1, 30, 100);
+      state.publicServices.schools = clamp(state.publicServices.schools - 5, 10, 95);
+      state.economic.youthUnemployment = clamp(state.economic.youthUnemployment + 1, 5, 90);
+    },
+  },
+  roads: {
+    threshold: 5,
+    headline: 'TRANSPORT COLLAPSE: Roads crumble and public transport halts without maintenance funds.',
+    logMessage: 'CRISIS: The transport network has collapsed. Roads are impassable and buses have stopped running.',
+    category: 'infrastructure',
+    impact: -7,
+    apply: (state) => {
+      state.infrastructure.roadQuality = clamp(state.infrastructure.roadQuality - 4, 0, 100);
+      state.publicServices.publicTransport = clamp(state.publicServices.publicTransport - 5, 10, 80);
+      state.economic.gdpGrowth = clamp(state.economic.gdpGrowth - 0.5, -15, 20);
+    },
+  },
+  agriculture: {
+    threshold: 5,
+    headline: 'FOOD SHORTAGE: Harvests fail as agricultural support programs are cut.',
+    logMessage: 'CRISIS: A severe food shortage looms with farmers left without support or inputs.',
+    category: 'agriculture',
+    impact: -9,
+    apply: (state) => {
+      for (const p of state.provinces) p.agriculturalOutput = clamp(p.agriculturalOutput - 8, 0, 150);
+      state.economic.inflation = clamp(state.economic.inflation + 4, 0, 500);
+      state.national.deathRate = clamp(state.national.deathRate + 0.5, 0, 50);
+    },
+  },
+  mining: {
+    threshold: 5,
+    headline: 'MINING SECTOR COLLAPSE: Operations shut down as industry funding disappears.',
+    logMessage: 'CRISIS: The mining sector has collapsed without funding. Smuggling is filling the vacuum.',
+    category: 'mining',
+    impact: -9,
+    apply: (state) => {
+      for (const p of state.provinces) p.miningOutput = clamp(p.miningOutput - 8, 0, 150);
+      state.economic.taxRevenue = clamp(state.economic.taxRevenue - 0.3, 0.5, 100);
+      state.trade.smugglingRate = clamp(state.trade.smugglingRate + 3, 0, 100);
+    },
+  },
+  housing: {
+    threshold: 5,
+    headline: 'HOUSING CRISIS: Backlog balloons as construction programs are suspended.',
+    logMessage: 'CRISIS: The housing backlog has ballooned. Informal settlements are growing unchecked.',
+    category: 'infrastructure',
+    impact: -6,
+    apply: (state) => {
+      state.infrastructure.housingBacklog = clamp(state.infrastructure.housingBacklog + 80, 0, 5000);
+      state.citizenSatisfaction.services = clamp(state.citizenSatisfaction.services - 4, 5, 95);
+    },
+  },
+  social_welfare: {
+    threshold: 5,
+    headline: 'POVERTY SPIKE: Welfare payments stop, pushing vulnerable families to the brink.',
+    logMessage: 'CRISIS: Welfare payments have stopped entirely. Poverty is spiking across the country.',
+    category: 'social',
+    impact: -8,
+    apply: (state) => {
+      state.national.lifeExpectancy = clamp(state.national.lifeExpectancy - 0.5, 40, 90);
+      state.citizenSatisfaction.services = clamp(state.citizenSatisfaction.services - 5, 5, 95);
+      for (const p of state.provinces) {
+        for (const d of p.districts) d.crime = clamp(d.crime + 5, 0, 100);
+      }
+    },
+  },
+  youth_development: {
+    threshold: 6,
+    headline: 'YOUTH DISCONTENT: Jobless youth take to the streets in growing numbers.',
+    logMessage: 'CRISIS: Youth programs are gone and youth unemployment is exploding. Protests are spreading.',
+    category: 'social',
+    impact: -7,
+    apply: (state) => {
+      state.economic.youthUnemployment = clamp(state.economic.youthUnemployment + 3, 5, 90);
+      state.citizenSatisfaction.future = clamp(state.citizenSatisfaction.future - 6, 5, 95);
+      for (const p of state.provinces) {
+        for (const d of p.districts) d.crime = clamp(d.crime + 4, 0, 100);
+      }
+    },
+  },
+  ict: {
+    threshold: 6,
+    headline: 'DIGITAL BLACKOUT: Internet services degrade as the ICT budget runs dry.',
+    logMessage: 'CRISIS: The digital backbone is failing. Internet access is degrading nationwide.',
+    category: 'economic',
+    impact: -6,
+    apply: (state) => {
+      state.infrastructure.internetPenetration = clamp(state.infrastructure.internetPenetration - 4, 0, 100);
+      state.economic.investorConfidence = clamp(state.economic.investorConfidence - 4, 0, 100);
+    },
+  },
+  tourism: {
+    threshold: 6,
+    headline: 'TOURISM COLLAPSE: Visitors stay away as destinations fall into disrepair.',
+    logMessage: 'CRISIS: The tourism industry has collapsed. Reserves are draining with no visitor revenue.',
+    category: 'tourism',
+    impact: -7,
+    apply: (state) => {
+      state.economic.foreignReserves = clamp(state.economic.foreignReserves - 0.3, 0, 20);
+      state.economic.investorConfidence = clamp(state.economic.investorConfidence - 3, 0, 100);
+    },
+  },
+  disaster_relief: {
+    threshold: 6,
+    headline: 'RELIEF PARALYSIS: Disaster response is frozen with no emergency funding.',
+    logMessage: 'CRISIS: Disaster relief capacity is paralyzed. Emergencies will go unaddressed.',
+    category: 'natural_disaster',
+    impact: -7,
+    apply: (state) => {
+      state.national.deathRate = clamp(state.national.deathRate + 1, 0, 50);
+      state.citizenSatisfaction.governance = clamp(state.citizenSatisfaction.governance - 4, 5, 95);
+    },
+  },
+  debt_repayment: {
+    threshold: 6,
+    headline: 'CREDITOR BACKLASH: Lenders raise rates as Zimbabwe stops servicing its debt.',
+    logMessage: 'CRISIS: Creditors have lost confidence. Interest rates are climbing and reserves are falling.',
+    category: 'economic',
+    impact: -8,
+    apply: (state) => {
+      state.economic.interestRate = clamp(state.economic.interestRate + 1.5, 0, 60);
+      state.economic.investorConfidence = clamp(state.economic.investorConfidence - 5, 0, 100);
+      state.economic.foreignReserves = clamp(state.economic.foreignReserves - 0.4, 0, 20);
+    },
+  },
+  administration: {
+    threshold: 7,
+    headline: 'GOVERNMENT PARALYSIS: Civil service grinds to a halt without administrative funding.',
+    logMessage: 'CRISIS: The civil service has ground to a halt. Corruption is thriving in the paralysis.',
+    category: 'political',
+    impact: -6,
+    apply: (state) => {
+      state.corruption.nationalLevel = clamp(state.corruption.nationalLevel + 3, 0, 100);
+      state.citizenSatisfaction.governance = clamp(state.citizenSatisfaction.governance - 5, 5, 95);
+    },
+  },
+};
+
+function simulateBudgetCrises(state: GameState): void {
+  if (state.isGameOver) return;
+  const counters = { ...(state.budgetZeroTurns || {}) };
+
+  for (const item of state.budget.items) {
+    const crisis = BUDGET_CRISES[item.category];
+    if (!crisis) continue;
+
+    const zeroTurns = counters[item.category] || 0;
+
+    if (item.allocated <= 0) {
+      counters[item.category] = zeroTurns + 1;
+      const turns = counters[item.category];
+
+      // Terminal escalation (e.g. anarchy after 10 turns without police)
+      if (crisis.gameOverAt && turns >= crisis.gameOverAt && crisis.gameOverReason) {
+        state.isGameOver = true;
+        state.gameOverReason = crisis.gameOverReason;
+        state.budgetZeroTurns = counters;
+        return;
+      }
+
+      // Fire the crisis when the threshold is hit (or re-fires every threshold turns when repeating)
+      if (turns >= crisis.threshold && (!crisis.repeat || turns % crisis.threshold === 0)) {
+        if (!crisis.repeat) counters[item.category] = 0;
+        crisis.apply(state);
+        state.gameLog.push(crisis.logMessage);
+        state.newsHistory = [{
+          id: uid(), headline: crisis.headline,
+          subheadline: `Emergency report for ${MONTH_NAMES[state.player.month - 1]} ${state.player.year}`,
+          body: crisis.headline,
+          category: crisis.category, turn: state.player.turn, month: state.player.month, year: state.player.year,
+          sentiment: 'negative', impact: crisis.impact, isBreaking: true,
+        }, ...state.newsHistory].slice(0, 100);
+      }
+    } else if (zeroTurns > 0) {
+      counters[item.category] = 0;
+    }
+  }
+
+  state.budgetZeroTurns = counters;
+}
 
 // ═══════════════════════════════════════════════════════
 // NEWS GENERATION
@@ -382,6 +938,9 @@ export function simulateTurn(state: GameState): GameState {
 
   // ─── Elections ───
   simulateElections(newState);
+
+  // ─── Zero budget crises ───
+  simulateBudgetCrises(newState);
 
   // ─── Check for Game Over ───
   checkGameOver(newState);
@@ -991,8 +1550,13 @@ function simulateElections(state: GameState): void {
     // Campaign funds bonus (more money = better outreach)
     playerVotePercent += player.campaignFunds * 0.15;
 
-    // Turnout boost for high-satisfaction populations
-    const turnout = clamp(55 + citizenSatisfaction.overall * 0.3 + randomRange(-5, 5), 40, 85);
+    // Turnout: base + satisfaction, modulated by GDP growth, inflation, and cabinet strength
+    const gdpFactor = clamp(economic.gdpGrowth, -10, 10) * 0.5;
+    const inflationFactor = clamp((25 - economic.inflation) * 0.15, -12, 3);
+    const activeMinisters = state.ministers.filter(m => m.isActive);
+    const avgMinisterPopularity = activeMinisters.length ? activeMinisters.reduce((sum, m) => sum + m.popularity, 0) / activeMinisters.length : 0;
+    const ministerFactor = avgMinisterPopularity * 0.1 - (state.ministers.length - activeMinisters.length) * 1.5;
+    const turnout = clamp(55 + citizenSatisfaction.overall * 0.3 + gdpFactor + inflationFactor + ministerFactor + randomRange(-5, 5), 40, 85);
     election.turnoutPercent = turnout;
 
     // If turnout is high and satisfaction is low, opposition benefits

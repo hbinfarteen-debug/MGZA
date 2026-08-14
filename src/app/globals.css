@@ -393,45 +393,213 @@
  *  🇿🇼  Premium "Wow" Visual Effects — MGZA
  * ═══════════════════════════════════════════════════════════════ */
 
-/* ── Animated gradient background for Start Screen ─────────── */
+/* ═══════════════════════════════════════════════════════════════
+ *  🇿🇼  Hero (Start Screen) — Clean Light Institutional Aesthetic
+ *  White/cream → warm stone, chevron texture, hard flag stripes
+ * ═══════════════════════════════════════════════════════════════ */
+
+/* Pin light tokens for the hero + new game dialog (start screen only).
+   In-game (gameplay) dark mode is untouched. */
+.zim-hero-light,
+.zim-hero-light * {
+  --background:            #FAFAF7 !important;
+  --foreground:            #1A1A1A !important;
+  --card:                  #FFFFFF !important;
+  --card-foreground:       #1A1A1A !important;
+  --popover:               #FFFFFF !important;
+  --popover-foreground:    #1A1A1A !important;
+  --primary:               #2E8B37 !important;
+  --primary-foreground:    #FFFFFF !important;
+  --secondary:             #F5F0E8 !important;
+  --secondary-foreground:  #3D2E1A !important;
+  --muted:                 #F2EFEA !important;
+  --muted-foreground:      #6B6560 !important;
+  --accent:                #FFF3D4 !important;
+  --accent-foreground:     #6B4E00 !important;
+  --destructive:           #CC2936 !important;
+  --border:                #E5E0D8 !important;
+  --input:                 #E5E0D8 !important;
+  --ring:                  #2E8B37 !important;
+  color-scheme: light;
+}
+
+/* ── Background: white/cream → warm stone vertical gradient ─── */
 .zim-hero-bg {
   position: relative;
   overflow: hidden;
+  background: linear-gradient(180deg, #FAFAF7 0%, #F2F0EB 50%, #EDE8DF 100%);
 }
+
+/* Great Zimbabwe chevron motif, 5% opacity — felt, not seen */
 .zim-hero-bg::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: 
-    radial-gradient(ellipse at 20% 50%, rgba(46, 139, 55, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 50%, rgba(232, 168, 23, 0.08) 0%, transparent 50%);
-  animation: zim-bg-pulse 8s ease-in-out infinite alternate;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='28' viewBox='0 0 56 28'%3E%3Cg fill='none' stroke='%232E8B37' stroke-width='1.5'%3E%3Cpath d='M0 0 L14 14 L28 0'/%3E%3Cpath d='M28 0 L42 14 L56 0'/%3E%3Cpath d='M0 28 L14 14 L28 28'/%3E%3Cpath d='M28 28 L42 14 L56 28'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 56px 28px;
+  opacity: 0.05;
   pointer-events: none;
-}
-@keyframes zim-bg-pulse {
-  0% { opacity: 0.5; transform: scale(1); }
-  100% { opacity: 1; transform: scale(1.05); }
 }
 
-/* ── Animated shimmer/shine effect on the title ────────────── */
-.zim-title-shimmer {
-  position: relative;
-  display: inline-block;
-}
-.zim-title-shimmer::after {
+/* Ambient institutional glows — subtle green upper-left, gold lower-right */
+.zim-hero-bg::after {
   content: '';
   position: absolute;
-  top: 0;
-  left: -100%;
-  width: 60%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-  animation: zim-shimmer 4s ease-in-out infinite;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 55% 40% at 12% 8%, rgba(46, 139, 55, 0.06) 0%, transparent 70%),
+    radial-gradient(ellipse 45% 40% at 88% 92%, rgba(232, 169, 60, 0.05) 0%, transparent 70%);
   pointer-events: none;
 }
-@keyframes zim-shimmer {
-  0%, 100% { left: -100%; }
-  50% { left: 150%; }
+
+/* ── Headline: condensed grotesk, one word per line ─────────── */
+.zim-hero-title {
+  font-family: var(--font-anton), 'Archivo Black', sans-serif;
+  font-weight: 400;
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  line-height: 1.06;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+}
+.zim-hero-title .zim-hero-line-green { color: #4A9D3F; }
+.zim-hero-title .zim-hero-line-gold  { color: #E8A93C; }
+
+/* ── Subtitle: uppercase, tracked, warm stone gray ──────────── */
+.zim-hero-subtitle {
+  font-family: var(--font-jakarta), sans-serif;
+  font-weight: 500;
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.125em;
+  color: #5C5650;
+}
+
+/* ── Proverb: muted italic + oversized gold quote glyphs ────── */
+.zim-hero-proverb {
+  color: #6B6560;
+}
+.zim-proverb-quote {
+  color: #E8A93C;
+  opacity: 0.2;
+}
+
+/* ── Badges: transparent pill, hairline border, gold hover ──── */
+.zim-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3125rem 0.875rem;
+  font-family: var(--font-jakarta), sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #3D3028;
+  background: transparent;
+  border: 1px solid #D8D0C4;
+  border-radius: 9999px;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+.zim-hero-badge:hover {
+  border-color: #E8A93C;
+  color: #E8A93C;
+}
+
+/* ── Feature cards: white slab, 1px flag-color top border ──── */
+.zim-hero-card {
+  background: #FFFFFF;
+  border-right: 1px solid #E5E0D8;
+  border-bottom: 1px solid #E5E0D8;
+  border-left: 1px solid #E5E0D8;
+  border-top-width: 1px;
+  border-radius: 0.75rem;
+  padding: 1.25rem 1rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+.zim-hero-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(92, 76, 55, 0.14);
+  background: #F9F6F0;
+}
+
+/* Circular icon well with inner glow matching the accent (via currentColor) */
+.zim-icon-glow {
+  box-shadow:
+    inset 0 0 14px color-mix(in srgb, currentColor 22%, transparent),
+    inset 0 0 2px color-mix(in srgb, currentColor 35%, transparent);
+}
+
+/* ── Description: warm stone, generous leading ──────────────── */
+.zim-hero-desc {
+  color: #4A4440;
+  line-height: 1.7;
+  max-width: 640px;
+  margin-inline: auto;
+}
+
+/* ── CTA: solid institutional green, 8px radius ─────────────── */
+.zim-hero-cta {
+  background: #3D7A32;
+  color: #FFFFFF;
+  border-radius: 0.5rem;
+  font-family: var(--font-jakarta), sans-serif;
+  font-weight: 600;
+  box-shadow: 0 0 20px rgba(61, 122, 50, 0.20);
+  transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+.zim-hero-cta:hover {
+  background: #356A2B;
+  box-shadow: 0 0 26px rgba(61, 122, 50, 0.30);
+}
+.zim-hero-cta:active {
+  transform: scale(0.98);
+}
+
+/* ── Footer: faint warm caption ─────────────────────────────── */
+.zim-hero-footer {
+  color: #9A9490;
+  font-size: 0.6875rem;
+}
+
+/* Respect reduced motion for hero animations */
+@media (prefers-reduced-motion: reduce) {
+  .zim-float,
+  .zim-float-delay-1,
+  .zim-float-delay-2 {
+    animation: none;
+  }
+  .zim-hero-cta:active {
+    transform: none;
+  }
+}
+
+/* ── New Game modal: distinct floating light surface ────────── */
+.zim-modal {
+  background: #FFFFFF !important;
+  border-color: #E5E0D8 !important;
+  box-shadow: 0 20px 60px rgba(92, 76, 55, 0.18) !important;
+  color: #1A1A1A !important;
+}
+.zim-modal,
+.zim-modal * {
+  --foreground: #1A1A1A !important;
+  --muted-foreground: #6B6560 !important;
+  --card: #FFFFFF !important;
+}
+.zim-modal [data-slot="dialog-close"] {
+  color: #9A9490 !important;
+  opacity: 1 !important;
+}
+.zim-modal [data-slot="dialog-close"]:hover {
+  color: #1A1A1A !important;
+}
+.zim-modal [data-slot="dialog-close"] svg {
+  width: 20px !important;
+  height: 20px !important;
+}
+[data-slot="dialog-overlay"]:has(+ .zim-modal) {
+  background: rgba(26, 26, 22, 0.45) !important;
+  backdrop-filter: blur(4px);
 }
 
 /* ── Glow pulse effect for critical stats ──────────────────── */

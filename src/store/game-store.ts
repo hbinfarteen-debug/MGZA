@@ -23,6 +23,7 @@ export type GameScreen =
   | 'corruption'
   | 'news'
   | 'elections'
+  | 'leaderboard'
   | 'game_over';
 
 interface ReplacementCandidate {
@@ -121,6 +122,7 @@ export const useGameStore = create<GameStore>()(
         const state = createInitialGameState(difficulty);
         state.player.name = name || 'Comrade Leader';
         state.player.partyName = partyName || 'Zimbabwe Peoples Party';
+        state.runId = `run_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 9)}`;
         state.availableProjects = generateAvailableProjects(state);
         set({
           gameState: state,
@@ -388,6 +390,8 @@ function applyEffect(state: GameState, target: string, operation: string, value:
     setNested(state.corruption, parts.slice(1), value);
   } else if (target.startsWith('infrastructure.')) {
     setNested(state.infrastructure, parts.slice(1), value);
+  } else if (target.startsWith('trade.')) {
+    setNested(state.trade, parts.slice(1), value);
   } else if (target.startsWith('budget.')) {
     const budgetTarget = parts.slice(1).join('.');
     for (const item of state.budget.items) {

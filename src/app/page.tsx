@@ -24,9 +24,183 @@ import {
   Users, Zap, Droplets, ShieldAlert, Vote, ChevronRight, Play,
   Skull, Settings, Clock, TrendingUp, AlertTriangle, Flame,
   ChevronLeft, Menu, Gamepad2, X, Heart, Star, Trophy, Check, Lightbulb, Info,
-  Sun, Moon, Type, Globe,
+  Sun, Moon, Type, Globe, RefreshCw, Crown,
 } from 'lucide-react';
 import { MONTH_NAMES } from '@/lib/game/constants';
+import { computeScore } from '@/lib/scoreboard';
+
+// ═══════════════════════════════════════════════════════
+// LEADERBOARD — per-difficulty score comparison,
+// ranking snapshot refreshed once per 24 hours
+// ═══════════════════════════════════════════════════════
+
+type LeaderboardDifficulty = 'easy' | 'normal' | 'hard';
+
+interface LeaderboardEntryRow {
+  id: string;
+  playerName: string;
+  score: number;
+  popularity: number;
+  satisfaction: number;
+  legitimacy: number;
+  gdp: number;
+  yearsInOffice: number;
+  turnsSurvived: number;
+  population: number;
+  difficulty: string;
+  createdAt?: string;
+}
+
+function LeaderboardScreen() {
+  const { gameState } = useGameStore();
+  const { t } = useTranslation();
+  const [difficulty, setDifficulty] = useState<LeaderboardDifficulty>('normal');
+  const [entries, setEntries] = useState<LeaderboardEntryRow[]>([]);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
+  const [nextUpdateAt, setNextUpdateAt] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadBoard = useCallback(async (difficulty: LeaderboardDifficulty) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/leaderboard?difficulty=${difficulty}`);
+      if (!res.ok) throw new Error('leaderboard fetch failed');
+      const data = await res.json();
+      setEntries(data.entries || []);
+      setLastUpdatedAt(data.lastUpdatedAt || null);
+      setNextUpdateAt(data.nextUpdateAt || null);
+    } catch (err) {
+      console.error(err);
+      setEntries([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadBoard(difficulty);
+  }, [difficulty, loadBoard]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadBoard(difficulty);
+    setRefreshing(false);
+  };
+
+  const myName = gameState?.player.name || '';
+  const myEntryId = myName ? localStorage.getItem(`mgza-entry-${difficulty}`) : null;
+  const myEntryIndex = myEntryId ? entries.findIndex(e => e.id === myEntryId) : -1;
+  const myRank = myEntryIndex === -1 ? null : myEntryIndex + 1;
+
+  const fmtDate = (iso: string | null) => {
+    if (!iso) return '-';
+    const d = new Date(iso);
+    return d.toLocaleString();
+  };
+
+  const rankMedal = (rank: number) => {
+    if (rank === 1) return <span className="text-yellow-500 font-black">🥇</span>;
+    if (rank === 2) return <span className="text-slate-400 font-black">🥈</span>;
+    if (rank === 3) return <span className="text-amber-700 font-black">🥉</span>;
+    return <span className="text-muted-foreground font-bold">#{rank}</span>;
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-black flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-amber-500" />
+            {t('leaderboard.title')}
+          </h2>
+          <p className="text-[0.625rem] text-muted-foreground">{t('leaderboard.description')}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="text-xs" onClick={handleRefresh} disabled={refreshing}>
+            <RefreshCw className={`h-3 w-3 mr-1 ${refreshing ? 'animate-spin' : ''}`} /> Refresh
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex gap-1.5">
+        {(['easy', 'normal', 'hard'] as LeaderboardDifficulty[]).map((d) => (
+          <Button
+            key={d}
+            size="sm"
+            variant={difficulty === d ? 'default' : 'outline'}
+            onClick={() => setDifficulty(d)}
+            className={`text-xs ${difficulty === d ? 'bg-amber-600 hover:bg-amber-700' : ''}`}
+          >
+            {t(`leaderboard.${d}`)}
+          </Button>
+        ))}
+      </div>
+
+      {loading ? (
+        <div className="text-center py-12 text-muted-foreground text-xs">Loading...</div>
+      ) : entries.length === 0 ? (
+        <div className="bg-card border border-border rounded-lg p-8 text-center">
+          <Trophy className="h-8 w-8 text-amber-500/40 mx-auto mb-3" />
+          <p className="text-sm font-medium">{t('leaderboard.empty')}</p>
+        </div>
+      ) : (
+        <div className="bg-card border border-border rounded-lg overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-muted/50 text-left text-muted-foreground">
+                  <th className="px-3 py-2 font-semibold">{t('leaderboard.rank')}</th>
+                  <th className="px-3 py-2 font-semibold">{t('leaderboard.playerName')}</th>
+                  <th className="px-3 py-2 font-semibold text-right">{t('leaderboard.score')}</th>
+                  <th className="px-3 py-2 font-semibold hidden sm:table-cell text-right">{t('leaderboard.popularity')}</th>
+                  <th className="px-3 py-2 font-semibold hidden sm:table-cell text-right">{t('leaderboard.satisfaction')}</th>
+                  <th className="px-3 py-2 font-semibold hidden md:table-cell text-right">{t('leaderboard.gdp')}</th>
+                  <th className="px-3 py-2 font-semibold hidden md:table-cell text-right">{t('leaderboard.years')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {entries.map((entry, i) => {
+                  const isMe = !!myEntryId && entry.id === myEntryId;
+                  return (
+                    <tr key={entry.id} className={`border-t border-border/50 ${isMe ? 'bg-amber-500/10' : i % 2 === 0 ? '' : 'bg-muted/20'}`}>
+                      <td className="px-3 py-2">{rankMedal(i + 1)}</td>
+                      <td className="px-3 py-2 font-medium">
+                        <div className="flex items-center gap-2">
+                          <span className="truncate max-w-[140px]">{entry.playerName}</span>
+                          {isMe && <Badge variant="secondary" className="text-[0.5625rem] bg-amber-500/20 text-amber-600 border border-amber-500/30">YOU</Badge>}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 text-right font-bold">{entry.score.toFixed(1)}</td>
+                      <td className="px-3 py-2 hidden sm:table-cell text-right">{entry.popularity.toFixed(0)}%</td>
+                      <td className="px-3 py-2 hidden sm:table-cell text-right">{entry.satisfaction.toFixed(0)}%</td>
+                      <td className="px-3 py-2 hidden md:table-cell text-right">ZiG {entry.gdp.toFixed(1)}B</td>
+                      <td className="px-3 py-2 hidden md:table-cell text-right">{entry.yearsInOffice.toFixed(1)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-4 text-[0.625rem] text-muted-foreground">
+        <span className="flex items-center gap-1">
+          <Clock className="h-3 w-3" /> {t('leaderboard.lastUpdated')}: {fmtDate(lastUpdatedAt)}
+        </span>
+        <span className="flex items-center gap-1">
+          <RefreshCw className="h-3 w-3" /> {t('leaderboard.nextUpdate')}: {fmtDate(nextUpdateAt)}
+        </span>
+        {myRank !== null && (
+          <span className="flex items-center gap-1 text-amber-600 font-semibold">
+            <Trophy className="h-3 w-3" /> {t('leaderboard.yourRank')}: #{myRank}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
 
 // ═══════════════════════════════════════════════════════
 // TIP SYSTEM — Contextual hover tip cards
@@ -1387,8 +1561,51 @@ function ElectionsScreen() {
 // ═══════════════════════════════════════════════════════
 
 function GameOverScreen() {
-  const { gameState, resetGame, setShowNewGameDialog } = useGameStore();
+  const { gameState, resetGame, setShowNewGameDialog, setScreen } = useGameStore();
   const { t } = useTranslation();
+  const alreadySubmitted = !!(gameState?.runId && localStorage.getItem(`mgza-submitted-${gameState.runId}`));
+  const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState(false);
+
+  useEffect(() => {
+    if (!gameState || !gameState.runId) return;
+    if (localStorage.getItem(`mgza-submitted-${gameState.runId}`)) return;
+
+    const submitKey = `mgza-submitted-${gameState.runId}`;
+
+    const breakdown = computeScore(gameState);
+
+    fetch('/api/leaderboard/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        playerName: gameState.player.name,
+        difficulty: gameState.difficulty,
+        score: breakdown.score,
+        popularity: breakdown.popularity,
+        satisfaction: breakdown.satisfaction,
+        legitimacy: breakdown.legitimacy,
+        gdp: gameState.economic.gdp,
+        yearsInOffice: breakdown.yearsInOffice,
+        turnsSurvived: gameState.player.turn,
+        population: gameState.national.population,
+      }),
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('submit failed');
+        return res.json();
+      })
+      .then((data: { entry: string; rank: number }) => {
+        localStorage.setItem(submitKey, '1');
+        localStorage.setItem(`mgza-entry-${gameState.difficulty}`, data.entry);
+        setSubmitted(true);
+      })
+      .catch(err => {
+        console.error(err);
+        setSubmitError(true);
+      });
+  }, [gameState]);
+
   if (!gameState) return null;
 
   const { player, economic, citizenSatisfaction, national } = gameState;
@@ -1398,54 +1615,74 @@ function GameOverScreen() {
   const yearsSurvived = turnsSurvived / 12;
 
   return (
-    <div className="flex items-center justify-center min-h-[60vh]">
+    <div className="flex-1 flex items-center justify-center p-4">
       <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className={`rounded-lg p-8 max-w-lg text-center ${isElectionLoss ? 'bg-card border border-red-500/30' : 'bg-card border border-red-500/30'}`}
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+        className={`rounded-2xl p-8 max-w-lg w-full text-center shadow-2xl backdrop-blur-md ${isElectionLoss ? 'bg-zinc-900/80 border-2 border-red-500/50 shadow-red-900/20' : 'bg-zinc-900/80 border-2 border-red-500/50 shadow-red-900/20'}`}
       >
         {isElectionLoss ? (
           <div className="text-6xl mb-4">🗳️</div>
         ) : (
           <Skull className="h-16 w-16 text-red-500 mx-auto mb-4" />
         )}
-        <h2 className="text-2xl font-bold mb-2">{t('gameOver.title')}</h2>
-        <p className="text-sm text-muted-foreground mb-4">{gameState.gameOverReason}</p>
+        <h2 className="text-3xl font-black mb-2 text-white tracking-tight">{t('gameOver.title')}</h2>
+        <p className="text-sm text-red-400 font-medium mb-6 uppercase tracking-widest">{gameState.gameOverReason}</p>
 
-        <div className="grid grid-cols-2 gap-3 mb-6 text-left">
-          <div className="bg-muted rounded p-3">
-            <p className="text-[0.625rem] text-muted-foreground">{t('gameOver.turnsSurvived')}</p>
-            <p className="text-lg font-bold">{turnsSurvived}</p>
+        <div className="grid grid-cols-2 gap-3 mb-8 text-left">
+          <div className="bg-black/40 rounded-xl p-4 border border-white/5">
+            <p className="text-[0.625rem] text-zinc-400 uppercase tracking-wider">{t('gameOver.turnsSurvived')}</p>
+            <p className="text-xl font-bold text-white">{turnsSurvived}</p>
           </div>
-          <div className="bg-muted rounded p-3">
-            <p className="text-[0.625rem] text-muted-foreground">{t('gameOver.yearsInOffice')}</p>
-            <p className="text-lg font-bold">{yearsSurvived.toFixed(1)}</p>
+          <div className="bg-black/40 rounded-xl p-4 border border-white/5">
+            <p className="text-[0.625rem] text-zinc-400 uppercase tracking-wider">{t('gameOver.yearsInOffice')}</p>
+            <p className="text-xl font-bold text-white">{yearsSurvived.toFixed(1)}</p>
           </div>
-          <div className="bg-muted rounded p-3">
-            <p className="text-[0.625rem] text-muted-foreground">{t('gameOver.finalGDP')}</p>
-            <p className="text-lg font-bold">ZiG {economic.gdp.toFixed(1)}B</p>
+          <div className="bg-black/40 rounded-xl p-4 border border-white/5">
+            <p className="text-[0.625rem] text-zinc-400 uppercase tracking-wider">{t('gameOver.finalGDP')}</p>
+            <p className="text-xl font-bold text-white">ZiG {economic.gdp.toFixed(1)}B</p>
           </div>
-          <div className="bg-muted rounded p-3">
-            <p className="text-[0.625rem] text-muted-foreground">{t('gameOver.finalPopularity')}</p>
-            <p className="text-lg font-bold">{player.popularity.toFixed(0)}%</p>
+          <div className="bg-black/40 rounded-xl p-4 border border-white/5">
+            <p className="text-[0.625rem] text-zinc-400 uppercase tracking-wider">{t('gameOver.finalPopularity')}</p>
+            <p className="text-xl font-bold text-white">{player.popularity.toFixed(0)}%</p>
           </div>
-          <div className="bg-muted rounded p-3">
-            <p className="text-[0.625rem] text-muted-foreground">{t('gameOver.population')}</p>
-            <p className="text-lg font-bold">{(national.population / 1e6).toFixed(1)}M</p>
+          <div className="bg-black/40 rounded-xl p-4 border border-white/5">
+            <p className="text-[0.625rem] text-zinc-400 uppercase tracking-wider">{t('gameOver.population')}</p>
+            <p className="text-xl font-bold text-white">{(national.population / 1e6).toFixed(1)}M</p>
           </div>
-          <div className="bg-muted rounded p-3">
-            <p className="text-[0.625rem] text-muted-foreground">{t('gameOver.satisfaction')}</p>
-            <p className="text-lg font-bold">{citizenSatisfaction.overall.toFixed(0)}%</p>
+          <div className="bg-black/40 rounded-xl p-4 border border-white/5">
+            <p className="text-[0.625rem] text-zinc-400 uppercase tracking-wider">{t('gameOver.satisfaction')}</p>
+            <p className="text-xl font-bold text-white">{citizenSatisfaction.overall.toFixed(0)}%</p>
           </div>
         </div>
 
-        <p className="text-xs text-muted-foreground/70 italic mb-6">
-          {t('gameOver.proverb')}
-        </p>
+        <div className="relative mt-2 mb-8 px-8 py-3 inline-block">
+          <span className="absolute left-2 top-0 text-3xl text-red-500/20 font-serif">"</span>
+          <p className="text-xs text-zinc-400 italic font-medium relative z-10">
+            {t('gameOver.proverb').replace(/^"|"$/g, '')}
+          </p>
+          <span className="absolute right-2 bottom-0 text-3xl text-red-500/20 font-serif leading-none">"</span>
+        </div>
+
+        {submitted && (
+          <div className={`mb-6 p-3 rounded-lg border ${submitError ? 'border-red-500/30 bg-red-500/5' : 'border-green-500/30 bg-green-500/5'}`}>
+            {submitError ? (
+              <p className="text-xs text-red-600">{t('leaderboard.title')}: Could not record your score</p>
+            ) : (
+              <p className="text-xs text-green-700 font-medium flex items-center justify-center gap-1.5">
+                <Trophy className="h-3.5 w-3.5" /> {t('leaderboard.submitted')}
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="flex gap-3">
-          <Button onClick={() => { resetGame(); setShowNewGameDialog(true); }} className="flex-1 bg-amber-600 hover:bg-amber-700">
-            <Gamepad2 className="h-4 w-4 mr-2" /> {t('gameOver.playAgain')}
+          <Button onClick={() => { resetGame(); setShowNewGameDialog(true); }} className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold h-12 text-base rounded-xl shadow-lg shadow-red-900/30">
+            <Gamepad2 className="h-5 w-5 mr-2" /> {t('gameOver.playAgain')}
+          </Button>
+          <Button variant="outline" onClick={() => setScreen('leaderboard')} className="border-white/10 text-white hover:bg-white/5 h-12 rounded-xl">
+            <Trophy className="h-5 w-5 mr-2 text-amber-500" /> {t('leaderboard.title')}
           </Button>
         </div>
       </motion.div>
@@ -1482,13 +1719,13 @@ function StartScreen() {
   }, [fontSize]);
 
   return (
-    <div className="flex flex-col min-h-[80vh] bg-gradient-to-b from-[#2E8B37]/5 via-background to-background zim-hero-bg">
+    <div className="flex flex-col min-h-[80vh] zim-hero-bg">
       {/* Zimbabwe Flag Stripe Bar */}
-      <div className="w-full flex flex-col">
-        <div className="w-full h-1" style={{ backgroundColor: '#2E8B37' }} />
-        <div className="w-full h-1" style={{ backgroundColor: '#E8A817' }} />
-        <div className="w-full h-1" style={{ backgroundColor: '#CC2936' }} />
-        <div className="w-full h-1" style={{ backgroundColor: '#000000' }} />
+      <div className="w-full flex" style={{ height: 3 }}>
+        <div className="flex-1" style={{ backgroundColor: '#006400' }} />
+        <div className="flex-1" style={{ backgroundColor: '#FFD200' }} />
+        <div className="flex-1" style={{ backgroundColor: '#DE2010' }} />
+        <div className="flex-1" style={{ backgroundColor: '#000000' }} />
       </div>
 
       {/* Settings bar */}
@@ -1578,86 +1815,95 @@ function StartScreen() {
           className="text-center max-w-xl px-4"
         >
           <div className="mb-6">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <div className="relative">
-                <div className="text-6xl">🇿🇼</div>
-                <span className="absolute -bottom-1 -right-1 text-xs font-black text-black">ZW</span>
+            <div className="flex items-center justify-center mb-6">
+              <div className="relative flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#1C1C16] to-[#14140F] shadow-xl shadow-black/40 border border-[#3A3A32] overflow-hidden group">
+                <div className="absolute inset-0 bg-gradient-to-br from-[#4A9D3F]/15 via-transparent to-[#E8A93C]/15 opacity-60 group-hover:opacity-100 transition-opacity"></div>
+                <Landmark className="h-10 w-10 text-[#4A9D3F] relative z-10 drop-shadow-[0_2px_8px_rgba(74,157,63,0.35)] group-hover:scale-110 transition-transform duration-500" />
               </div>
             </div>
-            <h1 className="text-4xl md:text-5xl font-black tracking-tight mb-3">
-              <div className="zim-title-shimmer">
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#2E8B37] to-[#E8A817]">{t('start.title1')}</span><br />
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#E8A817] to-[#2E8B37]">{t('start.title2')}</span><br />
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#2E8B37] to-[#E8A817]">{t('start.title3')}</span>
-              </div>
+            <h1 className="zim-hero-title mb-3">
+              <span className="zim-hero-line-green">{t('start.title1')}</span><br />
+              <span className="zim-hero-line-gold">{t('start.title2')}</span><br />
+              <span className="zim-hero-line-green">{t('start.title3')}</span>
             </h1>
-            <p className="text-sm text-muted-foreground font-medium">
+            <p className="zim-hero-subtitle">
               {t('start.subtitle')}
             </p>
-            <p className="text-xs text-muted-foreground/70 italic mt-1">
-              {t('start.proverb')}
-            </p>
-            <div className="flex items-center justify-center gap-2 mt-3">
-              <Badge variant="secondary">{t('common.turnBased')}</Badge>
-              <Badge variant="secondary">{t('common.strategy')}</Badge>
-              <Badge variant="secondary">{t('common.simulation')}</Badge>
+            <div className="relative mt-2 mb-4 px-8 py-3 inline-block">
+              <span className="zim-proverb-quote absolute left-2 top-0 text-3xl font-serif">"</span>
+              <p className="zim-hero-proverb text-xs italic font-medium relative z-10">
+                Ivhu risina mutsindo hairevi: A tree without roots cannot stand
+              </p>
+              <span className="zim-proverb-quote absolute right-2 bottom-0 text-3xl font-serif leading-none">"</span>
+            </div>
+            <div className="flex items-center justify-center gap-2 mt-2 flex-wrap">
+              <Badge variant="secondary" className="zim-hero-badge">{t('common.turnBased')}</Badge>
+              <Badge variant="secondary" className="zim-hero-badge">{t('common.strategy')}</Badge>
+              <Badge variant="secondary" className="zim-hero-badge">{t('common.simulation')}</Badge>
             </div>
           </div>
 
           {/* Feature Cards */}
-          <div className="grid grid-cols-3 gap-3 mb-8">
+          <div className="grid grid-cols-3 gap-3 mb-8 relative z-10">
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.3 }}
-              className="bg-card border border-border rounded-lg p-3 text-center shadow-sm"
+              className="zim-hero-card border-t border-t-[#4A9D3F] text-center group cursor-default"
             >
-              <div className="text-2xl mb-1 zim-float">🇿🇼</div>
+              <div className="mx-auto w-12 h-12 rounded-full bg-[#4A9D3F]/10 text-[#4A9D3F] flex items-center justify-center mb-3 group-hover:bg-[#4A9D3F]/20 transition-colors zim-float zim-icon-glow">
+                <Landmark className="h-5 w-5" />
+              </div>
               <p className="text-xs font-bold">{t('start.leadZimbabwe')}</p>
-              <p className="text-[0.625rem] text-muted-foreground mt-0.5">{t('start.leadZimbabweDesc')}</p>
+              <p className="text-[0.625rem] text-muted-foreground mt-1 leading-relaxed">{t('start.leadZimbabweDesc')}</p>
             </motion.div>
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.4 }}
-              className="bg-card border border-border rounded-lg p-3 text-center shadow-sm"
+              className="zim-hero-card border-t border-t-[#E8A93C] text-center group cursor-default"
             >
-              <div className="text-2xl mb-1 zim-float zim-float-delay-1">📊</div>
+              <div className="mx-auto w-12 h-12 rounded-full bg-[#E8A93C]/10 text-[#E8A93C] flex items-center justify-center mb-3 group-hover:bg-[#E8A93C]/20 transition-colors zim-float zim-float-delay-1 zim-icon-glow">
+                <TrendingUp className="h-5 w-5" />
+              </div>
               <p className="text-xs font-bold">{t('start.manageEconomy')}</p>
-              <p className="text-[0.625rem] text-muted-foreground mt-0.5">{t('start.manageEconomyDesc')}</p>
+              <p className="text-[0.625rem] text-muted-foreground mt-1 leading-relaxed">{t('start.manageEconomyDesc')}</p>
             </motion.div>
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.5 }}
-              className="bg-card border border-border rounded-lg p-3 text-center shadow-sm"
+              className="zim-hero-card border-t border-t-[#DE2010] text-center group cursor-default"
             >
-              <div className="text-2xl mb-1 zim-float zim-float-delay-2">🗳️</div>
+              <div className="mx-auto w-12 h-12 rounded-full bg-[#DE2010]/10 text-[#DE2010] flex items-center justify-center mb-3 group-hover:bg-[#DE2010]/20 transition-colors zim-float zim-float-delay-2 zim-icon-glow">
+                <Vote className="h-5 w-5" />
+              </div>
               <p className="text-xs font-bold">{t('start.winElections')}</p>
-              <p className="text-[0.625rem] text-muted-foreground mt-0.5">{t('start.winElectionsDesc')}</p>
+              <p className="text-[0.625rem] text-muted-foreground mt-1 leading-relaxed">{t('start.winElectionsDesc')}</p>
             </motion.div>
           </div>
 
-          <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
+          <p className="zim-hero-desc text-sm mb-6">
             {t('start.description')}
           </p>
 
           <motion.div
-            whileHover={{ scale: 1.06, boxShadow: '0 0 24px rgba(46, 139, 55, 0.35)' }}
+            whileHover={{ scale: 1.06, boxShadow: '0 0 24px rgba(61, 122, 50, 0.35)' }}
             whileTap={{ scale: 0.95 }}
             transition={{ type: 'spring', stiffness: 400, damping: 17 }}
             className="inline-block"
           >
             <Button
               size="lg"
-              className="bg-[#2E8B37] hover:bg-[#247A2E] text-lg font-bold px-10 py-7 rounded-xl shadow-lg shadow-green-500/20"
+              className="zim-hero-cta text-lg font-bold px-10 py-7"
               onClick={() => setShowNewGameDialog(true)}
             >
-              <Play className="h-5 w-5 mr-2" /> {t('start.startNewGame')}
+              <Play className="h-5 w-5 mr-2" /> 
+              <span>{t('start.startNewGame')}</span>
             </Button>
           </motion.div>
 
-          <p className="text-[0.625rem] text-muted-foreground/50 mt-6">
+          <p className="zim-hero-footer mt-6">
             {t('start.footer')}
           </p>
         </motion.div>
@@ -1683,7 +1929,7 @@ function NewGameDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md zim-hero-light zim-modal">
         <DialogHeader>
           <DialogTitle>{t('newGame.title')}</DialogTitle>
           <DialogDescription>{t('newGame.description')}</DialogDescription>
@@ -2361,6 +2607,7 @@ export default function GamePage() {
     { id: 'events' as GameScreen, label: t('nav.events'), icon: <AlertTriangle className="h-4 w-4" /> },
     { id: 'news' as GameScreen, label: t('nav.news'), icon: <Newspaper className="h-4 w-4" /> },
     { id: 'elections' as GameScreen, label: t('nav.elections'), icon: <Vote className="h-4 w-4" /> },
+    { id: 'leaderboard' as GameScreen, label: t('nav.leaderboard'), icon: <Trophy className="h-4 w-4" /> },
   ];
 
   // Mark as mounted and sync dark mode from store to next-themes (one-way)
@@ -2383,7 +2630,7 @@ export default function GamePage() {
   // Start Screen
   if (currentScreen === 'start') {
     return (
-      <div className="min-h-screen bg-background flex flex-col zim-force-light">
+      <div className="min-h-screen bg-background flex flex-col zim-hero-light">
         <StartScreen />
         <NewGameDialog open={showNewGameDialog} onOpenChange={setShowNewGameDialog} />
       </div>
@@ -2391,10 +2638,13 @@ export default function GamePage() {
   }
 
   // Game Over Screen
-  if (currentScreen === 'game_over' || gameState?.isGameOver) {
+  if (currentScreen === 'game_over' || (gameState?.isGameOver && currentScreen !== 'leaderboard')) {
     return (
-      <div className="min-h-screen bg-background flex flex-col zim-force-light">
-        <GameOverScreen />
+      <div className="min-h-screen bg-black text-white flex flex-col relative overflow-hidden dark">
+        <div className="absolute inset-0 bg-gradient-to-b from-red-900/30 via-black to-black pointer-events-none"></div>
+        <div className="relative z-10 flex-1 flex flex-col">
+          <GameOverScreen />
+        </div>
       </div>
     );
   }
@@ -2407,78 +2657,100 @@ export default function GamePage() {
     ? ((nextElection.year - (player?.year || 2025)) * 12 + (nextElection.month - (player?.month || 1)))
     : null;
 
+  const dateTurnBadges = (
+    <>
+      <Badge variant="secondary" className="text-[0.625rem]">{MONTH_NAMES[(player?.month || 1) - 1]} {player?.year || 2025}</Badge>
+      <Badge variant="secondary" className="text-[0.625rem]">Turn {player?.turn || 1}</Badge>
+    </>
+  );
+
+  const electionBadges = (
+    <>
+      {monthsToElection !== null && monthsToElection > 1 && (
+        <Badge variant="outline" className="text-[0.625rem] gap-1 border-amber-500/40 text-amber-600">
+          <Vote className="h-2.5 w-2.5" />
+          <span className="sm:hidden">{monthsToElection}M</span>
+          <span className="hidden sm:inline">{monthsToElection} Months to Elections</span>
+        </Badge>
+      )}
+      {monthsToElection === 1 && (
+        <Badge variant="outline" className="text-[0.625rem] gap-1 border-red-500/40 text-red-500">
+          <Vote className="h-2.5 w-2.5" />
+          <span className="sm:hidden">1M</span>
+          <span className="hidden sm:inline">1 Month to Elections</span>
+        </Badge>
+      )}
+      {monthsToElection === 0 && (
+        <Badge variant="destructive" className="text-[0.625rem] gap-1 animate-pulse">
+          <Vote className="h-2.5 w-2.5" />
+          Election Month
+        </Badge>
+      )}
+    </>
+  );
+
+  const quickStats = (
+    <>
+      <span className="flex items-center gap-1">
+        <Heart className="h-3 w-3 text-red-400" />
+        <span className="font-bold">{(player?.popularity || 0).toFixed(0)}%</span>
+      </span>
+      <span className="flex items-center gap-1">
+        <TrendingUp className="h-3 w-3 text-green-400" />
+        <span className="font-bold">{(economic?.gdpGrowth || 0).toFixed(1)}%</span>
+      </span>
+      <span className="flex items-center gap-1">
+        <Zap className="h-3 w-3 text-amber-400" />
+        <span className="font-bold">{(energy?.loadSheddingHoursPerDay || 0).toFixed(0)}h</span>
+      </span>
+    </>
+  );
+
   return (
     <TipHoverContext.Provider value={{ hoveredTipId, setHoveredTipId }}>
     <div className="min-h-screen bg-background flex flex-col">
       {/* Top Header */}
       <header className="sticky top-0 z-50 bg-card/95 backdrop-blur border-b border-border px-3 py-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" className="lg:hidden p-0 h-8 w-8" onClick={() => setSidebarOpen(!sidebarOpen)}>
+        <div className="flex items-center justify-between gap-1.5 sm:gap-2 flex-wrap">
+          <div className="flex items-center gap-2 min-w-0">
+            <Button variant="ghost" size="sm" className="lg:hidden p-0 h-9 w-9 sm:h-8 sm:w-8 shrink-0" onClick={() => setSidebarOpen(!sidebarOpen)}>
               <Menu className="h-4 w-4" />
             </Button>
-            <div className="flex items-center gap-2">
-              <Gamepad2 className="h-5 w-5 text-amber-500" />
-              <h1 className="text-sm font-black tracking-tight hidden sm:block">MGZA</h1>
+            <div className="flex items-center gap-1.5 sm:gap-2 group cursor-default shrink-0">
+              <div className="bg-gradient-to-br from-[#2E8B37] to-[#E8A817] p-1 rounded-md shadow-sm group-hover:shadow-md transition-shadow">
+                <Landmark className="h-4 w-4 text-white" />
+              </div>
+              <h1 className="text-xs sm:text-sm font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">MGZA</h1>
             </div>
-            <Separator orientation="vertical" className="h-5 hidden sm:block" />
-            <div className="hidden sm:flex items-center gap-2">
-              <Badge variant="secondary" className="text-[0.625rem]">{MONTH_NAMES[(player?.month || 1) - 1]} {player?.year || 2025}</Badge>
-              <Badge variant="secondary" className="text-[0.625rem]">Turn {player?.turn || 1}</Badge>
-              {monthsToElection !== null && monthsToElection > 1 && (
-                <Badge variant="outline" className="text-[0.625rem] gap-1 border-amber-500/40 text-amber-600">
-                  <Vote className="h-2.5 w-2.5" />
-                  {monthsToElection} Months to Elections
-                </Badge>
-              )}
-              {monthsToElection === 1 && (
-                <Badge variant="outline" className="text-[0.625rem] gap-1 border-red-500/40 text-red-500">
-                  <Vote className="h-2.5 w-2.5" />
-                  1 Month to Elections
-                </Badge>
-              )}
-              {monthsToElection === 0 && (
-                <Badge variant="destructive" className="text-[0.625rem] gap-1 animate-pulse">
-                  <Vote className="h-2.5 w-2.5" />
-                  Election Month
-                </Badge>
-              )}
+            <Separator orientation="vertical" className="h-5 hidden md:block shrink-0" />
+            <div className="hidden md:flex items-center gap-2 min-w-0">
+              {dateTurnBadges}
+              {electionBadges}
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {/* Quick Stats */}
-            <div className="hidden md:flex items-center gap-3 text-[0.625rem]">
-              <span className="flex items-center gap-1">
-                <Heart className="h-3 w-3 text-red-400" />
-                <span className="font-bold">{(player?.popularity || 0).toFixed(0)}%</span>
-              </span>
-              <span className="flex items-center gap-1">
-                <TrendingUp className="h-3 w-3 text-green-400" />
-                <span className="font-bold">{(economic?.gdpGrowth || 0).toFixed(1)}%</span>
-              </span>
-              <span className="flex items-center gap-1">
-                <Zap className="h-3 w-3 text-amber-400" />
-                <span className="font-bold">{(energy?.loadSheddingHoursPerDay || 0).toFixed(0)}h</span>
-              </span>
+            <div className="hidden lg:flex items-center gap-3 text-[0.625rem]">
+              {quickStats}
             </div>
 
-            <Separator orientation="vertical" className="h-5 hidden md:block" />
+            <Separator orientation="vertical" className="h-5 hidden lg:block" />
 
             {/* Event Alert */}
             {gameState && gameState.events.filter(e => !e.resolved).length > 0 && (
-              <Button variant="destructive" size="sm" className="text-[0.625rem] h-7 px-2 animate-pulse" onClick={() => setScreen('events')}>
+              <Button variant="destructive" size="sm" className="text-[0.625rem] h-9 sm:h-7 px-2 animate-pulse" onClick={() => setScreen('events')}>
                 <AlertTriangle className="h-3 w-3 mr-1" /> {gameState.events.filter(e => !e.resolved).length}
               </Button>
             )}
 
             {/* Game Log Toggle */}
-            <Button variant="ghost" size="sm" className="text-[0.625rem] h-7 px-2" onClick={() => setShowLog(!showLog)} title="Game Log">
+            <Button variant="ghost" size="sm" className="text-[0.625rem] h-9 w-9 sm:h-7 sm:w-7 p-0" onClick={() => setShowLog(!showLog)} title="Game Log">
               <Newspaper className="h-3 w-3" />
             </Button>
 
             {/* Settings */}
-            <Button variant="ghost" size="sm" className="text-[0.625rem] h-7 px-2" onClick={() => setShowSettings(true)} title="Settings">
+            <Button variant="ghost" size="sm" className="text-[0.625rem] h-9 w-9 sm:h-7 sm:w-7 p-0" onClick={() => setShowSettings(true)} title="Settings">
               <Settings className="h-3 w-3" />
             </Button>
 
@@ -2494,7 +2766,7 @@ export default function GamePage() {
                   size="sm"
                   onClick={endTurn}
                   disabled={isProcessingTurn}
-                  className="bg-amber-600 hover:bg-amber-700 text-xs font-bold px-4"
+                  className="bg-gradient-to-r from-[#E8A817] to-[#D4940A] hover:from-[#D4940A] hover:to-[#E8A817] text-white text-xs font-bold px-2 sm:px-4 h-9 sm:h-8 shadow-md shadow-amber-500/20 border border-amber-500/20 transition-all"
                 >
                   <ChevronRight className="h-4 w-4 mr-1" />
                   <span className="hidden sm:inline">{t('nav.endTurn')}</span>
@@ -2503,6 +2775,14 @@ export default function GamePage() {
               </motion.div>
             </HoverTip>
           </div>
+        </div>
+
+        {/* Mobile row: date, turn, election countdown and quick stats */}
+        <div className="md:hidden flex flex-wrap items-center gap-1.5 mt-2">
+          {dateTurnBadges}
+          {electionBadges}
+          <span aria-hidden="true" className="w-px h-3 bg-border self-center mx-0.5"></span>
+          {quickStats}
         </div>
       </header>
 
@@ -2524,10 +2804,17 @@ export default function GamePage() {
 
             {/* Player Info */}
             {gameState && (
-              <div className="p-3 border-b border-border">
-                <p className="text-xs font-bold">{gameState.player.name}</p>
-                <p className="text-[0.625rem] text-muted-foreground">{gameState.player.partyName}</p>
-                <Badge variant="secondary" className="text-[0.625rem] mt-1">
+              <div className="p-4 border-b border-border bg-gradient-to-b from-card to-muted/20">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#2E8B37] to-[#E8A817] flex items-center justify-center text-white font-bold text-xs shadow-inner shadow-black/20 shrink-0">
+                    {gameState.player.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold truncate text-foreground">{gameState.player.name}</p>
+                    <p className="text-[0.625rem] text-muted-foreground truncate">{gameState.player.partyName}</p>
+                  </div>
+                </div>
+                <Badge variant="secondary" className="text-[0.625rem] w-full justify-center bg-amber-500/10 text-amber-600 border border-amber-500/20 hover:bg-amber-500/20 transition-colors">
                   {gameState.player.careerLevel.replace('_', ' ').toUpperCase()}
                 </Badge>
               </div>
@@ -2539,16 +2826,21 @@ export default function GamePage() {
                   <button
                     key={item.id}
                     onClick={() => { setScreen(item.id); setSidebarOpen(false); }}
-                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs transition-colors ${
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs transition-all relative overflow-hidden group ${
                       currentScreen === item.id
-                        ? 'bg-amber-600/20 text-amber-500 font-bold'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                        ? 'bg-gradient-to-r from-amber-500/20 to-amber-500/5 text-amber-600 font-bold border border-amber-500/20 shadow-sm shadow-amber-500/5'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground hover:shadow-sm'
                     }`}
                   >
-                    {item.icon}
+                    {currentScreen === item.id && (
+                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500 rounded-r shadow-[0_0_8px_rgba(232,168,23,0.8)]"></div>
+                    )}
+                    <span className={`transition-colors ${currentScreen === item.id ? 'text-amber-500' : 'group-hover:text-amber-500/70'}`}>
+                      {item.icon}
+                    </span>
                     <span>{item.label}</span>
                     {item.id === 'events' && gameState && gameState.events.filter(e => !e.resolved).length > 0 && (
-                      <span className="ml-auto bg-red-500 text-white text-[0.5625rem] rounded-full w-4 h-4 flex items-center justify-center">
+                      <span className="ml-auto bg-red-500 text-white text-[0.5625rem] rounded-full w-4 h-4 flex items-center justify-center animate-pulse">
                         {gameState.events.filter(e => !e.resolved).length}
                       </span>
                     )}
@@ -2604,6 +2896,7 @@ export default function GamePage() {
                 {currentScreen === 'events' && <EventsScreen />}
                 {currentScreen === 'news' && <NewsScreen />}
                 {currentScreen === 'elections' && <ElectionsScreen />}
+                {currentScreen === 'leaderboard' && <LeaderboardScreen />}
               </motion.div>
             </AnimatePresence>
           </div>
@@ -2644,7 +2937,7 @@ export default function GamePage() {
         <div className="px-4 py-3">
           <div className="flex items-center justify-between text-[0.625rem] text-muted-foreground max-w-7xl mx-auto">
             <span className="flex items-center gap-1">
-              <Gamepad2 className="h-3 w-3 text-amber-500" /> Make Great Zimbabwe Again | v1.3
+              <Gamepad2 className="h-3 w-3 text-amber-500" /> Make Great Zimbabwe Again | v1.5
             </span>
             <span>{MONTH_NAMES[(player?.month || 1) - 1]} {player?.year || 2025} | Turn {(player?.turn || 1)} | {(citizenSatisfaction?.overall || 0).toFixed(0)}% Satisfaction</span>
           </div>

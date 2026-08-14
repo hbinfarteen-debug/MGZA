@@ -498,6 +498,7 @@ export interface CitizenSatisfaction {
 // ═══════════════════════════════════════════════════════
 
 export interface GameState {
+  runId?: string;
   player: PlayerState;
   national: NationalStats;
   economic: EconomicStats;
@@ -524,6 +525,7 @@ export interface GameState {
   gameLog: string[];
   isGameOver: boolean;
   gameOverReason?: string;
+  budgetZeroTurns?: Partial<Record<BudgetCategory, number>>;
   gameStarted: boolean;
   difficulty: 'easy' | 'normal' | 'hard';
 }

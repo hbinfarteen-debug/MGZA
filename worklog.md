@@ -144,3 +144,141 @@ Stage Summary:
 - ZW text is pure black, flag 4th stripe is pure black
 - Footer has 4-stripe Zimbabwe flag bar
 - Version: v1.3
+
+---
+Task ID: 6
+Agent: main
+Task: Leaderboard with per-difficulty boards and 24h snapshot refresh
+
+Work Log:
+- Added composite score computation in src/lib/scoreboard.ts: popularity + satisfaction + legitimacy + longevity bonus (years x 5, capped 40) + log10 GDP x 10 bonus - corruption penalty (nationalLevel x 0.5)
+- Added SQLite leaderboard store src/lib/leaderboard-db.ts using bun:sqlite (bun dev runtime) with node:sqlite fallback via process.getBuiltinModule; DB file db/leaderboard.db with leaderboard_entries and leaderboard_snapshots tables
+- Added GET /api/leaderboard?difficulty=: returns cached top-50 snapshot; recomputes from DB only when snapshot is older than 24h (SNAPSHOT_TTL_MS), serves cached snapshot otherwise with lastUpdatedAt/nextUpdateAt timestamps
+- Added POST /api/leaderboard/submit: validates name (max 30 chars) and difficulty, inserts entry with full stats, returns entry id and rank within that difficulty
+- Added runId (UUID) to GameState set in startNewGame so each run submits its score exactly once; GameOverScreen submits on mount, dedupe via localStorage mgza-submitted-{runId}, stores entry id in mgza-entry-{difficulty}
+- Added LeaderboardScreen with Easy/Normal/Hard tabs, rank medals (gold/silver/bronze), score/popularity/satisfaction/GDP/years columns, YOU badge for own entry, Refresh button, last-updated and next-update timestamps
+- Added Leaderboard nav item (Trophy icon) to sidebar after Elections; added leaderboard screen to GameScreen union and screen render switch; game over screen gained View Leaderboard button
+- Added leaderboard i18n keys to all 3 languages (en/sn/nd), no em dashes used
+- Bumped version from v1.3 to v1.4 in footer and all 3 language translations
+- Verified end-to-end in browser: start screen v1.4, leaderboard renders entries with medals, difficulty tabs switch boards, game over auto-submits score and shows Your result has been recorded, API returns rank + 24h snapshot timestamps
+- ESLint: 0 errors, 0 warnings
+
+Stage Summary:
+- Players are ranked by a composite governance score, name = president name from new game dialog
+- Separate leaderboards per difficulty (easy/normal/hard)
+- Scores submit instantly; the displayed board is refreshed once per 24h cycle with timestamps shown
+- Storage: db/leaderboard.db via bun:sqlite (no Prisma dependency)
+- Version: v1.4
+
+
+---
+Task ID: 7
+Agent: main
+Task: Hero redesign + New Game modal contrast fixes
+
+Work Log:
+- Replaced light gradient hero with dark-institutional design: charcoal #14140F to near-black #0A0A08 gradient, chevron SVG texture at 5% opacity, 4-color Zimbabwe flag stripe (3px full width, hard stops #006400/#FFD200/#DE2010/#000000)
+- Added Anton (--font-anton) and Plus Jakarta Sans (--font-jakarta) fonts to layout.tsx via next/font; headline uses Anton with solid green #4A9D3F / gold #E8A93C lines, subtitle/badges use Plus Jakarta Sans
+- Added .zim-hero-dark to globals.css: pins dark tokens (charcoal background, --muted-foreground #8A8A80, --border #3A3A32) on the start screen wrapper AND New Game dialog (Radix portal); .zim-hero-* classes own title, subtitle, proverb, badge, card (1px flag-color top border, #1C1C16), desc, CTA (solid #3D7A32, 8px radius), footer
+- Rewrote StartScreen JSX: hero title, subtitle, proverb quote with serif quotes, badges, feature cards (green/gold/red top borders), description, CTA, footer; updated SettingsDialog button to ghost variant
+- Fixed badge row overflow on mobile (flex-wrap) so the 3 badges wrap under 390px
+- New Game modal contrast pass: .zim-modal class sets surface #1C1C16 + 0 20px 60px rgba(0,0,0,0.6) shadow + #3A3A32 border, text #E8E8DE, --muted-foreground #A8A89E, --card #23231B for the tips row; overlay darkened to rgba(0,0,0,0.7) with 4px backdrop blur via :has(+ .zim-modal); close icon #8A8A80 (white on hover) at 20px; input border #3A3A32 default / gold #E8A93C on focus
+- Verified in browser (1440x900 + 390x844): Anton headline, stripe, chevron, CTA, dialog dark surface, contrast fixes, no horizontal overflow; ESLint clean
+- Updated AGENTS.md hero convention + version v1.4
+
+Stage Summary:
+- Start screen is now a dark institutional hero (Anton + Plus Jakarta Sans, flag stripe, chevron texture) that renders dark regardless of theme setting
+- New Game dialog reads as a distinct floating surface over a darkened blurred scrim, all text AA contrast
+- Mobile: badges wrap, no horizontal overflow
+
+
+---
+Task ID: 8
+Agent: main
+Task: Zero military budget coup
+
+Work Log:
+- Added militaryZeroTurns field to GameState (types.ts)
+- Extended checkGameOver in engine.ts: if military budget allocation is 0, increments a counter each turn; after 3 consecutive turns at zero, game over with reason "MILITARY COUP: With the defense budget cut to zero, the armed forces seized power without warning. Your presidency is over." (no em dashes, hardcoded English like other reasons)
+- Raising the military budget above 0 resets the counter (no coup)
+- Verified with bun engine script: coup fires on exactly turn 3, countdown resets when budget restored
+- Verified end-to-end in browser: set military slider to 0, ended 3 turns, game over screen showed the coup reason
+- ESLint clean
+
+Stage Summary:
+- Starving the military to 0 triggers an unavoidable coup after 3 turns with no warning
+- Restoring the budget before turn 3 cancels the coup
+
+
+---
+Task ID: 9
+Agent: main
+Task: Zero-budget sector crisis system
+
+Work Log:
+- Replaced militaryZeroTurns with budgetZeroTurns: Partial<Record<BudgetCategory, number>> (types.ts) tracking consecutive zero turns per category
+- Added BUDGET_CRISES config + simulateBudgetCrises() in engine.ts, run each turn in simulateTurn before checkGameOver; silent, like the coup: crisis fires at each sector threshold, pushing a game log entry + breaking news article (English-only, no em dashes, matching existing gameLog/news precedent)
+- Military: threshold 3, unchanged game over (MILITARY COUP), moved onto the shared map
+- Police: crime wave at 4 turns (repeat, re-fires every 4 turns), ANARCHY game over at 10 consecutive turns at zero
+- Other sectors (non-fatal, feed existing game-over cascades): hospitals/water/energy at 4, education/roads/agriculture/mining/housing/social_welfare at 5, youth/ict/tourism/disaster_relief/debt_repayment at 6, administration at 7
+- Persistent stat shocks chosen over recomputed ones: energy crisis hits maintenanceBacklog (drives load shedding) instead of loadSheddingHoursPerDay; mining hits taxRevenue instead of governmentRevenue; district crime/safetyIndex/province output fields verified persistent
+- Counter resets when a sector is re-funded; recurring crises re-fire every threshold turns while starved
+- Verified with bun engine tests: all 17 sectors fire at exact thresholds, police crime waves at 4/8 + anarchy at 10, hospitals deathRate +7.5 across 5 waves in 20 turns, restore resets counters, baseline clean at 12 turns
+- Verified in browser: police to 0, crime wave news on News screen, game log entry at turn 4, game continues past turn 5
+- ESLint clean
+
+Stage Summary:
+- Starving any ministry now produces an appropriate sector crisis; only military (3 turns) and police (10 turns, anarchy) end the game
+- All messages English hardcoded in game log/news consistent with existing precedent
+
+
+---
+Task ID: 10
+Agent: main
+Task: GDP, inflation and ministers affect election turnout
+
+Work Log:
+- Reworked the election-day turnout formula in simulateElections (engine.ts): base 55 + satisfaction x 0.3 now modulated by:
+  - gdpFactor: clamp(gdpGrowth, -10, +10) x 0.5 (strong growth mobilizes voters)
+  - inflationFactor: clamp((25 - inflation) x 0.15, -12, +3) (sub-25% inflation slightly boosts turnout; past 25% it suppresses it)
+  - ministerFactor: avg popularity of active ministers x 0.1 minus 1.5 per fired/inactive minister
+- Turnout stays clamped 40-85; polls and vote share untouched (they already factor GDP/inflation)
+- Verified with bun engine tests at election day (turn 44, Aug 2028): boom (GDP+10, infl 10) 81.1 > baseline 72.2 > crisis (GDP-10, infl 100) 51.2; gutted cabinet 51.3 with nearly identical satisfaction to baseline (drop is purely the minister penalty); popular cabinet 84.7
+- ESLint clean
+
+Stage Summary:
+- Election turnout now reacts to economic performance and cabinet strength, giving fired ministers and economic collapse an electoral consequence
+
+
+Task ID: 11b
+Agent: main
+Task: Event deck fixups, round 2
+
+Work Log:
+- Redone after verification found earlier fix edits had not persisted to disk: dead targets re-fixed (agricultural production, national.educationIndex x2, budget.healthcare, budget.mines, energy.sources.imported.output)
+- New findings on the real file state: economic.miningOutput is a province field, not economic; mining_accident choices retargeted to economic.gdpGrowth; fuel_shortage trade.mainImportPartners (array of objects, setNested would string-concat) retargeted to trade.imports
+- trade.* branch in applyEffect (game-store.ts) re-applied and confirmed; pre-existing fuel_shortage + diplomatic_crisis trade effects now actually apply
+- Re-verified on current file: 35 unique cards (15 crisis / 10 major / 10 minor), every condition runs, every target resolves, ESLint clean
+
+Stage Summary:
+- Event card pool complete and verified end to end
+
+---
+Task ID: 12
+Agent: main
+Task: Convert start-screen hero from dark-institutional to clean light theme
+
+Work Log:
+- Replaced .zim-hero-dark with .zim-hero-light in globals.css: pins light tokens (background #FAFAF7, foreground #1A1A1A, card #FFFFFF, primary #2E8B37, border #E5E0D8, color-scheme light) on the start screen wrapper AND New Game dialog; dark-forced variables removed
+- .zim-hero-bg gradient changed from charcoal (#14140F to #0A0A08) to light institutional (#FAFAF7 to #F2F0EB to #EDE8DF); chevron texture stroke %23ffffff to %232E8B37 at same 5% opacity; ambient glows kept green/gold but lowered to rgba(46,139,55,0.06) and rgba(232,169,60,0.05)
+- Light-text pass on hero classes: subtitle #5C5650, proverb #6B6560, badge #3D3028 with #D8D0C4 border (gold hover unchanged), card #FFFFFF with #E5E0D8 borders, hover soft warm shadow rgba(92,76,55,0.14) + background #F9F6F0, desc #4A4440, footer #9A9490; CTA and icon glow unchanged
+- .zim-modal updated to light surface: #FFFFFF, #E5E0D8 border, #1A1A1A text, --muted-foreground #6B6560, --card #FFFFFF; close icon #9A9490 (dark on hover); overlay softened to rgba(26,26,22,0.45)
+- page.tsx: start screen wrapper and NewGameDialog DialogContent switched zim-hero-dark to zim-hero-light; gameplay screens untouched
+- Bumped version from v1.4 to v1.5 in footer and all 3 language translations
+- ESLint clean
+
+Stage Summary:
+- Start screen now renders as a clean light institutional hero (white/cream to warm stone gradient, green chevron texture) regardless of theme setting
+- In-game dark mode and game-over screen unchanged
+- New Game dialog reads as a white floating surface over a softened scrim
+- Version: v1.5
