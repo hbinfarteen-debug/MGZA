@@ -5,7 +5,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { GameState, InfrastructureProject, GameEvent, BudgetItem, Minister, HistoricalDataPoint } from '@/lib/game/types';
-import { createInitialGameState } from '@/lib/game/constants';
+import { createInitialGameState, EVENT_DECISION_SECONDS, EVENT_TIMEOUT_PENALTY } from '@/lib/game/constants';
 import { simulateTurn, generateAvailableProjects, getHistoricalDataPoint } from '@/lib/game/engine';
 import type { Language } from '@/lib/i18n';
 
@@ -81,6 +81,7 @@ interface GameStore {
   endTurn: () => void;
   setScreen: (screen: GameScreen) => void;
   resolveEvent: (eventId: string, choiceId: string) => void;
+  checkEventDeadlines: () => void;
   approveProject: (projectId: string) => void;
   updateBudget: (category: string, amount: number) => void;
   allocateBudget: () => void;
@@ -151,6 +152,9 @@ export const useGameStore = create<GameStore>()(
 
         // Check for unresolved events that need attention
         const unresolvedEvent = newState.events.find(e => !e.resolved && e.choices && e.choices.length > 0);
+        if (unresolvedEvent && !unresolvedEvent.deadline) {
+          unresolvedEvent.deadline = Date.now() + EVENT_DECISION_SECONDS * 1000;
+        }
 
         // Check if an election just concluded this turn
         const finishedElection = newState.elections.find(e => e.isOver && !gameState.elections.find(ge => ge.id === e.id && ge.isOver));
@@ -193,6 +197,9 @@ export const useGameStore = create<GameStore>()(
 
         const choice = event.choices?.find(c => c.id === choiceId);
         if (!choice) return;
+
+        // Decision window expired: reject resolution
+        if (event.deadline && Date.now() >= event.deadline) return;
 
         // Apply effects
         for (const effect of choice.effects) {
@@ -328,7 +335,34 @@ export const useGameStore = create<GameStore>()(
       },
 
       selectProvince: (provinceId) => set({ selectedProvince: provinceId }),
-      setShowEventModal: (event) => set({ showEventModal: event }),
+      setShowEventModal: (event) => {
+        if (event && !event.deadline) {
+          event.deadline = Date.now() + EVENT_DECISION_SECONDS * 1000;
+        }
+        set({ showEventModal: event });
+      },
+      checkEventDeadlines: () => {
+        const { gameState } = get();
+        if (!gameState) return;
+
+        const now = Date.now();
+        const newState = JSON.parse(JSON.stringify(gameState)) as GameState;
+        let changed = false;
+
+        for (const event of newState.events) {
+          if (event.resolved || !event.deadline || event.penaltyApplied) continue;
+          if (now < event.deadline) continue;
+
+          event.penaltyApplied = true;
+          changed = true;
+          newState.player.popularity = Math.max(0, newState.player.popularity - EVENT_TIMEOUT_PENALTY.popularity);
+          newState.player.legitimacy = Math.max(0, newState.player.legitimacy - EVENT_TIMEOUT_PENALTY.legitimacy);
+          newState.citizenSatisfaction.governance = Math.max(0, newState.citizenSatisfaction.governance - EVENT_TIMEOUT_PENALTY.governance);
+          newState.gameLog.push(`Indecision penalty: People lose confidence (-${EVENT_TIMEOUT_PENALTY.popularity} popularity, -${EVENT_TIMEOUT_PENALTY.legitimacy} legitimacy, -${EVENT_TIMEOUT_PENALTY.governance} governance) for failing to address "${event.title}" promptly.`);
+        }
+
+        if (changed) set({ gameState: newState });
+      },
       dismissEvent: () => set({ showEventModal: null }),
       resetGame: () => set({ gameState: null, currentScreen: 'start', historicalData: [], availableProjects: [] }),
       setShowNewGameDialog: (show) => set({ showNewGameDialog: show }),

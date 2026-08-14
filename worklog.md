@@ -284,6 +284,27 @@ Stage Summary:
 - Version: v1.6
 
 ---
+Task ID: 14
+Agent: main
+Task: Hero copy fix (President premise) + event decision countdown overhaul
+
+Work Log:
+- Hero copy: start.description and start.leadZimbabweDesc rewritten in all 3 languages to the President-from-turn-1 premise ("Take office as President and govern through 44 turns to survive re-election"; badge "Govern for 44 turns, survive re-election"); layout.tsx meta description updated; sn/nd are user-approved drafts
+- types.ts: GameEvent gained deadline (epoch ms) + penaltyApplied (idempotency flag)
+- constants.ts: EVENT_DECISION_SECONDS = 45 and EVENT_TIMEOUT_PENALTY { popularity: 5, legitimacy: 3, governance: 5 } as single source of truth
+- game-store.ts: endTurn and setShowEventModal lazily set deadline = now + 45s when an event first surfaces (never resets); new checkEventDeadlines() action applies the -5/-3/-5 penalty once per event at expiry with a game log entry (English, existing precedent); resolveEvent rejects past-deadline events
+- page.tsx: EventTimer local-countdown replaced with useEventCountdown(event) computing seconds from the deadline (real time, survives minimize, screen switches and page reloads since gameState persists); GamePage runs a 1s checkEventDeadlines tick so the penalty fires even when the modal is minimized or the user is on another screen
+- EventModal locks choice buttons + Confirm when expired and shows an expired notice with the points lost; EventsScreen pending cards now show a live per-card countdown (amber at 20s, red/pulse at 10s), an Expired badge, decision-locked state and the lost-points summary; pending/resolved/decision labels now use existing i18n keys
+- i18n: new events.expired / events.decisionLocked / events.penaltyLost keys in en/sn/nd (no em dashes)
+- Bumped version from v1.6 to v1.7 in footer and all 3 language translations; updated AGENTS.md version
+- ESLint clean
+
+Stage Summary:
+- Event decision countdowns now run in real time and never restart on minimize; at zero the decision is permanently locked, the penalty is applied exactly once, and the Events page shows how many points were lost
+- Hero copy no longer contradicts the game premise (President from turn 1, 44-turn re-election)
+- Version: v1.7
+
+---
 Task ID: 12
 Agent: main
 Task: Convert start-screen hero from dark-institutional to clean light theme

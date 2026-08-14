@@ -22,6 +22,6 @@
 - **Currency is ZiG** (Zimbabwe Gold), exchange rate constant 26.37 ZiG/USD (in `constants.ts`).
 - **Zimbabwe flag stripes** (hero bar): hard color stops `#006400`, `#FFD200`, `#DE2010`, `#000000` (3px, full width). In-game/general palette green `#2E8B37`, yellow `#E8A800`-ish, red `#CC2936`.
 - **Start screen hero is clean-light-institutional**: `.zim-hero-light` (globals.css) pins light tokens (white/cream `#FAFAF7` background, `--foreground: #1A1A1A`, `--card: #FFFFFF`, `--border: #E5E0D8`, `color-scheme: light`) on the start screen wrapper AND the New Game dialog (Radix portal). `.zim-hero-*` classes in `globals.css` own the hero look: Anton (`--font-anton`) headline with solid green `#4A9D3F` / gold `#E8A93C` lines, Plus Jakarta Sans (`--font-jakarta`) subtitle/badges, green chevron SVG texture at 5% opacity on a `#FAFAF7` → `#EDE8DF` gradient, `#FFFFFF` cards with 1px flag-color top border, solid `#3D7A32` CTA with 8px radius. Game-over screen still forces dark via its own wrapper; dark mode applies in-game.
-- **Version bump**: footer + all 3 translation files carry "v1.x" — bump all together (currently v1.6).
+- **Version bump**: footer + all 3 translation files carry "v1.x" — bump all together (currently v1.7).
 - `worklog.md` is the append-only task log (front-matter style: Task ID / Agent / Task header, Work Log, Stage). Append new entries there when finishing significant tasks.
 - Dev proxy: `Caddyfile` serves :81 → localhost:3000 (with optional `XTransformPort` query passthrough) — only relevant when running behind Caddy.

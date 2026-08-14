@@ -27,7 +27,7 @@ const jakarta = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: "Make Great Zimbabwe Again — Political Strategy Game",
-  description: "A political and economic simulation game set in a fictional version of Zimbabwe. Build your political career from Councillor to President while navigating the complexities of governance.",
+  description: "A political and economic simulation game set in a fictional version of Zimbabwe. Take office as President, govern through 44 turns, and survive re-election while navigating the complexities of governance.",
   keywords: ["strategy game", "political simulation", "zimbabwe", "governance", "indie game"],
   authors: [{ name: "MGZA Studios" }],
   icons: {

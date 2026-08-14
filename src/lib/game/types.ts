@@ -358,6 +358,8 @@ export interface GameEvent {
   isRandom: boolean;
   resolved: boolean;
   choiceMade?: string;
+  deadline?: number;
+  penaltyApplied?: boolean;
 }
 
 export interface EventChoice {

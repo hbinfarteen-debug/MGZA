@@ -464,6 +464,18 @@ export const SEASON_FROM_MONTH: Record<number, string> = {
 };
 
 // ═══════════════════════════════════════════════════════
+// EVENT DECISION TIMEOUT
+// ═══════════════════════════════════════════════════════
+
+export const EVENT_DECISION_SECONDS = 45;
+
+export const EVENT_TIMEOUT_PENALTY = {
+  popularity: 5,
+  legitimacy: 3,
+  governance: 5,
+};
+
+// ═══════════════════════════════════════════════════════
 // GAME COLORS / THEMING
 // ═══════════════════════════════════════════════════════
 

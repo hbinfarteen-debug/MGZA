@@ -26,7 +26,8 @@ import {
   ChevronLeft, Menu, Gamepad2, X, Heart, Star, Trophy, Check, Lightbulb, Info,
   Sun, Moon, Type, Globe, RefreshCw, Crown,
 } from 'lucide-react';
-import { MONTH_NAMES } from '@/lib/game/constants';
+import { MONTH_NAMES, EVENT_DECISION_SECONDS, EVENT_TIMEOUT_PENALTY } from '@/lib/game/constants';
+import type { GameEvent } from '@/lib/game/types';
 import { computeScore } from '@/lib/scoreboard';
 
 // ═══════════════════════════════════════════════════════
@@ -1236,8 +1237,41 @@ function WaterScreen() {
 // EVENTS SCREEN
 // ═══════════════════════════════════════════════════════
 
+function PendingEventCard({ event, onDecide }: { event: GameEvent; onDecide: (event: GameEvent) => void }) {
+  const { expired } = useEventCountdown(event);
+  const { t } = useTranslation();
+
+  return (
+    <div className={`bg-card border rounded-lg p-4 ${expired ? 'border-red-500/40' : 'border-red-500/30'}`}>
+      <div className="flex items-center gap-2 mb-2">
+        <Badge variant={event.severity === 'crisis' ? 'destructive' : event.severity === 'major' ? 'default' : 'secondary'}>
+          {event.severity.toUpperCase()}
+        </Badge>
+        <Badge variant="secondary" className="text-[0.625rem]">{event.category}</Badge>
+        {expired && <Badge variant="destructive" className="text-[0.625rem]">{t('events.expired')}</Badge>}
+        <EventCountdown event={event} />
+      </div>
+      <h4 className="text-sm font-bold mb-1">{event.title}</h4>
+      <p className="text-xs text-muted-foreground mb-3">{event.description}</p>
+      {event.choices && event.choices.length > 0 && (
+        expired ? (
+          <div className="space-y-1">
+            <p className="text-xs font-semibold text-red-500">{t('events.decisionLocked')}</p>
+            <EventPenaltyNotice t={t} />
+          </div>
+        ) : (
+          <Button size="sm" onClick={() => onDecide(event)} className="bg-amber-600 hover:bg-amber-700">
+            {t('events.makeDecision')}
+          </Button>
+        )
+      )}
+    </div>
+  );
+}
+
 function EventsScreen() {
   const { gameState, setShowEventModal } = useGameStore();
+  const { t } = useTranslation();
   if (!gameState) return null;
 
   const unresolvedEvents = gameState.events.filter(e => !e.resolved);
@@ -1247,27 +1281,13 @@ function EventsScreen() {
     <div className="space-y-6">
       <HoverTip tipId="events_pending" screenId="events"><div>
         <h3 className="text-sm font-bold uppercase tracking-wider mb-3 flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4 text-red-500" /> Pending Events ({unresolvedEvents.length})
+          <AlertTriangle className="h-4 w-4 text-red-500" /> {t('events.pending', { count: unresolvedEvents.length })}
         </h3>
         <div className="space-y-3">
           {unresolvedEvents.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No pending events. End turn to see what happens next.</p>
+            <p className="text-sm text-muted-foreground">{t('events.noPending')}</p>
           ) : unresolvedEvents.map((event) => (
-            <div key={event.id} className="bg-card border border-red-500/30 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Badge variant={event.severity === 'crisis' ? 'destructive' : event.severity === 'major' ? 'default' : 'secondary'}>
-                  {event.severity.toUpperCase()}
-                </Badge>
-                <Badge variant="secondary" className="text-[0.625rem]">{event.category}</Badge>
-              </div>
-              <h4 className="text-sm font-bold mb-1">{event.title}</h4>
-              <p className="text-xs text-muted-foreground mb-3">{event.description}</p>
-              {event.choices && event.choices.length > 0 && (
-                <Button size="sm" onClick={() => setShowEventModal(event)} className="bg-amber-600 hover:bg-amber-700">
-                  Make Decision
-                </Button>
-              )}
-            </div>
+            <PendingEventCard key={event.id} event={event} onDecide={setShowEventModal} />
           ))}
         </div>
       </div></HoverTip>
@@ -1275,7 +1295,7 @@ function EventsScreen() {
       <Separator />
 
       <div>
-        <h3 className="text-sm font-bold uppercase tracking-wider mb-3 text-muted-foreground">Resolved Events</h3>
+        <h3 className="text-sm font-bold uppercase tracking-wider mb-3 text-muted-foreground">{t('events.resolved')}</h3>
         <div className="space-y-2">
           {resolvedEvents.map((event) => (
             <div key={event.id} className="bg-card border border-border/50 rounded-lg p-3 opacity-70">
@@ -1986,50 +2006,64 @@ function NewGameDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o
 }
 
 // ═══════════════════════════════════════════════════════
-// EVENT TIMER — countdown with indecision penalty
+// EVENT TIMER — real-time countdown tied to the event's
+// deadline (set once when the event first surfaces). Keeps
+// ticking while the modal is minimized and across screens.
 // ═══════════════════════════════════════════════════════
 
-function EventTimer({ eventId, eventTitle }: { eventId: string; eventTitle: string }) {
-  const [seconds, setSeconds] = useState(45);
-  const penaltyRef = useRef(false);
+function useEventCountdown(event: GameEvent) {
+  const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
-    penaltyRef.current = false;
-    const id = setInterval(() => {
-      setSeconds((p) => {
-        const n = p - 1;
-        if (n <= 0) {
-          clearInterval(id);
-          if (!penaltyRef.current) {
-            penaltyRef.current = true;
-            const store = useGameStore.getState();
-            if (store.gameState) {
-              const gs = { ...store.gameState };
-              gs.player.popularity = Math.max(0, gs.player.popularity - 5);
-              gs.player.legitimacy = Math.max(0, gs.player.legitimacy - 3);
-              gs.citizenSatisfaction = {
-                ...gs.citizenSatisfaction,
-                governance: Math.max(0, gs.citizenSatisfaction.governance - 5),
-              };
-              gs.gameLog.push(`Indecision penalty: People lose confidence (-5 popularity, -3 legitimacy) for failing to address "${eventTitle}" promptly.`);
-              useGameStore.setState({ gameState: gs });
-            }
-          }
-          return 0;
-        }
-        return n;
-      });
-    }, 1000);
+    if (!event.deadline) return;
+    setNow(Date.now());
+    const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
-  }, [eventId]);
+  }, [event.id, event.deadline]);
 
+  const remaining = event.deadline ? Math.max(0, Math.ceil((event.deadline - now) / 1000)) : EVENT_DECISION_SECONDS;
+  return { seconds: remaining, expired: remaining <= 0 };
+}
+
+const EMPTY_EVENT: GameEvent = {
+  id: '',
+  title: '',
+  description: '',
+  category: 'political',
+  severity: 'minor',
+  turn: 0,
+  month: 1,
+  year: 2025,
+  isRandom: false,
+  resolved: true,
+};
+
+function EventCountdown({ event }: { event: GameEvent }) {
+  const { seconds, expired } = useEventCountdown(event);
+  const cls = expired || seconds <= 10
+    ? 'text-red-500'
+    : seconds <= 20
+      ? 'text-amber-500'
+      : 'text-muted-foreground';
   return (
     <div className="ml-auto flex items-center gap-1">
-      <Clock className={`h-3 w-3 ${seconds <= 10 ? 'text-red-500 animate-pulse' : seconds <= 20 ? 'text-amber-500' : 'text-muted-foreground'}`} />
-      <span className={`text-[0.625rem] font-mono font-bold ${seconds <= 10 ? 'text-red-500' : seconds <= 20 ? 'text-amber-500' : 'text-muted-foreground'}`}>
-        {seconds}s
+      <Clock className={`h-3 w-3 ${expired ? '' : seconds <= 10 ? 'animate-pulse' : ''} ${cls}`} />
+      <span className={`text-[0.625rem] font-mono font-bold ${cls}`}>
+        {expired ? '0s' : `${seconds}s`}
       </span>
     </div>
+  );
+}
+
+function EventPenaltyNotice({ t }: { t: (key: string, params?: Record<string, string | number>) => string }) {
+  return (
+    <p className="text-xs text-red-500">
+      {t('events.penaltyLost', {
+        popularity: EVENT_TIMEOUT_PENALTY.popularity,
+        legitimacy: EVENT_TIMEOUT_PENALTY.legitimacy,
+        governance: EVENT_TIMEOUT_PENALTY.governance,
+      })}
+    </p>
   );
 }
 
@@ -2038,16 +2072,17 @@ function EventTimer({ eventId, eventTitle }: { eventId: string; eventTitle: stri
 // ═══════════════════════════════════════════════════════
 
 function EventModal() {
-  const { showEventModal, resolveEvent, setShowEventModal, endTurn } = useGameStore();
+  const { showEventModal, resolveEvent, setShowEventModal } = useGameStore();
   const { t } = useTranslation();
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
 
   const event = showEventModal;
+  const { expired } = useEventCountdown(event ?? EMPTY_EVENT);
 
-  if (!showEventModal || !showEventModal.choices || showEventModal.choices.length === 0) return null;
+  if (!event || !event.choices || event.choices.length === 0) return null;
 
   const handleResolve = () => {
-    if (selectedChoice) {
+    if (selectedChoice && !expired) {
       resolveEvent(event.id, selectedChoice);
       setSelectedChoice(null);
     }
@@ -2062,7 +2097,8 @@ function EventModal() {
               {event.severity.toUpperCase()}
             </Badge>
             <Badge variant="secondary" className="text-[0.625rem]">{event.category}</Badge>
-            <EventTimer eventId={event.id} eventTitle={event.title} />
+            {expired && <Badge variant="destructive" className="text-[0.625rem]">{t('events.expired')}</Badge>}
+            <EventCountdown event={event} />
           </div>
           <DialogTitle className="text-lg">{event.title}</DialogTitle>
           <DialogDescription className="text-sm leading-relaxed">{event.description}</DialogDescription>
@@ -2073,11 +2109,12 @@ function EventModal() {
             <button
               key={choice.id}
               onClick={() => setSelectedChoice(choice.id)}
+              disabled={expired}
               className={`w-full text-left rounded-lg border p-4 transition-all ${
                 selectedChoice === choice.id
                   ? 'border-amber-500 bg-amber-500/10 ring-1 ring-amber-500'
                   : 'border-border bg-card hover:border-amber-500/50'
-              }`}
+              } ${expired ? 'opacity-60 cursor-not-allowed hover:border-border' : ''}`}
             >
               <h4 className="text-sm font-bold mb-1">{choice.text}</h4>
               <p className="text-xs text-muted-foreground">{choice.shortDescription}</p>
@@ -2093,8 +2130,15 @@ function EventModal() {
           ))}
         </div>
 
+        {expired && (
+          <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3">
+            <p className="text-xs font-bold text-red-500 mb-1">{t('events.decisionLocked')}</p>
+            <EventPenaltyNotice t={t} />
+          </div>
+        )}
+
         <DialogFooter>
-          <Button onClick={handleResolve} disabled={!selectedChoice} className="bg-amber-600 hover:bg-amber-700">
+          <Button onClick={handleResolve} disabled={!selectedChoice || expired} className="bg-amber-600 hover:bg-amber-700">
             {t('events.confirmDecision')}
           </Button>
         </DialogFooter>
@@ -2627,6 +2671,17 @@ export default function GamePage() {
     document.documentElement.style.setProperty('--mgza-font-size', FONT_SIZE_MAP[fontSize]);
   }, [fontSize]);
 
+  // Event decision deadlines: apply the indecision penalty the moment a
+  // deadline passes, even when the modal is minimized or on another screen
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (useGameStore.getState().gameState) {
+        useGameStore.getState().checkEventDeadlines();
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
+
   // Start Screen
   if (currentScreen === 'start') {
     return (
@@ -2937,7 +2992,7 @@ export default function GamePage() {
         <div className="px-4 py-3">
           <div className="flex items-center justify-between text-[0.625rem] text-muted-foreground max-w-7xl mx-auto">
             <span className="flex items-center gap-1">
-              <Gamepad2 className="h-3 w-3 text-amber-500" /> Make Great Zimbabwe Again | v1.6
+              <Gamepad2 className="h-3 w-3 text-amber-500" /> Make Great Zimbabwe Again | v1.7
             </span>
             <span>{MONTH_NAMES[(player?.month || 1) - 1]} {player?.year || 2025} | Turn {(player?.turn || 1)} | {(citizenSatisfaction?.overall || 0).toFixed(0)}% Satisfaction</span>
           </div>
