@@ -191,7 +191,7 @@ export default function ProvinceMap({ provinces, selectedId, onSelect }: Provinc
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     return {
-      x: Math.min(Math.max(x + 14, 8), rect.width - 248),
+      x: Math.min(Math.max(x + 14, 8), rect.width - 308),
       y: y < 200 ? y + 26 : y - 196,
     };
   }, []);
@@ -294,11 +294,11 @@ export default function ProvinceMap({ provinces, selectedId, onSelect }: Provinc
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.12 } }}
                 transition={spring.entrance()}
-                className="pointer-events-none absolute z-20 w-[240px] rounded-lg border border-border bg-card/95 p-4 shadow-xl backdrop-blur"
+                className="pointer-events-none absolute z-20 min-w-[280px] w-max rounded-lg border border-border bg-card/95 p-4 shadow-xl backdrop-blur"
                 style={{ left: tip.x, top: tip.y }}
               >
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <h4 className="min-w-0 truncate text-sm font-bold">{activeProvince.name}</h4>
+                  <h4 className="text-sm font-bold whitespace-nowrap">{activeProvince.name}</h4>
                   <span className="shrink-0 rounded-full bg-amber-500/15 px-2 py-0.5 text-[0.625rem] text-amber-400">
                     {t(metricDef.key)}
                   </span>
@@ -320,12 +320,12 @@ export default function ProvinceMap({ provinces, selectedId, onSelect }: Provinc
                   ].map((row) => (
                     <div
                       key={row.key}
-                      className={`flex min-w-0 items-center justify-between gap-2 ${
+                      className={`flex items-center justify-between gap-3 text-nowrap ${
                         row.key === metricDef.key ? 'text-amber-400' : 'text-muted-foreground'
                       }`}
                     >
-                      <span className="min-w-0 truncate">{t(row.key)}</span>
-                      <span className="shrink-0 font-bold text-foreground">{row.value}</span>
+                      <span>{t(row.key)}</span>
+                      <span className="font-bold text-foreground">{row.value}</span>
                     </div>
                   ))}
                 </div>

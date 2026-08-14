@@ -1639,7 +1639,17 @@ function ElectionsScreen() {
         <StatCard label="Election Type" value={election.type.charAt(0).toUpperCase() + election.type.slice(1)} color="text-amber-500" />
         <StatCard label="Election Date" value={`${MONTH_NAMES[election.month - 1]} ${election.year}`} color="text-foreground" />
         <StatCard label="Turns Until" value={`${turnsUntilElection}`} color={turnsUntilElection < 12 ? 'text-red-500' : 'text-green-500'} />
-        <StatCard label="Current Polls" value={`${latestPoll?.playerPercent.toFixed(0) || 48}%`} color={(latestPoll?.playerPercent || 0) > 50 ? 'text-green-500' : 'text-yellow-500'} />
+        <StatCard 
+          label="Current Polls" 
+          value={`${latestPoll?.playerPercent.toFixed(0) || 48}%`} 
+          color={(latestPoll?.playerPercent || 0) > 50 ? 'text-green-500' : 'text-yellow-500'} 
+          borderColor="#F59E0B"
+          badge={
+            <Badge className="bg-amber-500/10 hover:bg-amber-500/10 text-amber-500 text-[0.625rem] border border-amber-500/20 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+              {gameState.player.partyName}
+            </Badge>
+          }
+        />
       </div></HoverTip>
 
       {/* Election Status */}
@@ -1707,6 +1717,18 @@ function ElectionsScreen() {
           ))}
         </div>
 
+        {/* Polls Legend */}
+        <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mb-6 text-[0.6875rem] font-semibold border-b border-border/40 pb-3">
+          <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" />
+            <span className="text-foreground">{gameState.player.partyName} ({t('election.legendYou')})</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" />
+            <span className="text-muted-foreground">{t('politics.opposition')}</span>
+          </div>
+        </div>
+
         {/* Historical Results */}
         {election.historicalResults && (
           <div>
@@ -1717,7 +1739,7 @@ function ElectionsScreen() {
                   <span className="text-xs w-12">{result.year}</span>
                   <div className="flex-1 flex h-4 rounded overflow-hidden">
                     <div className="bg-amber-500 flex items-center justify-center" style={{ width: `${result.playerParty}%` }}>
-                      <span className="text-[0.5625rem] font-bold">{result.playerParty}%</span>
+                      <span className="text-[0.5625rem] font-bold whitespace-nowrap">{result.playerParty}% {t('election.inBarYou')}</span>
                     </div>
                     <div className="bg-red-500 flex items-center justify-center" style={{ width: `${result.opposition}%` }}>
                       <span className="text-[0.5625rem] font-bold">{result.opposition}%</span>
@@ -1959,22 +1981,22 @@ function StartScreen() {
           exit={{ opacity: 0, height: 0 }}
           className="mx-auto max-w-md w-full px-4 mb-4"
         >
-          <div className="bg-card border border-border rounded-lg p-4 space-y-4">
+          <div className="bg-slate-900/95 backdrop-blur-sm border border-slate-800 rounded-lg p-5 space-y-4 shadow-xl ring-1 ring-black/5 text-slate-100">
             {/* Language */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Globe className="h-4 w-4 text-amber-500" />
-                <span className="text-sm font-medium">{t('common.language')}</span>
+                <Globe className="h-4 w-4 text-amber-400" />
+                <span className="text-sm font-semibold text-slate-100">{t('common.language')}</span>
               </div>
-              <div className="flex gap-1">
+              <div className="flex gap-1.5">
                 {(['en', 'sn', 'nd'] as import('@/lib/i18n').Language[]).map((lang) => (
                   <button
                     key={lang}
                     onClick={() => setLanguage(lang)}
-                    className={`px-2 py-1 rounded text-[0.625rem] font-medium transition-all ${
+                    className={`px-2.5 py-1 rounded text-[0.625rem] font-bold transition-all border ${
                       language === lang
-                        ? 'bg-amber-500 text-white'
-                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                        ? 'bg-amber-600 border-amber-500 text-white shadow-sm'
+                        : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white'
                     }`}
                   >
                     {LANGUAGE_FLAGS[lang]} {LANGUAGE_NAMES[lang]}
@@ -1986,17 +2008,17 @@ function StartScreen() {
             {/* Dark Mode */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                {darkMode ? <Moon className="h-4 w-4 text-indigo-400" /> : <Sun className="h-4 w-4 text-amber-500" />}
-                <span className="text-sm font-medium">{t('common.darkMode')}</span>
+                {darkMode ? <Moon className="h-4 w-4 text-amber-400" /> : <Sun className="h-4 w-4 text-amber-400" />}
+                <span className="text-sm font-semibold text-slate-100">{t('common.darkMode')}</span>
               </div>
-              <Switch checked={darkMode} onCheckedChange={setDarkMode} />
+              <Switch checked={darkMode} onCheckedChange={setDarkMode} className="border border-slate-800 data-[state=checked]:bg-amber-500" />
             </div>
 
             {/* Text Size */}
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Type className="h-4 w-4 text-amber-500" />
-                <span className="text-sm font-medium">{t('common.textSize')}</span>
+              <div className="flex items-center gap-2 mb-2.5">
+                <Type className="h-4 w-4 text-amber-400" />
+                <span className="text-sm font-semibold text-slate-100">{t('common.textSize')}</span>
               </div>
               <div className="grid grid-cols-4 gap-2">
                 {(['small', 'medium', 'large', 'xlarge'] as FontSize[]).map((size) => (
@@ -2005,53 +2027,52 @@ function StartScreen() {
                     onClick={() => setFontSize(size)}
                     className={`rounded-lg border p-2 text-center transition-all ${
                       fontSize === size
-                        ? 'border-amber-500 bg-amber-500/10 ring-1 ring-amber-500'
-                        : 'border-border bg-card hover:border-amber-500/50'
+                        ? 'border-amber-500 bg-amber-600/20 ring-1 ring-amber-500 font-extrabold text-white shadow-inner'
+                        : 'border-slate-700 bg-slate-800 text-slate-300 hover:border-slate-600 hover:bg-slate-700 hover:text-white'
                     }`}
                   >
-                    <span className={`block font-bold leading-none ${
-                      size === 'small' ? 'text-xs' : size === 'medium' ? 'text-sm' : size === 'large' ? 'text-base' : 'text-lg'
-                    }`}>
+                    <span className="block font-bold leading-none">
                       Aa
                     </span>
-<span className="text-[0.625rem] text-muted-foreground mt-1 block capitalize">{size}</span>
+                    <span className={`text-[0.625rem] mt-1 block capitalize font-medium ${fontSize === size ? 'text-amber-300' : 'text-slate-400'}`}>{size}</span>
                   </button>
                 ))}
               </div>
             </div>
-          </div>
+            <div className="border-t border-slate-800/80 my-2" />
 
-          {/* Save / Load */}
-          <div className="p-3 rounded-lg border border-border bg-card">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="flex items-center justify-center w-8 h-8 rounded-md bg-amber-500/15 text-amber-500">
-                <Download className="h-4 w-4" />
+            {/* Save / Load */}
+            <div className="space-y-3.5 pt-1">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-8 h-8 rounded-md bg-amber-500/10 text-amber-400">
+                  <Download className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-100">{t('save.title')}</p>
+                  <p className="text-[0.625rem] text-slate-400">{t('save.desc')}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-medium">{t('save.title')}</p>
-                <p className="text-[0.625rem] text-muted-foreground">{t('save.desc')}</p>
+              <div className="grid grid-cols-2 gap-2">
+                <Button variant="outline" size="sm" className="text-xs bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700 hover:text-white hover:border-slate-600" onClick={handleExport} disabled={!gameState}>
+                  <Download className="h-3 w-3 mr-1 text-amber-400" /> {t('save.export')}
+                </Button>
+                <Button variant="outline" size="sm" className="text-xs bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700 hover:text-white hover:border-slate-600" onClick={() => fileInputRef.current?.click()}>
+                  <Upload className="h-3 w-3 mr-1 text-amber-400" /> {t('save.import')}
+                </Button>
               </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json,application/json"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleImportFile(file);
+                  e.target.value = '';
+                }}
+              />
+              {saveStatus && <p className="text-[0.625rem] text-slate-400 mt-2 text-center font-medium">{saveStatus}</p>}
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Button variant="outline" size="sm" className="text-xs" onClick={handleExport} disabled={!gameState}>
-                <Download className="h-3 w-3 mr-1" /> {t('save.export')}
-              </Button>
-              <Button variant="outline" size="sm" className="text-xs" onClick={() => fileInputRef.current?.click()}>
-                <Upload className="h-3 w-3 mr-1" /> {t('save.import')}
-              </Button>
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".json,application/json"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleImportFile(file);
-                e.target.value = '';
-              }}
-            />
-            {saveStatus && <p className="text-[0.625rem] text-muted-foreground mt-2">{saveStatus}</p>}
           </div>
         </motion.div>
       )}
@@ -2863,12 +2884,13 @@ function AnimatedMetricCard({ title, items, index = 0 }: { title: string; items:
 // SHARED UI COMPONENTS
 // ═══════════════════════════════════════════════════════
 
-function StatCard({ label, value, icon, color = 'text-foreground' }: { label: string; value: string | number; icon?: React.ReactNode; color?: string }) {
+function StatCard({ label, value, icon, color = 'text-foreground', borderColor, badge }: { label: string; value: string | number; icon?: React.ReactNode; color?: string; borderColor?: string; badge?: React.ReactNode }) {
+  const defaultBorderColor = color.startsWith('text-green') ? '#2E8B37' : color.startsWith('text-yellow') ? '#E8A817' : color.startsWith('text-red') ? '#CC2936' : '#888';
   return (
-    <div className="bg-card border border-border rounded-lg p-4" style={{ borderLeftWidth: '3px', borderLeftColor: color.startsWith('text-green') ? '#2E8B37' : color.startsWith('text-yellow') ? '#E8A817' : color.startsWith('text-red') ? '#CC2936' : '#888' }}>
-      <div className="flex items-center justify-between">
+    <div className="bg-card border border-border rounded-lg p-4" style={{ borderLeftWidth: '3px', borderLeftColor: borderColor || defaultBorderColor }}>
+      <div className="flex items-center justify-between gap-2">
         <span className="text-[0.625rem] text-muted-foreground uppercase tracking-wider font-medium">{label}</span>
-        {icon && <span className={color}>{icon}</span>}
+        {badge ? badge : icon ? <span className={color}>{icon}</span> : null}
       </div>
       <p className={`text-xl font-bold mt-1.5 ${color}`}>{value}</p>
     </div>
