@@ -31,6 +31,7 @@ import type { GameEvent } from '@/lib/game/types';
 import { getPublicMood, EVENT_TEMPLATES, TITLE_RULES } from '@/lib/game/engine';
 import { computeScore } from '@/lib/scoreboard';
 import { TITLE_TURNS_REQUIRED } from '@/lib/game/constants';
+import ProvinceMap from '@/components/province-map';
 
 // ═══════════════════════════════════════════════════════
 // LEADERBOARD — per-difficulty score comparison,
@@ -1508,62 +1509,42 @@ function HistoryScreen() {
 // ═══════════════════════════════════════════════════════
 
 function MapScreen() {
-  const { gameState, selectProvince } = useGameStore();
+  const { gameState, selectedProvince, selectProvince } = useGameStore();
+  const { t } = useTranslation();
   if (!gameState) return null;
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Province Grid Map */}
+        {/* Interactive 3D Province Map */}
         <HoverTip tipId="province_overview" screenId="map"><div className="lg:col-span-2">
           <div className="bg-card border border-border rounded-lg p-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider mb-4">PROVINCES</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 gap-3">
-              {gameState.provinces.map((province) => (
-                <button
-                  key={province.id}
-                  onClick={() => selectProvince(province.id)}
-                  className="bg-muted hover:bg-muted/80 border border-border rounded-lg p-4 text-left transition-colors"
-                >
-                  <h4 className="text-sm font-bold">{province.name}</h4>
-                  <div className="grid grid-cols-2 gap-2 mt-2 text-[0.625rem]">
-                    <span>Pop: {(province.population / 1e6).toFixed(1)}M</span>
-                    <span>Urban: {province.urbanization.toFixed(0)}%</span>
-                    <span>Support: {province.politicalSupport.toFixed(0)}%</span>
-                    <span>Happy: {province.satisfactionIndex.toFixed(0)}%</span>
-                  </div>
-                  <div className="mt-2 h-1.5 bg-background rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full"
-                      style={{
-                        width: `${province.satisfactionIndex}%`,
-                        backgroundColor: province.satisfactionIndex > 50 ? '#4CAF50' : province.satisfactionIndex > 30 ? '#FF9800' : '#f44336',
-                      }}
-                    />
-                  </div>
-                </button>
-              ))}
-            </div>
+            <h3 className="text-sm font-bold uppercase tracking-wider mb-4">{t('map.provinces')}</h3>
+            <ProvinceMap
+              provinces={gameState.provinces}
+              selectedId={selectedProvince}
+              onSelect={selectProvince}
+            />
           </div>
         </div></HoverTip>
 
         {/* Province Details */}
         <HoverTip tipId="province_support" screenId="map"><div className="bg-card border border-border rounded-lg p-4">
-          <h3 className="text-sm font-bold uppercase tracking-wider mb-3">PROVINCE COMPARISON</h3>
+          <h3 className="text-sm font-bold uppercase tracking-wider mb-3">{t('map.provinceComparison')}</h3>
           <ScrollArea className="h-[600px]">
             <div className="space-y-3">
               {gameState.provinces.map((province) => (
                 <div key={province.id} className="pb-3 border-b border-border/50 last:border-0">
                   <h4 className="text-xs font-bold mb-1">{province.name}</h4>
                   <div className="grid grid-cols-2 gap-1 text-[0.625rem] text-muted-foreground">
-                    <span>Health: {province.healthIndex.toFixed(0)}</span>
-                    <span>Education: {province.educationIndex.toFixed(0)}</span>
-                    <span>Infrastructure: {province.infrastructureIndex.toFixed(0)}</span>
-                    <span>Safety: {province.safetyIndex.toFixed(0)}</span>
-                    <span>Poverty: {province.povertyRate.toFixed(0)}%</span>
-                    <span>Unemployment: {province.unemploymentRate.toFixed(0)}%</span>
-                    <span>Agri: {province.agriculturalOutput}</span>
-                    <span>Mining: {province.miningOutput}</span>
+                    <span>{t('map.health')}: {province.healthIndex.toFixed(0)}</span>
+                    <span>{t('map.education')}: {province.educationIndex.toFixed(0)}</span>
+                    <span>{t('map.infrastructure')}: {province.infrastructureIndex.toFixed(0)}</span>
+                    <span>{t('map.safety')}: {province.safetyIndex.toFixed(0)}</span>
+                    <span>{t('map.poverty')}: {province.povertyRate.toFixed(0)}%</span>
+                    <span>{t('map.unemployment')}: {province.unemploymentRate.toFixed(0)}%</span>
+                    <span>{t('map.agriculture')}: {province.agriculturalOutput}</span>
+                    <span>{t('map.mining')}: {province.miningOutput}</span>
                   </div>
                 </div>
               ))}
@@ -3330,7 +3311,7 @@ export default function GamePage() {
         <div className="px-4 py-3">
           <div className="flex items-center justify-between text-[0.625rem] text-muted-foreground max-w-7xl mx-auto">
             <span className="flex items-center gap-1">
-              <Gamepad2 className="h-3 w-3 text-amber-500" /> Make Great Zimbabwe Again | v1.8
+              <Gamepad2 className="h-3 w-3 text-amber-500" /> Make Great Zimbabwe Again | v1.9
             </span>
             <span>{MONTH_NAMES[(player?.month || 1) - 1]} {player?.year || 2025} | Turn {(player?.turn || 1)} | {(citizenSatisfaction?.overall || 0).toFixed(0)}% Satisfaction</span>
           </div>

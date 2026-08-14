@@ -69,7 +69,7 @@ const en: Record<string, string> = {
   'start.winElectionsDesc': "Secure the people's mandate",
   'start.description': 'Take office as President and govern through 44 turns to survive re-election. Navigate corruption, manage infrastructure, balance budgets, and make impossible decisions that shape the future of millions. There are no perfect choices, only trade-offs.',
   'start.startNewGame': 'Start New Game',
-  'start.footer': 'v1.8 | Made with ❤️ for Zimbabwe',
+  'start.footer': 'v1.9 | Made with ❤️ for Zimbabwe',
 
   // NEW GAME DIALOG
   'newGame.title': 'Start New Game',
@@ -465,6 +465,12 @@ const en: Record<string, string> = {
   'tip.campaign_fund.title': 'Campaign Fund',
   'tip.campaign_fund.desc': 'Money available for election campaigning. More funds = better voter outreach.',
   'tip.campaign_fund.strategy': 'Allocate budget to your campaign fund in the months leading up to the election.',
+
+  // MAP SCREEN (3D map)
+  'map.hint': 'Hover a province for details, tap to pin it',
+  'map.low': 'Low',
+  'map.high': 'High',
+  'map.elevation': 'Elevation by metric',
 };
 
 // ═══════════════════════════════════════════════════════
@@ -519,7 +525,7 @@ const sn: Record<string, string> = {
   'start.winElectionsDesc': 'Tora ruvambo rwevanhu',
   'start.description': 'Tora hofisi sePresident uye tungamira kwemaitiro 44 kuti urarame kusarudzwa zvakare. Rwadza urombo, tarisa mabasa okuvaka, simbisa bhajeti, uye gadza sarudzo dzisingawoneki dzinoumba ramangwana remamiriyoni. Hakuna sarudzo yakakwana, kuchingwa chete.',
   'start.startNewGame': 'Tanga Mutambo Mutsva',
-  'start.footer': 'v1.8 | Yakagadzirwa ne ❤️ yeZimbabwe',
+  'start.footer': 'v1.9 | Yakagadzirwa ne ❤️ yeZimbabwe',
 
   // NEW GAME DIALOG
   'newGame.title': 'Tanga Mutambo Mutsva',
@@ -915,6 +921,12 @@ const sn: Record<string, string> = {
   'tip.campaign_fund.title': 'Mari yeMakampani',
   'tip.campaign_fund.desc': 'Mari yekushambadzira. Mari yakawanda = kuunganidza vhoti kakanaka.',
   'tip.campaign_fund.strategy': 'Gadzirisa bhajeti mune mari yekampani mise mese inoenda makhoti.',
+
+  // MAP SCREEN (3D map)
+  'map.hint': 'Dzika purovinsi uone mashoko, dzvanya kuti irambe yakatariswa',
+  'map.low': 'Kudiki',
+  'map.high': 'Kukuru',
+  'map.elevation': 'Ukwiriro nemetric',
 };
 
 // ═══════════════════════════════════════════════════════
@@ -969,7 +981,7 @@ const nd: Record<string, string> = {
   'start.winElectionsDesc': 'Thola umvuzo walabo',
   'start.description': 'Thatha isihlalo njengoMongameli ubuse izikhathi ezingama-44 ukuze usinde ekukhetheni kabusha. Qala ukubamba ubuthi, phatha imisebenzi yokwakha, qondisa ibhajethi, wenze izinqumo ezinzima ezishintsha ikusasa lezigidi. Akukho nqopho elifanele, kunokukhetha okunye.',
   'start.startNewGame': 'Qala Umdlalo Omusha',
-  'start.footer': 'v1.8 | Yakhiwe nge ❤️ yeZimbabwe',
+  'start.footer': 'v1.9 | Yakhiwe nge ❤️ yeZimbabwe',
 
   // NEW GAME DIALOG
   'newGame.title': 'Qala Umdlalo Omusha',
@@ -1365,6 +1377,12 @@ const nd: Record<string, string> = {
   'tip.campaign_fund.title': 'Imali Yekampani',
   'tip.campaign_fund.desc': 'Imali ekhona yokukhangela. Imali eningi = ukufikelela kubavoti kakuhle.',
   'tip.campaign_fund.strategy': 'Gcina ibhajethi kumali yokukhangela emasikweni angakaqalanga ekuvoteni.',
+
+  // MAP SCREEN (3D map)
+  'map.hint': 'Ehla phezu kwephrovinji ukuze ubone iinkcukacha, thatha ukuze uyibambe',
+  'map.low': 'Phansi',
+  'map.high': 'Phezulu',
+  'map.elevation': 'Ukuphakama ngomlinganiselo',
 };
 
 // ═══════════════════════════════════════════════════════

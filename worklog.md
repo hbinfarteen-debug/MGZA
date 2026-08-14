@@ -346,3 +346,23 @@ Stage Summary:
 - New Government History screen records terms, titles, milestones and decisions
 - End-of-turn report summarizes each month; saves export/import as JSON
 - Version: v1.8
+
+---
+Task ID: 16
+Agent: main
+Task: Interactive Zimbabwe province map (2D SVG) on the Map screen (v1.9)
+
+Work Log:
+- Geometry: fetched real geoBoundaries ZWE ADM1 GeoJSON (https://github.com/wmgeolab/geoBoundaries/raw/9469f09/releaseData/gbOpen/ZWE/ADM1/geoBoundaries-ZWE-ADM1.geojson), simplified with Douglas-Peucker TOL 0.008 (34-275 pts/province) into src/lib/geo/zimbabwe-adm1.ts (TS module, 80KB, 10 features, Polygon type, property "name"); NAME_MAP maps Bulawayo/Harare to "Bulawayo Metropolitan"/"Harare Metropolitan"; no runtime fetch
+- Fixed data bug: geoBoundaries rings arrived one level deeper than GeoJSON spec (coordinates [[[pts]]] instead of [[pts]]); unwrapped all 10 features so bounds/simplify/ringPath compute correctly (2012 pts total, lon 25.24-33.07, lat -22.42 to -15.61)
+- 3D pivot history: initial R3F plan (three/@react-three/fiber/@react-three/drei installed) rendered an empty canvas (WebGL context loss, getParts built 0 geometries); user directive "YOU CAN MAKE THE MAP 2D"; three deps fully removed, package.json clean
+- src/components/province-map.tsx (new, 364 lines): 2D SVG equirectangular projection (K=520, PAD=80), SHAPES_CACHE per game name, rampHex/mixHex helpers with amber ramp #4B463F > #6E5F3F > #A67C2E > #E8A817, hover highlight (mix #FFD76A) + dim non-active provinces to #1B1916@0.55, click-to-pin (click again or background click unpins), framer-motion spring tooltip (12 stat rows: pop, urban, support, happy, health, education, infrastructure, safety, poverty, unemployment, agri, mining; current metric highlighted amber), 9-metric segmented toggle (support/happy/poverty/infrastructure/health/education/safety/urban/unemployment) with invert for poverty/unemployment, gradient legend + hint, MotionConfig reducedMotion="user", motion springs from src/lib/motion.ts
+- page.tsx: MapScreen now renders ProvinceMap inside the map card (removed old 3D dynamic import and next/dynamic); selected province card + PROVINCE COMPARISON panel unchanged
+- i18n: map.hint rewritten for 2D interaction in en/sn/nd ("Hover a province for details, tap to pin it"); map.low/map.high/map.elevation added earlier; footers bumped to v1.9
+- ESLint clean; tsc only pre-existing errors
+- Browser-verified at :3000: 10 provinces render with amber fills, hover tooltip follows with full stat grid, click pins province + updates selected card, background click unpins, POVERTY toggle re-ramps colors, hint + legend correct
+
+Stage Summary:
+- Map screen now shows a real interactive SVG map of Zimbabwe's 10 provinces colored by 9 metrics
+- Hover tooltips show all 13 live province stats; tap pins a province for the comparison panel
+- Version: v1.9
