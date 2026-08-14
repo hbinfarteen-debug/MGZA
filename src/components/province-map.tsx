@@ -294,16 +294,16 @@ export default function ProvinceMap({ provinces, selectedId, onSelect }: Provinc
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.12 } }}
                 transition={spring.entrance()}
-                className="pointer-events-none absolute z-20 w-[240px] rounded-lg border border-border bg-card/95 p-3 shadow-xl backdrop-blur"
+                className="pointer-events-none absolute z-20 w-[240px] rounded-lg border border-border bg-card/95 p-4 shadow-xl backdrop-blur"
                 style={{ left: tip.x, top: tip.y }}
               >
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <h4 className="text-sm font-bold">{activeProvince.name}</h4>
+                  <h4 className="min-w-0 truncate text-sm font-bold">{activeProvince.name}</h4>
                   <span className="shrink-0 rounded-full bg-amber-500/15 px-2 py-0.5 text-[0.625rem] text-amber-400">
                     {t(metricDef.key)}
                   </span>
                 </div>
-                <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[0.625rem]">
+                <div className="grid min-w-0 grid-cols-2 gap-x-4 gap-y-1.5 text-[0.875rem]">
                   {[
                     { key: 'map.pop', value: `${(activeProvince.population / 1e6).toFixed(1)}M` },
                     { key: 'map.urban', value: `${activeProvince.urbanization.toFixed(0)}%` },
@@ -320,12 +320,12 @@ export default function ProvinceMap({ provinces, selectedId, onSelect }: Provinc
                   ].map((row) => (
                     <div
                       key={row.key}
-                      className={`flex items-center justify-between gap-1 ${
+                      className={`flex min-w-0 items-center justify-between gap-2 ${
                         row.key === metricDef.key ? 'text-amber-400' : 'text-muted-foreground'
                       }`}
                     >
-                      <span>{t(row.key)}</span>
-                      <span className="font-bold text-foreground">{row.value}</span>
+                      <span className="min-w-0 truncate">{t(row.key)}</span>
+                      <span className="shrink-0 font-bold text-foreground">{row.value}</span>
                     </div>
                   ))}
                 </div>
