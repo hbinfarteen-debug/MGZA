@@ -303,7 +303,7 @@ export default function ProvinceMap({ provinces, selectedId, onSelect }: Provinc
                     {t(metricDef.key)}
                   </span>
                 </div>
-                <div className="grid min-w-0 grid-cols-2 gap-x-4 gap-y-1.5 text-[0.875rem]">
+                <div className="space-y-1.5 text-xs">
                   {[
                     { key: 'map.pop', value: `${(activeProvince.population / 1e6).toFixed(1)}M` },
                     { key: 'map.urban', value: `${activeProvince.urbanization.toFixed(0)}%` },
@@ -320,12 +320,12 @@ export default function ProvinceMap({ provinces, selectedId, onSelect }: Provinc
                   ].map((row) => (
                     <div
                       key={row.key}
-                      className={`flex items-center justify-between gap-3 text-nowrap ${
+                      className={`flex items-center justify-between gap-6 ${
                         row.key === metricDef.key ? 'text-amber-400' : 'text-muted-foreground'
                       }`}
                     >
-                      <span>{t(row.key)}</span>
-                      <span className="font-bold text-foreground">{row.value}</span>
+                      <span className="whitespace-nowrap">{t(row.key)}</span>
+                      <span className="font-bold tabular-nums text-foreground whitespace-nowrap">{row.value}</span>
                     </div>
                   ))}
                 </div>
