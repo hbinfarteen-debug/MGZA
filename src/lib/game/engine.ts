@@ -4,7 +4,7 @@
 
 import type {
   GameState, GameEvent, NewsArticle, InfrastructureProject,
-  HistoricalDataPoint, EventChoice, Province, BudgetCategory,
+  HistoricalDataPoint, EventChoice, Province, BudgetCategory, PublicMood,
 } from './types';
 import {
   MONTH_NAMES, SEASON_FROM_MONTH, CAREER_LEVELS, CAREER_ORDER,
@@ -51,7 +51,11 @@ export const EVENT_TEMPLATES: {
   category: any;
   severity: any;
   condition: (state: GameState) => boolean;
-  choices: { text: string; shortDesc: string; effects: { target: string; op: string; value: number; dur: number }[]; politicalRisk: number; popularityImpact: number }[];
+  weight?: number;
+  requiredFlags?: string[];
+  setFlags?: string[];
+  foreshadow?: string;
+  choices: { text: string; shortDesc: string; effects: { target: string; op: string; value: number; dur: number }[]; politicalRisk: number; popularityImpact: number; setFlags?: string[]; clearFlags?: string[]; nextEventId?: string; consequenceDelay?: number }[];
 }[] = [
   {
     id: 'drought_major',
@@ -505,7 +509,324 @@ export const EVENT_TEMPLATES: {
     choices: [
       { text: 'Fund a national expansion', shortDesc: 'Read to lead', effects: [{ target: 'budget.education', op: 'subtract', value: 50, dur: 0 }, { target: 'national.literacyRate', op: 'add', value: 1, dur: 8 }, { target: 'publicServices.schools', op: 'add', value: 2, dur: 6 }], politicalRisk: 0, popularityImpact: 3 },
       { text: 'Train teacher-librarians first', shortDesc: 'Quality over quantity', effects: [{ target: 'budget.education', op: 'subtract', value: 30, dur: 0 }, { target: 'publicServices.schools', op: 'add', value: 2, dur: 8 }], politicalRisk: 0, popularityImpact: 2 },
-      { text: 'Celebrate the pilot, hold steady', shortDesc: 'No expansion', effects: [{ target: 'citizenSatisfaction.future', op: 'add', value: 2, dur: 4 }], politicalRisk: 0, popularityImpact: 1 },
+      { text: 'Celebrate the pilot, hold steady', shortDesc: 'No expansion', effects: [      { target: 'citizenSatisfaction.future', op: 'add', value: 2, dur: 4 }], politicalRisk: 0, popularityImpact: 1 },
+    ],
+  },
+  {
+    id: 'zig_redenomination',
+    title: 'ZiG Redenomination Rumors Spread',
+    description: 'Markets are whispering that the ZiG will be redenominated again. Prices are being repriced in USD and USD cents, savers are nervous, and the parallel rate is swinging wildly.',
+    category: 'economic',
+    severity: 'crisis',
+    weight: 2,
+    foreshadow: 'Markets whisper of another currency overhaul.',
+    condition: (s) => s.economic.exchangeRate > 35 && s.economic.inflation > 50,
+    choices: [
+      { text: 'Announce a full ZiG reissue', shortDesc: 'Clean slate, weeks of chaos', effects: [{ target: 'economic.inflation', op: 'subtract', value: 8, dur: 6 }, { target: 'economic.informalEconomySize', op: 'add', value: 4, dur: 8 }, { target: 'economic.investorConfidence', op: 'add', value: 4, dur: 8 }], politicalRisk: -8, popularityImpact: -4 },
+      { text: 'Reissue with gold backing', shortDesc: 'Confidence play, drains reserves', effects: [{ target: 'economic.inflation', op: 'subtract', value: 12, dur: 8 }, { target: 'economic.foreignReserves', op: 'subtract', value: 0.4, dur: 0 }, { target: 'economic.investorConfidence', op: 'add', value: 8, dur: 10 }], politicalRisk: -10, popularityImpact: -6, setFlags: ['gold_backed_currency'] },
+      { text: 'Reject reform, defend current notes', shortDesc: 'Firm hand, escalating pressure', effects: [{ target: 'economic.inflation', op: 'add', value: 6, dur: 4 }, { target: 'economic.blackMarketPremium', op: 'add', value: 10, dur: 8 }, { target: 'citizenSatisfaction.economy', op: 'subtract', value: 8, dur: 6 }], politicalRisk: -5, popularityImpact: -10 },
+    ],
+  },
+  {
+    id: 'load_shedding_anger',
+    title: 'Load Shedding Fury Boils Over',
+    description: 'Load shedding has stretched past ten hours a day. Businesses are running on generators, and angry residents are blocking roads with burning tyres to demand an end to the blackouts.',
+    category: 'energy',
+    severity: 'major',
+    weight: 1.5,
+    foreshadow: 'ZESA warns of deeper load shedding.',
+    condition: (s) => s.energy.loadSheddingHoursPerDay > 10,
+    choices: [
+      { text: 'Fast-track emergency power imports', shortDesc: 'Quick relief, foreign currency cost', effects: [{ target: 'economic.foreignReserves', op: 'subtract', value: 0.3, dur: 0 }, { target: 'energy.loadSheddingHoursPerDay', op: 'subtract', value: 4, dur: 4 }, { target: 'economic.inflation', op: 'add', value: 2, dur: 2 }], politicalRisk: -2, popularityImpact: 4 },
+      { text: 'Publish a fair sharing schedule', shortDesc: 'Transparent, only slightly better', effects: [{ target: 'citizenSatisfaction.infrastructure', op: 'add', value: 4, dur: 4 }, { target: 'energy.loadSheddingHoursPerDay', op: 'subtract', value: 1, dur: 3 }, { target: 'budget.energy', op: 'subtract', value: 30, dur: 0 }], politicalRisk: 0, popularityImpact: 2 },
+      { text: 'Blame the previous administration', shortDesc: 'Popular at rallies, useless at home', effects: [{ target: 'citizenSatisfaction.governance', op: 'subtract', value: 5, dur: 4 }, { target: 'politicalInfluence', op: 'add', value: 4, dur: 4 }, { target: 'energy.loadSheddingHoursPerDay', op: 'add', value: 2, dur: 3 }], politicalRisk: 3, popularityImpact: -6, nextEventId: 'power_grid_collapse', consequenceDelay: 3 },
+    ],
+  },
+  {
+    id: 'fuel_smuggling_ring',
+    title: 'Fuel Smuggling Ring Busted at the Border',
+    description: 'Security forces have uncovered a sophisticated fuel smuggling operation across the border. Truck drivers, customs officials, and several well-connected businessmen are implicated.',
+    category: 'security',
+    severity: 'major',
+    weight: 1.5,
+    condition: (s) => s.trade.smugglingRate > 40 && s.economic.blackMarketPremium > 25,
+    choices: [
+      { text: 'Launch a full anti-smuggling crackdown', shortDesc: 'Decisive, expensive, risky', effects: [{ target: 'trade.smugglingRate', op: 'subtract', value: 10, dur: 6 }, { target: 'budget.police', op: 'subtract', value: 60, dur: 0 }, { target: 'corruption.nationalLevel', op: 'add', value: 2, dur: 4 }], politicalRisk: -4, popularityImpact: 5 },
+      { text: 'Amnesty for small-scale cross-border traders', shortDesc: 'Pragmatic, keeps the economy moving', effects: [{ target: 'trade.smugglingRate', op: 'subtract', value: 5, dur: 6 }, { target: 'trade.borderEfficiency', op: 'add', value: 6, dur: 6 }, { target: 'economic.informalEconomySize', op: 'add', value: 2, dur: 6 }], politicalRisk: 2, popularityImpact: 4 },
+      { text: 'Look the other way', shortDesc: 'Patronage networks stay happy', effects: [{ target: 'trade.smugglingRate', op: 'add', value: 5, dur: 6 }, { target: 'economic.foreignReserves', op: 'subtract', value: 0.2, dur: 4 }, { target: 'corruption.nationalLevel', op: 'add', value: 4, dur: 6 }], politicalRisk: -6, popularityImpact: -8, nextEventId: 'fuel_shortage', consequenceDelay: 2 },
+    ],
+  },
+  {
+    id: 'land_audit_findings',
+    title: 'Land Audit Reveals Dual Allocations',
+    description: 'A long-awaited land audit has found thousands of farms with multiple owners, many allocated to officials who never set foot on them. The findings are explosive.',
+    category: 'agriculture',
+    severity: 'major',
+    weight: 1.2,
+    condition: (s) => Math.random() < 0.15,
+    choices: [
+      { text: 'Publish the audit and reallocate dual farms', shortDesc: 'Transparent, angers the powerful', effects: [{ target: 'citizenSatisfaction.governance', op: 'add', value: 6, dur: 6 }, { target: 'politicalInfluence', op: 'subtract', value: 5, dur: 6 }, { target: 'corruption.nationalLevel', op: 'subtract', value: 3, dur: 8 }], politicalRisk: -8, popularityImpact: 6, setFlags: ['land_audit_published'] },
+      { text: 'Resolve disputes quietly behind closed doors', shortDesc: 'Peace now, whispers later', effects: [{ target: 'politicalInfluence', op: 'add', value: 4, dur: 4 }, { target: 'corruption.publicPerception', op: 'add', value: 4, dur: 6 }, { target: 'citizenSatisfaction.governance', op: 'subtract', value: 3, dur: 4 }], politicalRisk: -2, popularityImpact: -2, nextEventId: 'land_reform_dispute', consequenceDelay: 2 },
+      { text: 'Suppress the audit', shortDesc: 'Easiest today, costliest tomorrow', effects: [{ target: 'corruption.nationalLevel', op: 'add', value: 5, dur: 8 }, { target: 'corruption.publicPerception', op: 'add', value: 8, dur: 8 }, { target: 'politicalInfluence', op: 'add', value: 3, dur: 4 }], politicalRisk: -5, popularityImpact: -10 },
+    ],
+  },
+  {
+    id: 'informal_formalization_drive',
+    title: 'Informal Economy: Formalize or Face the Music',
+    description: 'The informal economy now dwarfs the formal one. Traders operate with no licenses, no taxes, and no safety nets. Officials argue it is time to formalize the sector.',
+    category: 'economic',
+    severity: 'major',
+    weight: 1.5,
+    condition: (s) => s.economic.informalEconomySize > 60,
+    choices: [
+      { text: 'Tax incentives for registered informal firms', shortDesc: 'Carrot approach, slower revenue', effects: [{ target: 'economic.informalEconomySize', op: 'subtract', value: 5, dur: 8 }, { target: 'economic.taxRevenue', op: 'subtract', value: 0.2, dur: 12 }, { target: 'citizenSatisfaction.economy', op: 'add', value: 4, dur: 6 }], politicalRisk: 0, popularityImpact: 4, setFlags: ['informal_formalization'] },
+      { text: 'Harsh penalties for unregistered traders', shortDesc: 'Stick approach, street backlash', effects: [{ target: 'economic.informalEconomySize', op: 'subtract', value: 3, dur: 6 }, { target: 'citizenSatisfaction.economy', op: 'subtract', value: 6, dur: 6 }, { target: 'corruption.nationalLevel', op: 'add', value: 3, dur: 4 }], politicalRisk: -4, popularityImpact: -6, setFlags: ['informal_market_anger'] },
+      { text: 'Leave the informal sector alone', shortDesc: 'Hands off, it keeps families fed', effects: [{ target: 'economic.informalEconomySize', op: 'add', value: 3, dur: 6 }, { target: 'economic.unemploymentRate', op: 'subtract', value: 1, dur: 4 }], politicalRisk: 0, popularityImpact: 3 },
+    ],
+  },
+  {
+    id: 'informal_market_protest',
+    title: 'Street Traders Protest in Mbare and Makokoba',
+    description: 'Thousands of street traders have downed their stalls in protest against the crackdown. High-density markets are shut and the mood is tense.',
+    category: 'social',
+    severity: 'moderate',
+    weight: 1,
+    requiredFlags: ['informal_market_anger'],
+    condition: () => true,
+    choices: [
+      { text: 'Reverse the penalties and start a dialogue', shortDesc: 'De-escalate, accept the U-turn', effects: [{ target: 'citizenSatisfaction.economy', op: 'add', value: 5, dur: 4 }, { target: 'politicalInfluence', op: 'subtract', value: 2, dur: 4 }, { target: 'corruption.nationalLevel', op: 'subtract', value: 2, dur: 4 }], politicalRisk: -3, popularityImpact: 5, clearFlags: ['informal_market_anger'] },
+      { text: 'Hold the line, add more enforcement', shortDesc: 'Order first, anger everywhere', effects: [{ target: 'citizenSatisfaction.freedom', op: 'subtract', value: 6, dur: 6 }, { target: 'citizenSatisfaction.governance', op: 'subtract', value: 4, dur: 5 }, { target: 'politicalInfluence', op: 'add', value: 3, dur: 4 }], politicalRisk: -6, popularityImpact: -8 },
+      { text: 'Rally formal businesses against the protests', shortDesc: 'Divide and rule', effects: [{ target: 'economic.investorConfidence', op: 'add', value: 4, dur: 6 }, { target: 'citizenSatisfaction.economy', op: 'subtract', value: 2, dur: 4 }], politicalRisk: 2, popularityImpact: 1 },
+    ],
+  },
+  {
+    id: 'cross_border_trader_boom',
+    title: 'Cross-Border Traders Swarm the Border Posts',
+    description: 'Kukiya-kiya traders are shuttling goods between Beitbridge and Musina in record numbers. The border posts are jammed with buses, bales of clothes, and hawkers.',
+    category: 'economic',
+    severity: 'moderate',
+    weight: 1,
+    condition: (s) => s.trade.borderEfficiency < 50 && Math.random() < 0.2,
+    choices: [
+      { text: 'Streamline border processing for traders', shortDesc: 'Faster crossings, real revenue', effects: [{ target: 'trade.borderEfficiency', op: 'add', value: 10, dur: 8 }, { target: 'budget.administration', op: 'subtract', value: 40, dur: 0 }, { target: 'economic.foreignReserves', op: 'add', value: 0.15, dur: 6 }], politicalRisk: 0, popularityImpact: 3 },
+      { text: 'Levy a light cross-border toll', shortDesc: 'Fills coffers, pinches traders', effects: [{ target: 'economic.taxRevenue', op: 'add', value: 0.15, dur: 6 }, { target: 'citizenSatisfaction.economy', op: 'subtract', value: 3, dur: 4 }], politicalRisk: -2, popularityImpact: -1 },
+      { text: 'Ban goods above ZiG 2,000 per person', shortDesc: 'Protectionist, smuggling booms', effects: [{ target: 'trade.smugglingRate', op: 'add', value: 6, dur: 6 }, { target: 'economic.foreignReserves', op: 'subtract', value: 0.1, dur: 4 }, { target: 'citizenSatisfaction.economy', op: 'subtract', value: 6, dur: 5 }], politicalRisk: -6, popularityImpact: -8 },
+    ],
+  },
+  {
+    id: 'youth_exodus',
+    title: 'Youth Unemployment Hits a New Record',
+    description: 'Over half of young Zimbabweans are jobless. Graduates queue for nonexistent posts, taxi ranks are full of hustlers, and the social media feeds are filled with #Exodus posts.',
+    category: 'social',
+    severity: 'major',
+    weight: 1.5,
+    foreshadow: 'Youth unemployment hits a new record.',
+    condition: (s) => s.economic.youthUnemployment > 50,
+    choices: [
+      { text: 'Launch a national youth employment fund', shortDesc: 'Real money for real jobs', effects: [{ target: 'budget.youth_development', op: 'subtract', value: 150, dur: 0 }, { target: 'economic.youthUnemployment', op: 'subtract', value: 4, dur: 8 }, { target: 'citizenSatisfaction.future', op: 'add', value: 6, dur: 8 }], politicalRisk: -3, popularityImpact: 8 },
+      { text: 'Partner with regional employers for skills visas', shortDesc: 'Jobs abroad, families split', effects: [{ target: 'national.netMigration', op: 'add', value: 3000, dur: 4 }, { target: 'economic.youthUnemployment', op: 'subtract', value: 2, dur: 6 }, { target: 'citizenSatisfaction.future', op: 'subtract', value: 3, dur: 6 }], politicalRisk: 0, popularityImpact: 2 },
+      { text: 'Blame the youth for lacking skills', shortDesc: 'Rallies love it, reality hates it', effects: [{ target: 'citizenSatisfaction.future', op: 'subtract', value: 8, dur: 6 }, { target: 'citizenSatisfaction.governance', op: 'subtract', value: 5, dur: 5 }, { target: 'politicalInfluence', op: 'add', value: 2, dur: 3 }], politicalRisk: -4, popularityImpact: -10, setFlags: ['youth_anger'], nextEventId: 'genz_protests', consequenceDelay: 2 },
+    ],
+  },
+  {
+    id: 'genz_protests',
+    title: 'Gen-Z Uprising Spreads Across the Cities',
+    description: 'Young protesters are marching in Harare, Bulawayo, and Mutare, chanting for jobs, freedom, and an end to power cuts. The movement has its own TikTok hashtags and is growing daily.',
+    category: 'social',
+    severity: 'crisis',
+    weight: 1,
+    requiredFlags: ['youth_anger'],
+    condition: () => true,
+    choices: [
+      { text: 'Meet the protesters and concede on jobs', shortDesc: 'Expensive, but the streets calm', effects: [{ target: 'budget.youth_development', op: 'subtract', value: 100, dur: 0 }, { target: 'citizenSatisfaction.governance', op: 'add', value: 8, dur: 6 }, { target: 'citizenSatisfaction.future', op: 'add', value: 6, dur: 6 }], politicalRisk: -6, popularityImpact: 8, clearFlags: ['youth_anger'] },
+      { text: 'Order a communications blackout', shortDesc: 'Silence today, storm tomorrow', effects: [{ target: 'citizenSatisfaction.freedom', op: 'subtract', value: 12, dur: 6 }, { target: 'corruption.publicPerception', op: 'add', value: 6, dur: 6 }, { target: 'politicalInfluence', op: 'add', value: 4, dur: 4 }], politicalRisk: -10, popularityImpact: -14, nextEventId: 'capital_flight', consequenceDelay: 2 },
+      { text: 'Announce an early election window', shortDesc: 'Shock move, resets the clock', effects: [{ target: 'politicalInfluence', op: 'subtract', value: 8, dur: 6 }, { target: 'citizenSatisfaction.governance', op: 'add', value: 5, dur: 4 }, { target: 'citizenSatisfaction.future', op: 'add', value: 4, dur: 6 }], politicalRisk: -8, popularityImpact: 5 },
+    ],
+  },
+  {
+    id: 'gold_artisanal_rush',
+    title: 'Artisanal Gold Rush Draws Thousands',
+    description: 'High gold prices have pulled thousands into artisanal mining. New pits are opening weekly, often without permits, and gold is leaking across the border.',
+    category: 'mining',
+    severity: 'moderate',
+    weight: 1.2,
+    condition: (s) => s.commodities.gold > 1850 && Math.random() < 0.2,
+    choices: [
+      { text: 'Register and license artisanal miners', shortDesc: 'Formalize the rush', effects: [{ target: 'trade.smugglingRate', op: 'subtract', value: 6, dur: 8 }, { target: 'economic.foreignReserves', op: 'add', value: 0.2, dur: 6 }, { target: 'budget.mining', op: 'subtract', value: 40, dur: 0 }], politicalRisk: 0, popularityImpact: 4 },
+      { text: 'Launch a military-led clampdown', shortDesc: 'Harsh, but the pits stay open', effects: [{ target: 'trade.smugglingRate', op: 'subtract', value: 4, dur: 6 }, { target: 'citizenSatisfaction.freedom', op: 'subtract', value: 6, dur: 6 }, { target: 'economic.gdpGrowth', op: 'subtract', value: 0.3, dur: 4 }], politicalRisk: -6, popularityImpact: -5 },
+      { text: 'Leave the mines to the market', shortDesc: 'No state interference at all', effects: [{ target: 'economic.informalEconomySize', op: 'add', value: 4, dur: 6 }, { target: 'trade.smugglingRate', op: 'add', value: 4, dur: 6 }], politicalRisk: 0, popularityImpact: 1 },
+    ],
+  },
+  {
+    id: 'lithium_sovereign_deal',
+    title: 'Lithium Consortium Seeks a Mega Contract',
+    description: 'Foreign bidders are circling the lithium fields with a proposal to build three processing plants. The deal could double mining exports, but terms matter for who keeps the wealth.',
+    category: 'mining',
+    severity: 'major',
+    weight: 1.2,
+    foreshadow: 'Foreign bidders circle the lithium fields.',
+    condition: (s) => s.economic.investorConfidence > 30 && Math.random() < 0.15,
+    choices: [
+      { text: 'State majority stake with private operation', shortDesc: 'National control, slow progress', effects: [{ target: 'economic.gdp', op: 'add', value: 1, dur: 18 }, { target: 'economic.investorConfidence', op: 'add', value: 5, dur: 10 }, { target: 'budget.mining', op: 'subtract', value: 80, dur: 0 }], politicalRisk: -3, popularityImpact: 7, setFlags: ['lithium_sovereign'] },
+      { text: 'Full foreign ownership, best royalty terms', shortDesc: 'Fast money, prickly pride', effects: [{ target: 'economic.gdp', op: 'add', value: 1.5, dur: 18 }, { target: 'economic.taxRevenue', op: 'add', value: 0.2, dur: 12 }, { target: 'citizenSatisfaction.governance', op: 'subtract', value: 4, dur: 5 }], politicalRisk: -2, popularityImpact: -2 },
+      { text: 'Reject the deal outright', shortDesc: 'Resource nationalism, empty coffers', effects: [{ target: 'economic.investorConfidence', op: 'subtract', value: 8, dur: 10 }, { target: 'economic.gdp', op: 'subtract', value: 0.3, dur: 6 }, { target: 'politicalInfluence', op: 'add', value: 4, dur: 4 }], politicalRisk: 4, popularityImpact: 3 },
+    ],
+  },
+  {
+    id: 'lithium_sovereign_scandal',
+    title: 'Lithium Contract Leaks Spark Scandal',
+    description: 'Leaked tender documents suggest inflated prices and cozy deals inside the state-owned lithium project. The opposition is calling for heads to roll.',
+    category: 'political',
+    severity: 'major',
+    weight: 1,
+    requiredFlags: ['lithium_sovereign'],
+    condition: () => true,
+    choices: [
+      { text: 'Independent audit and renegotiation', shortDesc: 'Painful now, cleaner later', effects: [{ target: 'corruption.nationalLevel', op: 'subtract', value: 4, dur: 8 }, { target: 'citizenSatisfaction.governance', op: 'add', value: 6, dur: 6 }, { target: 'economic.investorConfidence', op: 'subtract', value: 3, dur: 8 }], politicalRisk: -6, popularityImpact: 5, clearFlags: ['lithium_sovereign'] },
+      { text: 'Sack the officials involved', shortDesc: 'Sacrifice the scouts, save the fort', effects: [{ target: 'corruption.nationalLevel', op: 'subtract', value: 2, dur: 6 }, { target: 'politicalInfluence', op: 'subtract', value: 4, dur: 4 }, { target: 'citizenSatisfaction.governance', op: 'add', value: 4, dur: 5 }], politicalRisk: -4, popularityImpact: 4 },
+      { text: 'Dismiss the leaks as foreign propaganda', shortDesc: 'Bunker mentality', effects: [{ target: 'corruption.publicPerception', op: 'add', value: 6, dur: 8 }, { target: 'citizenSatisfaction.governance', op: 'subtract', value: 8, dur: 6 }, { target: 'player.legitimacy', op: 'subtract', value: 6, dur: 6 }], politicalRisk: -5, popularityImpact: -10 },
+    ],
+  },
+  {
+    id: 'diaspora_bond_drive',
+    title: 'Diaspora Savings Surge Revives Bond Ideas',
+    description: 'Money is pouring in from Zimbabweans abroad. Treasury advisers suggest issuing diaspora bonds to soak up the inflows and fund development.',
+    category: 'economic',
+    severity: 'moderate',
+    weight: 1,
+    condition: (s) => Math.random() < 0.15,
+    choices: [
+      { text: 'Launch retail diaspora bonds', shortDesc: 'Raise capital, add debt', effects: [{ target: 'economic.governmentDebt', op: 'add', value: 0.4, dur: 0 }, { target: 'economic.foreignReserves', op: 'add', value: 0.3, dur: 6 }, { target: 'economic.investorConfidence', op: 'add', value: 3, dur: 6 }], politicalRisk: 0, popularityImpact: 1 },
+      { text: 'Channel remittances into infrastructure', shortDesc: 'Build roads with homecoming money', effects: [{ target: 'economic.foreignReserves', op: 'add', value: 0.15, dur: 6 }, { target: 'infrastructure.roadQuality', op: 'add', value: 3, dur: 8 }, { target: 'budget.roads', op: 'subtract', value: 50, dur: 0 }], politicalRisk: 0, popularityImpact: 3 },
+      { text: 'Declare amnesty on remittance fees', shortDesc: 'More money in pockets', effects: [{ target: 'economic.foreignReserves', op: 'add', value: 0.1, dur: 4 }, { target: 'economic.informalEconomySize', op: 'subtract', value: 2, dur: 6 }], politicalRisk: 0, popularityImpact: 2 },
+    ],
+  },
+  {
+    id: 'cash_shortage_queues',
+    title: 'Cash Shortage: Bank Queues Circle the Blocks',
+    description: 'ATMs are dry and bank queues snake around the blocks. The parallel market premium is climbing and businesses are refusing to accept card payments without a surcharge.',
+    category: 'economic',
+    severity: 'major',
+    weight: 1.3,
+    foreshadow: 'Bank queues grow longer by the day.',
+    condition: (s) => s.economic.blackMarketPremium > 25 && Math.random() < 0.3,
+    choices: [
+      { text: 'Print limited new notes', shortDesc: 'Relief today, inflation tomorrow', effects: [{ target: 'economic.inflation', op: 'add', value: 4, dur: 4 }, { target: 'economic.blackMarketPremium', op: 'subtract', value: 8, dur: 6 }, { target: 'citizenSatisfaction.economy', op: 'add', value: 3, dur: 4 }], politicalRisk: -4, popularityImpact: 3 },
+      { text: 'Strengthen electronic payments', shortDesc: 'Modern fix, needs patience', effects: [{ target: 'budget.ict', op: 'subtract', value: 60, dur: 0 }, { target: 'economic.informalEconomySize', op: 'subtract', value: 3, dur: 6 }, { target: 'citizenSatisfaction.economy', op: 'add', value: 3, dur: 6 }], politicalRisk: 0, popularityImpact: 3, setFlags: ['digital_payments'] },
+      { text: 'Do nothing, blame parallel traders', shortDesc: 'Deflection without solutions', effects: [{ target: 'economic.blackMarketPremium', op: 'add', value: 6, dur: 6 }, { target: 'citizenSatisfaction.economy', op: 'subtract', value: 6, dur: 5 }, { target: 'corruption.publicPerception', op: 'add', value: 4, dur: 5 }], politicalRisk: -5, popularityImpact: -8, nextEventId: 'currency_crisis', consequenceDelay: 2 },
+    ],
+  },
+  {
+    id: 'tobacco_payments_dispute',
+    title: 'Tobacco Farmers Fume Over Delayed Payouts',
+    description: 'Auction floor payments are running weeks behind schedule. Farmers are blocking trucks and threatening to sell their golden leaf on the black market.',
+    category: 'agriculture',
+    severity: 'moderate',
+    weight: 1,
+    condition: (s) => s.commodities.tobacco > 6 && Math.random() < 0.2,
+    choices: [
+      { text: 'Fast-track auction payments', shortDesc: 'Costly today, loyal farmers tomorrow', effects: [{ target: 'budget.agriculture', op: 'subtract', value: 60, dur: 0 }, { target: 'citizenSatisfaction.economy', op: 'add', value: 4, dur: 4 }, { target: 'economic.foreignReserves', op: 'subtract', value: 0.1, dur: 3 }], politicalRisk: 0, popularityImpact: 4 },
+      { text: 'Pay in structured installments', shortDesc: 'Budget friendly, farmer unfriendly', effects: [{ target: 'citizenSatisfaction.economy', op: 'subtract', value: 3, dur: 4 }, { target: 'economic.taxRevenue', op: 'add', value: 0.1, dur: 4 }], politicalRisk: -2, popularityImpact: -1 },
+      { text: 'Blame the auction floor operators', shortDesc: 'Pass the buck', effects: [{ target: 'trade.smugglingRate', op: 'add', value: 4, dur: 6 }, { target: 'citizenSatisfaction.governance', op: 'subtract', value: 4, dur: 4 }], politicalRisk: -3, popularityImpact: -4 },
+    ],
+  },
+  {
+    id: 'parliament_walkout',
+    title: 'Opposition Stages a Mass Walkout',
+    description: 'The opposition has walked out of Parliament over a controversial bill, leaving the ruling party benches to pass it alone. The gallery jeers and the cameras roll.',
+    category: 'political',
+    severity: 'moderate',
+    weight: 1,
+    condition: (s) => s.parliament.mpSatisfaction < 40,
+    choices: [
+      { text: 'Negotiate with opposition leadership', shortDesc: 'Bipartisan, slower, healthier', effects: [{ target: 'parliament.mpSatisfaction', op: 'add', value: 10, dur: 6 }, { target: 'politicalInfluence', op: 'subtract', value: 3, dur: 4 }, { target: 'citizenSatisfaction.governance', op: 'add', value: 4, dur: 4 }], politicalRisk: -2, popularityImpact: 3 },
+      { text: 'Ram the bill through with ruling party MPs', shortDesc: 'Wins today, poisons tomorrow', effects: [{ target: 'politicalInfluence', op: 'add', value: 4, dur: 4 }, { target: 'parliament.publicSupportForGovernment', op: 'subtract', value: 6, dur: 6 }], politicalRisk: -6, popularityImpact: -5 },
+      { text: 'Appeal to the nation over Parliament', shortDesc: 'Presidential populism', effects: [{ target: 'citizenSatisfaction.governance', op: 'add', value: 3, dur: 4 }, { target: 'parliament.mpSatisfaction', op: 'subtract', value: 8, dur: 6 }, { target: 'politicalInfluence', op: 'add', value: 2, dur: 3 }], politicalRisk: 2, popularityImpact: 3 },
+    ],
+  },
+  {
+    id: 'finance_minister_scandal',
+    title: 'Finance Minister Implicated in Tender Fraud',
+    description: 'Documents implicate the Finance Minister in a padded tender scandal. The minister calls it a vendetta, but the auditors are circling and the currency markets are twitchy.',
+    category: 'political',
+    severity: 'major',
+    weight: 1.3,
+    foreshadow: 'Whispers of impropriety at the Finance Ministry.',
+    condition: (s) => (s.ministers.find(m => m.portfolio === 'Finance' && m.isActive)?.corruption ?? 0) > 50 || (s.corruption.nationalLevel > 65 && Math.random() < 0.2),
+    choices: [
+      { text: 'Suspend and investigate the Finance Minister', shortDesc: 'Firm, costly, destabilizing', effects: [{ target: 'citizenSatisfaction.governance', op: 'add', value: 8, dur: 6 }, { target: 'politicalInfluence', op: 'subtract', value: 5, dur: 6 }, { target: 'corruption.nationalLevel', op: 'subtract', value: 3, dur: 8 }], politicalRisk: -6, popularityImpact: 10, clearFlags: ['finance_scandal_simmering'], nextEventId: 'currency_crisis', consequenceDelay: 0 },
+      { text: 'Quietly reassign the minister', shortDesc: 'Smooth the scandal away', effects: [{ target: 'corruption.publicPerception', op: 'add', value: 4, dur: 6 }, { target: 'citizenSatisfaction.governance', op: 'subtract', value: 2, dur: 4 }, { target: 'parliament.mpSatisfaction', op: 'subtract', value: 4, dur: 4 }], politicalRisk: -2, popularityImpact: 0 },
+      { text: 'Protect the minister, attack the media', shortDesc: 'Fortress government', effects: [{ target: 'corruption.publicPerception', op: 'add', value: 8, dur: 8 }, { target: 'citizenSatisfaction.governance', op: 'subtract', value: 10, dur: 6 }, { target: 'politicalInfluence', op: 'add', value: 3, dur: 4 }], politicalRisk: -4, popularityImpact: -12, nextEventId: 'currency_crisis', consequenceDelay: 2 },
+    ],
+  },
+  {
+    id: 'education_minister_failure',
+    title: 'Education Ministry Flounders Amid Scandals',
+    description: 'Exam results are delayed, textbooks are missing, and the Education Ministry cannot account for millions in printing contracts. Parents are furious.',
+    category: 'education',
+    severity: 'major',
+    weight: 1.1,
+    condition: (s) => (s.ministers.find(m => m.portfolio === 'Education' && m.isActive)?.competence ?? 100) < 45 || (s.publicServices.schools < 40 && Math.random() < 0.2),
+    choices: [
+      { text: 'Overhaul the ministry leadership', shortDesc: 'Reset the department, lose allies', effects: [{ target: 'politicalInfluence', op: 'subtract', value: 6, dur: 6 }, { target: 'publicServices.schools', op: 'add', value: 4, dur: 8 }, { target: 'citizenSatisfaction.governance', op: 'add', value: 5, dur: 6 }], politicalRisk: -6, popularityImpact: 4 },
+      { text: 'Intervene directly with new textbooks', shortDesc: 'Do the ministry job yourself', effects: [{ target: 'budget.education', op: 'subtract', value: 80, dur: 0 }, { target: 'publicServices.schools', op: 'add', value: 3, dur: 6 }, { target: 'citizenSatisfaction.services', op: 'add', value: 3, dur: 5 }], politicalRisk: -2, popularityImpact: 3 },
+      { text: 'Defend the minister publicly', shortDesc: 'Loyalty over competence', effects: [{ target: 'politicalInfluence', op: 'add', value: 3, dur: 4 }, { target: 'citizenSatisfaction.services', op: 'subtract', value: 5, dur: 6 }, { target: 'publicServices.schools', op: 'subtract', value: 2, dur: 6 }], politicalRisk: -3, popularityImpact: -6 },
+    ],
+  },
+  {
+    id: 'bond_note_comeback',
+    title: 'Bond Notes Stage a Surprise Comeback',
+    description: 'Vendors have started giving change in mothballed bond coins. "An old classic returns to circulation," one street economist declares, to general applause.',
+    category: 'economic',
+    severity: 'minor',
+    weight: 0.7,
+    condition: () => Math.random() < 0.1,
+    choices: [
+      { text: 'Celebrate the coins as national heritage', shortDesc: 'Lean into the nostalgia', effects: [{ target: 'citizenSatisfaction.economy', op: 'add', value: 2, dur: 3 }, { target: 'citizenSatisfaction.future', op: 'add', value: 2, dur: 3 }], politicalRisk: 0, popularityImpact: 2 },
+      { text: 'Ban bond coins quietly', shortDesc: 'Kill the comeback', effects: [{ target: 'citizenSatisfaction.economy', op: 'subtract', value: 2, dur: 3 }, { target: 'corruption.nationalLevel', op: 'add', value: 1, dur: 3 }], politicalRisk: 0, popularityImpact: -1 },
+      { text: 'Mint a commemorative ZiG coin', shortDesc: 'Merchandise the moment', effects: [{ target: 'budget.administration', op: 'subtract', value: 20, dur: 0 }, { target: 'citizenSatisfaction.future', op: 'add', value: 3, dur: 4 }], politicalRisk: 0, popularityImpact: 3 },
+    ],
+  },
+  {
+    id: 'queue_social_club',
+    title: 'The Great Queue Becomes a Social Club',
+    description: 'Fuel, bank, and bread queues have merged into one mega-line where strangers trade recipes, gossip, and hot tips. Attendance is apparently voluntary, and oddly cheerful.',
+    category: 'social',
+    severity: 'minor',
+    weight: 0.7,
+    condition: () => Math.random() < 0.1,
+    choices: [
+      { text: 'Open Queue Amenity Stations with shade and water', shortDesc: 'Civilize the queue', effects: [{ target: 'budget.administration', op: 'subtract', value: 25, dur: 0 }, { target: 'citizenSatisfaction.economy', op: 'add', value: 3, dur: 3 }], politicalRisk: 0, popularityImpact: 3 },
+      { text: 'Declare National Queuing Day', shortDesc: 'Embrace the absurd', effects: [{ target: 'citizenSatisfaction.future', op: 'add', value: 2, dur: 3 }, { target: 'politicalInfluence', op: 'add', value: 2, dur: 3 }], politicalRisk: 0, popularityImpact: 4 },
+      { text: 'Order an end to all queues', shortDesc: 'Easier said than done', effects: [{ target: 'citizenSatisfaction.economy', op: 'subtract', value: 4, dur: 3 }, { target: 'politicalInfluence', op: 'subtract', value: 2, dur: 3 }], politicalRisk: 0, popularityImpact: -3 },
+    ],
+  },
+  {
+    id: 'njanja_market_deal',
+    title: 'Mbare Njanja Market Becomes a National Brand',
+    description: 'Mbare\'s Njanja market has become a one-stop bazaar where everything from gumboots to grandmothers\' remedies is negotiable. Tourists now ask for directions to "Mbare Mall".',
+    category: 'social',
+    severity: 'minor',
+    weight: 0.7,
+    condition: () => Math.random() < 0.1,
+    choices: [
+      { text: 'Formalize Njanja as a national trading brand', shortDesc: 'Franchise the hustle', effects: [{ target: 'trade.borderEfficiency', op: 'add', value: 5, dur: 6 }, { target: 'economic.taxRevenue', op: 'add', value: 0.1, dur: 6 }], politicalRisk: 0, popularityImpact: 3 },
+      { text: 'Commission a documentary on the market', shortDesc: 'Soft power, hard cinema', effects: [{ target: 'budget.administration', op: 'subtract', value: 20, dur: 0 }, { target: 'citizenSatisfaction.future', op: 'add', value: 3, dur: 4 }], politicalRisk: 0, popularityImpact: 2 },
+      { text: 'Issue a stern statement about pavement trading', shortDesc: 'Growl from the podium', effects: [{ target: 'citizenSatisfaction.economy', op: 'subtract', value: 3, dur: 3 }, { target: 'citizenSatisfaction.freedom', op: 'subtract', value: 2, dur: 3 }], politicalRisk: 0, popularityImpact: -2 },
+    ],
+  },
+  {
+    id: 'cabinet_leak_mystery',
+    title: 'The Cabinet Leak Mystery Deepens',
+    description: 'Every cabinet decision is now leaking to the press within hours. The source remains unidentified, which, as the Vice President notes, is itself a cabinet decision.',
+    category: 'political',
+    severity: 'minor',
+    weight: 0.7,
+    condition: () => Math.random() < 0.12,
+    choices: [
+      { text: 'Order a leak inquiry', shortDesc: 'The leak inquiry leaks', effects: [{ target: 'politicalInfluence', op: 'add', value: 3, dur: 3 }, { target: 'citizenSatisfaction.governance', op: 'add', value: 2, dur: 3 }], politicalRisk: 0, popularityImpact: 1 },
+      { text: 'Leak a fake decision to trap the mole', shortDesc: 'Counterintelligence theatre', effects: [{ target: 'citizenSatisfaction.governance', op: 'subtract', value: 2, dur: 3 }, { target: 'politicalInfluence', op: 'add', value: 4, dur: 3 }], politicalRisk: 0, popularityImpact: 1 },
+      { text: 'Announce everything preemptively', shortDesc: "Beat the leakers to it", effects: [{ target: 'citizenSatisfaction.governance', op: 'add', value: 3, dur: 4 }, { target: 'politicalInfluence', op: 'subtract', value: 2, dur: 3 }], politicalRisk: 0, popularityImpact: 3 },
     ],
   },
 ];
@@ -946,7 +1267,8 @@ export function simulateTurn(state: GameState): GameState {
   checkGameOver(newState);
 
   // ─── Generate Events ───
-  const newEvents = generateEvents(newState);
+  const consequenceEvents = fireDueConsequences(newState);
+  const newEvents = [...consequenceEvents, ...generateEvents(newState)];
   newState.events = [...newState.events.filter(e => !e.resolved), ...newEvents];
 
   // ─── Generate News ───
@@ -1431,37 +1753,117 @@ function simulateFactions(state: GameState): void {
   }
 }
 
+function buildEventFromTemplate(state: GameState, template: (typeof EVENT_TEMPLATES)[number]): GameEvent {
+  return {
+    id: uid(),
+    templateId: template.id,
+    title: template.title,
+    description: template.description,
+    category: template.category,
+    severity: template.severity,
+    turn: state.player.turn,
+    month: state.player.month,
+    year: state.player.year,
+    choices: template.choices.map((c, i) => ({
+      id: `${template.id}_choice_${i}`,
+      text: c.text,
+      shortDescription: c.shortDesc,
+      effects: c.effects.map(e => ({
+        target: e.target,
+        operation: e.op as any,
+        value: e.value,
+        duration: e.dur,
+      })),
+      politicalRisk: c.politicalRisk,
+      popularityImpact: c.popularityImpact,
+      setFlags: c.setFlags,
+      clearFlags: c.clearFlags,
+      nextEventId: c.nextEventId,
+      consequenceDelay: c.consequenceDelay,
+    })),
+    isRandom: true,
+    resolved: false,
+  };
+}
+
+// Fire scheduled consequences (cascading crises) whose turn has arrived.
+export function fireDueConsequences(state: GameState): GameEvent[] {
+  const fired: GameEvent[] = [];
+  const due = state.pendingConsequences.filter(c => c.fireTurn <= state.player.turn);
+  if (due.length === 0) return fired;
+  state.pendingConsequences = state.pendingConsequences.filter(c => c.fireTurn > state.player.turn);
+
+  for (const c of due) {
+    const template = EVENT_TEMPLATES.find(t => t.id === c.templateId);
+    if (!template) continue;
+    if (template.requiredFlags && !template.requiredFlags.every(f => state.flags.includes(f))) continue;
+    for (const f of c.clearFlags) state.flags = state.flags.filter(x => x !== f);
+    for (const f of [...(c.setFlags ?? []), ...(template.setFlags ?? [])]) {
+      if (!state.flags.includes(f)) state.flags.push(f);
+    }
+    const ev = buildEventFromTemplate(state, template);
+    fired.push(ev);
+    state.gameLog.push(`Crisis follow-up: ${template.title}`);
+  }
+  return fired;
+}
+
+// Public mood label derived from popularity, satisfaction, and inflation.
+export function getPublicMood(state: GameState): { key: PublicMood; score: number } {
+  const score = state.player.popularity * 0.5 + state.citizenSatisfaction.overall * 0.3 + Math.max(0, 100 - state.economic.inflation) * 0.2;
+  const key: PublicMood = score >= 75 ? 'euphoric' : score >= 60 ? 'optimistic' : score >= 45 ? 'content' : score >= 30 ? 'restless' : 'defiant';
+  return { key, score };
+}
+
+// Titles awarded automatically when the player's record meets thresholds.
+export const TITLE_RULES: { key: string; check: (s: GameState) => boolean }[] = [
+  { key: 'people_champion', check: s => s.player.popularity >= 80 },
+  { key: 'engine_of_growth', check: s => s.economic.gdpGrowth >= 5 },
+  { key: 'clean_hands', check: s => s.corruption.nationalLevel <= 20 },
+  { key: 'guardian_of_peace', check: s => s.player.popularity >= 60 && s.citizenSatisfaction.security >= 60 },
+  { key: 'champion_of_literacy', check: s => s.national.literacyRate >= 92 },
+  { key: 'formal_economy_builder', check: s => s.economic.informalEconomySize <= 35 },
+  { key: 'chief_queue_attendee', check: s => s.energy.loadSheddingHoursPerDay > 10 },
+];
+
 function generateEvents(state: GameState): GameEvent[] {
   const newEvents: GameEvent[] = [];
 
-  for (const template of EVENT_TEMPLATES) {
-    if (template.condition(state) && Math.random() < 0.25) {
-      newEvents.push({
+  // Weighted selection from eligible templates
+  const candidates = EVENT_TEMPLATES.filter(
+    t => t.condition(state) && (!t.requiredFlags || t.requiredFlags.every(f => state.flags.includes(f)))
+  );
+  if (candidates.length > 0) {
+    const diffMult = state.difficulty === 'hard' ? 1.3 : state.difficulty === 'easy' ? 0.8 : 1;
+    const sevMult: Record<string, number> = { minor: 1, moderate: 1.5, major: 2.2, crisis: 2.8 };
+    const total = candidates.reduce((sum, t) => sum + (t.weight ?? 1) * sevMult[t.severity] * diffMult, 0);
+    let roll = Math.random() * total;
+    let chosen = candidates[0];
+    for (const t of candidates) {
+      roll -= (t.weight ?? 1) * sevMult[t.severity] * diffMult;
+      if (roll <= 0) { chosen = t; break; }
+    }
+
+    // Foresight: major/crisis events with a foreshadow text may surface as a
+    // rumor one turn before they actually fire.
+    if (chosen.foreshadow && (chosen.severity === 'major' || chosen.severity === 'crisis') && Math.random() < 0.4) {
+      state.rumors = [...state.rumors, chosen.foreshadow].slice(-10);
+      state.pendingConsequences = [...state.pendingConsequences, {
         id: uid(),
-        title: template.title,
-        description: template.description,
-        category: template.category,
-        severity: template.severity,
-        turn: state.player.turn,
-        month: state.player.month,
-        year: state.player.year,
-        choices: template.choices.map((c, i) => ({
-          id: `${template.id}_choice_${i}`,
-          text: c.text,
-          shortDescription: c.shortDesc,
-          effects: c.effects.map(e => ({
-            target: e.target,
-            operation: e.op as any,
-            value: e.value,
-            duration: e.dur,
-          })),
-          politicalRisk: c.politicalRisk,
-          popularityImpact: c.popularityImpact,
-        })),
-        isRandom: true,
-        resolved: false,
-      });
-      break; // Only one major event per turn
+        fireTurn: state.player.turn + 1,
+        templateId: chosen.id,
+        setFlags: [],
+        clearFlags: [],
+      }];
+      state.gameLog.push(`Rumor: ${chosen.foreshadow}`);
+    } else {
+      const ev = buildEventFromTemplate(state, chosen);
+      if (chosen.setFlags) {
+        for (const f of chosen.setFlags) {
+          if (!state.flags.includes(f)) state.flags.push(f);
+        }
+      }
+      newEvents.push(ev);
     }
   }
 
@@ -1475,11 +1877,22 @@ function generateEvents(state: GameState): GameEvent[] {
       { title: 'Wildlife Poaching Report Released', description: 'Conservation authorities report a 15% decline in poaching incidents compared to last year.', category: 'social' as const, severity: 'minor' as const },
     ];
     const evt = minorEvents[Math.floor(Math.random() * minorEvents.length)];
-    newEvents.push({
+    const ev: GameEvent = {
       id: uid(), ...evt,
       turn: state.player.turn, month: state.player.month, year: state.player.year,
       isRandom: true, resolved: true,
-    });
+    };
+    newEvents.push(ev);
+    state.eventArchive = [...state.eventArchive, {
+      id: ev.id,
+      title: ev.title,
+      category: ev.category,
+      severity: ev.severity,
+      turn: ev.turn,
+      month: ev.month,
+      year: ev.year,
+      outcome: 'resolved' as const,
+    }].slice(-200);
     state.gameLog.push(`Event: ${evt.title}`);
   }
 

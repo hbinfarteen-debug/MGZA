@@ -323,3 +323,26 @@ Stage Summary:
 - In-game dark mode and game-over screen unchanged
 - New Game dialog reads as a white floating surface over a softened scrim
 - Version: v1.5
+
+---
+Task ID: 15
+Agent: main
+Task: Engine deepening (flags, consequence chains, rumors) + Government History screen (v1.8)
+
+Work Log:
+- types.ts: GameEvent gained templateId, setFlags/clearFlags, nextEventId, consequenceDelay; EventEffect gained operation + setFlag/clearFlag ops; new PendingConsequence, ArchivedEvent, PublicMood types; PlayerState.titles; GameState flags/pendingConsequences/eventArchive/rumors
+- constants.ts: initialized new fields + player.titles
+- engine.ts: EVENT_TEMPLATES extended (weight, requiredFlags, setFlags, foreshadow) and 22 new Zimbabwe-themed templates added (redenomination, load-shedding anger, fuel smuggling ring, land audit findings, informal-formalization drive, informal market protest, kukiya-kiya cross-border boom, youth exodus, Gen Z protests, gold artisanal rush, lithium sovereign deal/scandal, diaspora bond drive, cash queues, tobacco payment dispute, parliament walkout, finance minister scandal, education minister failure, bond note comeback + 3 humour: queue social club, njanja market deal, cabinet leak mystery); buildEventFromTemplate, fireDueConsequences (cascading crises), getPublicMood (5 moods), TITLE_RULES (7 titles); generateEvents rewritten: weighted selection (severity x difficulty), requiredFlags gating, foreshadow path (rumor + next-turn consequence), archive of minor events
+- game-store.ts: TurnReport + turn report dialog data (deltas, event counters, titles); resolveEvent applies flags + schedules consequence chains; checkEventDeadlines archives expired; applyEffect setFlag/clearFlag + minister:Portfolio.field targeting; exportSave/importSave (JSON); GameScreen 'history'
+- page.tsx: History nav item + HistoryScreen (election terms, honours/titles, milestone timeline from eventArchive, recent decisions); EventsScreen deck stack with draw animation + Threats Brewing rumors panel + Event Archive; EventModal tactile severity bar, minister effect hints, follow-up preview via template lookup; TurnReportDialog after each End Turn; public mood badge in header; Settings save/load (export JSON download, import via file picker) in start-screen sheet + settings dialog; footer v1.8
+- globals.css: zim-card-in card draw animation with reduced-motion guard
+- i18n: ~50 new keys in en/sn/nd (nav.history, events rumors/archive/followUp, moods, titles, history screen, turn report, save/load); removed pre-existing duplicate nd tip key; footers bumped to v1.8
+- ESLint clean; tsc only pre-existing errors (submit/route, page 544/1711, constants 580, engine 1076-2099, store 155/327)
+- AGENTS.md version bumped to v1.8
+- Follow-up fixes (user feedback): expired events now LEAVE the active list entirely (checkEventDeadlines prunes them from gameState.events after archiving; Events deck, dashboard Active Events, header alert badge and nav count all filter expired); every surfaced event now gets a 45s deadline at endTurn so nothing lingers forever; turnEventsExpired increments per event, not per tick; titles are now true milestones: a rule must hold for TITLE_TURNS_REQUIRED (3) consecutive turns to earn the title (titleProgress tracked in state, resets when the condition drops), and the History screen shows a progress bar for titles in progress
+
+Stage Summary:
+- Events now form flag-gated, cascading chains with rumors for foresight; ~57 templates total
+- New Government History screen records terms, titles, milestones and decisions
+- End-of-turn report summarizes each month; saves export/import as JSON
+- Version: v1.8

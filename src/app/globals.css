@@ -712,6 +712,20 @@
   animation: zim-count-flash 0.6s ease-out;
 }
 
+/* ── Card draw (event modal / turn report pop-in) ──────────── */
+@keyframes zim-card-in {
+  0% { opacity: 0; transform: scale(0.92) rotateX(-8deg); }
+  100% { opacity: 1; transform: scale(1) rotateX(0); }
+}
+.zim-card-in {
+  animation: zim-card-in 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .zim-card-in {
+    animation: none;
+  }
+}
+
 /* ── Force light theme on specific containers (start screen) ── */
 .zim-force-light,
 .zim-force-light * {

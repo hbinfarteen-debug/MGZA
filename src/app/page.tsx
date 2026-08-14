@@ -24,11 +24,13 @@ import {
   Users, Zap, Droplets, ShieldAlert, Vote, ChevronRight, Play,
   Skull, Settings, Clock, TrendingUp, AlertTriangle, Flame,
   ChevronLeft, Menu, Gamepad2, X, Heart, Star, Trophy, Check, Lightbulb, Info,
-  Sun, Moon, Type, Globe, RefreshCw, Crown,
+  Sun, Moon, Type, Globe, RefreshCw, Crown, ScrollText, Download, Upload,
 } from 'lucide-react';
 import { MONTH_NAMES, EVENT_DECISION_SECONDS, EVENT_TIMEOUT_PENALTY } from '@/lib/game/constants';
 import type { GameEvent } from '@/lib/game/types';
+import { getPublicMood, EVENT_TEMPLATES, TITLE_RULES } from '@/lib/game/engine';
 import { computeScore } from '@/lib/scoreboard';
+import { TITLE_TURNS_REQUIRED } from '@/lib/game/constants';
 
 // ═══════════════════════════════════════════════════════
 // LEADERBOARD — per-difficulty score comparison,
@@ -586,7 +588,7 @@ function DashboardScreen() {
   const { player, economic, energy, water, infrastructure, citizenSatisfaction, national, corruption } = gameState;
   const recentHistory = historicalData.slice(-12);
   const recentNews = gameState.newsHistory.slice(0, 5);
-  const activeEvents = gameState.events.filter(e => !e.resolved).slice(0, 3);
+  const activeEvents = gameState.events.filter(e => !e.resolved && !(e.deadline && Date.now() >= e.deadline)).slice(0, 3);
   const activeProjects = gameState.projects.filter(p => p.status === 'in_progress');
 
   return (
@@ -1241,28 +1243,35 @@ function PendingEventCard({ event, onDecide }: { event: GameEvent; onDecide: (ev
   const { expired } = useEventCountdown(event);
   const { t } = useTranslation();
 
+  const sevColor = event.severity === 'crisis' ? '#dc2626' : event.severity === 'major' ? '#ea580c' : event.severity === 'moderate' ? '#ca8a04' : '#16a34a';
+
   return (
-    <div className={`bg-card border rounded-lg p-4 ${expired ? 'border-red-500/40' : 'border-red-500/30'}`}>
-      <div className="flex items-center gap-2 mb-2">
-        <Badge variant={event.severity === 'crisis' ? 'destructive' : event.severity === 'major' ? 'default' : 'secondary'}>
+    <div className={`relative bg-card border rounded-lg p-4 overflow-hidden group transition-all duration-300 ${
+      expired ? 'border-red-500/40 opacity-80' : 'border-border/70 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/5'
+    }`}>
+      <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: sevColor }} />
+      <div className="flex items-center gap-2 mb-2 pl-1">
+        <Badge variant={event.severity === 'crisis' ? 'destructive' : event.severity === 'major' ? 'default' : 'secondary'} className="text-[0.625rem]">
           {event.severity.toUpperCase()}
         </Badge>
         <Badge variant="secondary" className="text-[0.625rem]">{event.category}</Badge>
         {expired && <Badge variant="destructive" className="text-[0.625rem]">{t('events.expired')}</Badge>}
         <EventCountdown event={event} />
       </div>
-      <h4 className="text-sm font-bold mb-1">{event.title}</h4>
-      <p className="text-xs text-muted-foreground mb-3">{event.description}</p>
+      <h4 className="text-sm font-bold mb-1 pl-1">{event.title}</h4>
+      <p className="text-xs text-muted-foreground mb-3 pl-1">{event.description}</p>
       {event.choices && event.choices.length > 0 && (
         expired ? (
-          <div className="space-y-1">
+          <div className="space-y-1 pl-1">
             <p className="text-xs font-semibold text-red-500">{t('events.decisionLocked')}</p>
             <EventPenaltyNotice t={t} />
           </div>
         ) : (
-          <Button size="sm" onClick={() => onDecide(event)} className="bg-amber-600 hover:bg-amber-700">
-            {t('events.makeDecision')}
-          </Button>
+          <div className="pl-1">
+            <Button size="sm" onClick={() => onDecide(event)} className="bg-amber-600 hover:bg-amber-700">
+              {t('events.makeDecision')}
+            </Button>
+          </div>
         )
       )}
     </div>
@@ -1274,40 +1283,222 @@ function EventsScreen() {
   const { t } = useTranslation();
   if (!gameState) return null;
 
-  const unresolvedEvents = gameState.events.filter(e => !e.resolved);
-  const resolvedEvents = gameState.events.filter(e => e.resolved).slice(-10).reverse();
+  const now = Date.now();
+  const unresolvedEvents = gameState.events.filter(e => !e.resolved && !(e.deadline && now >= e.deadline));
+  const archive = gameState.eventArchive.slice(-14).reverse();
+  const rumors = gameState.rumors.slice().reverse().slice(0, 6);
 
   return (
     <div className="space-y-6">
+      {/* Threats Brewing (foresight) */}
+      <div className="bg-card border border-border/60 rounded-xl p-4">
+        <h3 className="text-sm font-bold uppercase tracking-wider mb-3 flex items-center gap-2 text-amber-600">
+          <Flame className="h-4 w-4" /> {t('events.rumors')}
+        </h3>
+        {rumors.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{t('events.noRumors')}</p>
+        ) : (
+          <div className="space-y-2">
+            {rumors.map((r, i) => (
+              <div key={i} className="flex items-start gap-2 text-xs text-muted-foreground border-b border-border/40 pb-2 last:border-0 last:pb-0">
+                <span className="mt-0.5 h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                <span className="italic">&ldquo;{r}&rdquo;</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Pending deck */}
       <HoverTip tipId="events_pending" screenId="events"><div>
         <h3 className="text-sm font-bold uppercase tracking-wider mb-3 flex items-center gap-2">
           <AlertTriangle className="h-4 w-4 text-red-500" /> {t('events.pending', { count: unresolvedEvents.length })}
         </h3>
-        <div className="space-y-3">
-          {unresolvedEvents.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t('events.noPending')}</p>
-          ) : unresolvedEvents.map((event) => (
-            <PendingEventCard key={event.id} event={event} onDecide={setShowEventModal} />
-          ))}
-        </div>
+        {unresolvedEvents.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{t('events.noPending')}</p>
+        ) : (
+          <div className="flex flex-col items-stretch">
+            {unresolvedEvents.map((event, i) => (
+              <motion.div
+                key={event.id}
+                initial={{ opacity: 0, y: 18, rotateX: 75, transformPerspective: 900 }}
+                animate={{ opacity: 1, y: 0, rotateX: 0 }}
+                exit={{ opacity: 0, scale: 0.92 }}
+                transition={{ type: 'spring', stiffness: 280, damping: 26, delay: i * 0.07 }}
+                className={`relative ${i > 0 ? '-mt-24' : ''}`}
+                style={{ zIndex: unresolvedEvents.length - i }}
+              >
+                <PendingEventCard event={event} onDecide={setShowEventModal} />
+              </motion.div>
+            ))}
+          </div>
+        )}
       </div></HoverTip>
 
       <Separator />
 
+      {/* Event archive */}
       <div>
-        <h3 className="text-sm font-bold uppercase tracking-wider mb-3 text-muted-foreground">{t('events.resolved')}</h3>
-        <div className="space-y-2">
-          {resolvedEvents.map((event) => (
-            <div key={event.id} className="bg-card border border-border/50 rounded-lg p-3 opacity-70">
-              <div className="flex items-center gap-2">
-                <Check className="h-3 w-3 text-green-500" />
-                <span className="text-xs font-medium">{event.title}</span>
-                <span className="text-[0.625rem] text-muted-foreground">{MONTH_NAMES[event.month - 1]} {event.year}</span>
+        <h3 className="text-sm font-bold uppercase tracking-wider mb-3 text-muted-foreground">{t('events.archive')}</h3>
+        {archive.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{t('events.archiveEmpty')}</p>
+        ) : (
+          <div className="space-y-2">
+            {archive.map((event) => (
+              <div key={event.id} className="bg-card border border-border/50 rounded-lg p-3 opacity-75">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {event.outcome === 'resolved' ? (
+                    <Check className="h-3 w-3 text-green-500 shrink-0" />
+                  ) : (
+                    <X className="h-3 w-3 text-red-500 shrink-0" />
+                  )}
+                  <span className="text-xs font-medium">{event.title}</span>
+                  {event.choiceText && (
+                    <Badge variant="secondary" className="text-[0.5625rem]">{event.choiceText}</Badge>
+                  )}
+                  <span className="text-[0.625rem] text-muted-foreground ml-auto">{MONTH_NAMES[event.month - 1]} {event.year}</span>
+                </div>
               </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
+// GOVERNMENT HISTORY SCREEN
+// ═══════════════════════════════════════════════════════
+
+function HistoryScreen() {
+  const { gameState } = useGameStore();
+  const { t } = useTranslation();
+  if (!gameState) return null;
+
+  const completedElections = gameState.elections.filter(e => e.isOver);
+  const titles = gameState.player.titles;
+  const inProgressTitles = TITLE_RULES
+    .filter(r => !titles.includes(r.key) && (gameState.titleProgress[r.key] ?? 0) > 0)
+    .map(r => ({ rule: r, count: gameState.titleProgress[r.key] ?? 0 }));
+  const timeline = [...gameState.eventArchive].reverse().slice(0, 20);
+  const decisions = [...gameState.decisionHistory].reverse().slice(0, 10);
+
+  return (
+    <div className="space-y-6">
+      {/* Terms in office */}
+      <div>
+        <h3 className="text-sm font-bold uppercase tracking-wider mb-3 flex items-center gap-2">
+          <Crown className="h-4 w-4 text-amber-500" /> {t('history.terms')}
+        </h3>
+        {completedElections.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{t('history.noTerms')}</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {completedElections.map((e) => (
+              <div key={e.id} className={`bg-card border rounded-lg p-4 ${e.playerWon ? 'border-green-500/30' : 'border-red-500/30'}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <Badge variant={e.playerWon ? 'default' : 'destructive'} className="text-[0.625rem]">
+                    {e.playerWon ? t('history.reelected') : t('history.defeated')}
+                  </Badge>
+                  <span className="text-[0.625rem] text-muted-foreground">{MONTH_NAMES[e.month - 1]} {e.year}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div>
+                    <p className="text-[0.625rem] text-muted-foreground">{t('election.yourVotes')}</p>
+                    <p className="text-sm font-bold text-green-600">{e.playerVotes}</p>
+                  </div>
+                  <div>
+                    <p className="text-[0.625rem] text-muted-foreground">{t('election.oppositionVotes')}</p>
+                    <p className="text-sm font-bold text-red-500">{e.opponentVotes}</p>
+                  </div>
+                  <div>
+                    <p className="text-[0.625rem] text-muted-foreground">{t('election.turnout')}</p>
+                    <p className="text-sm font-bold">{e.turnoutPercent.toFixed(0)}%</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Honours & Titles */}
+      <div>
+        <h3 className="text-sm font-bold uppercase tracking-wider mb-3 flex items-center gap-2">
+          <Star className="h-4 w-4 text-amber-500" /> {t('history.titles')}
+        </h3>
+        {titles.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{t('history.noTitles')}</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {titles.map((key) => (
+              <Badge key={key} variant="secondary" className="text-[0.625rem] gap-1 border-amber-500/30 bg-amber-500/10 text-amber-600">
+                <Crown className="h-3 w-3" /> {t(`title.${key}`)}
+              </Badge>
+            ))}
+          </div>
+        )}
+
+        {/* Titles in progress (mileage) */}
+        {inProgressTitles.length > 0 && (
+          <div className="mt-4 space-y-2">
+            <p className="text-xs text-muted-foreground">{t('history.titleProgress')}</p>
+            {inProgressTitles.map(({ rule, count }) => (
+              <div key={rule.key} className="bg-card border border-border/50 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-medium">{t(`title.${rule.key}`)}</span>
+                  <span className="text-[0.625rem] text-muted-foreground">{t('history.turnsOf', { count, required: TITLE_TURNS_REQUIRED })}</span>
+                </div>
+                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                  <div className="h-full rounded-full bg-amber-500 transition-all" style={{ width: `${(count / TITLE_TURNS_REQUIRED) * 100}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Milestone timeline */}
+      <div>
+        <h3 className="text-sm font-bold uppercase tracking-wider mb-3 flex items-center gap-2">
+          <ScrollText className="h-4 w-4 text-amber-500" /> {t('history.timeline')}
+        </h3>
+        <div className="space-y-2">
+          {timeline.length === 0 && <p className="text-sm text-muted-foreground">{t('history.noEvents')}</p>}
+          {timeline.map((ev) => (
+            <div key={ev.id} className="flex items-start gap-3 bg-card border border-border/50 rounded-lg p-3">
+              <div className={`mt-1 h-2 w-2 rounded-full shrink-0 ${ev.outcome === 'resolved' ? 'bg-green-500' : 'bg-red-500'}`} />
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium">{ev.title}</p>
+                {ev.choiceText && <p className="text-[0.625rem] text-muted-foreground mt-0.5">{ev.choiceText}</p>}
+              </div>
+              <span className="text-[0.625rem] text-muted-foreground shrink-0">
+                {MONTH_NAMES[ev.month - 1]} {ev.year}
+              </span>
             </div>
           ))}
         </div>
       </div>
+
+      {/* Recent decisions */}
+      {decisions.length > 0 && (
+        <div>
+          <h3 className="text-sm font-bold uppercase tracking-wider mb-3 text-muted-foreground">{t('history.recentDecisions')}</h3>
+          <div className="space-y-2">
+            {decisions.map((d, i) => (
+              <div key={i} className="flex items-start gap-3 bg-card border border-border/50 rounded-lg p-3 opacity-80">
+                <Info className="h-3 w-3 text-muted-foreground mt-0.5 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium">{d.decision}</p>
+                  <p className="text-[0.625rem] text-muted-foreground mt-0.5">{d.reasoning}</p>
+                </div>
+                <span className="text-[0.625rem] text-muted-foreground shrink-0">{t('history.turn', { turn: d.turn })}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1715,11 +1906,35 @@ function GameOverScreen() {
 // ═══════════════════════════════════════════════════════
 
 function StartScreen() {
-  const { startNewGame, setShowNewGameDialog, fontSize, darkMode, setDarkMode, setFontSize, language, setLanguage } = useGameStore();
+  const { startNewGame, setShowNewGameDialog, fontSize, darkMode, setDarkMode, setFontSize, language, setLanguage, exportSave, importSave, gameState } = useGameStore();
   const { t } = useTranslation();
   const { setTheme } = useTheme();
   const [showStartSettings, setShowStartSettings] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const mountedRef = useRef(false);
+
+  const handleExport = () => {
+    const data = exportSave();
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mgza-save-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const ok = importSave(String(reader.result));
+      setSaveStatus(ok ? t('save.imported') : t('save.failed'));
+    };
+    reader.readAsText(file);
+  };
 
   // Mark as mounted and sync dark mode from store to next-themes (one-way)
   useEffect(() => {
@@ -1818,11 +2033,44 @@ function StartScreen() {
                     }`}>
                       Aa
                     </span>
-                    <span className="text-[0.625rem] text-muted-foreground mt-1 block capitalize">{size}</span>
+<span className="text-[0.625rem] text-muted-foreground mt-1 block capitalize">{size}</span>
                   </button>
                 ))}
               </div>
             </div>
+          </div>
+
+          {/* Save / Load */}
+          <div className="p-3 rounded-lg border border-border bg-card">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex items-center justify-center w-8 h-8 rounded-md bg-amber-500/15 text-amber-500">
+                <Download className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">{t('save.title')}</p>
+                <p className="text-[0.625rem] text-muted-foreground">{t('save.desc')}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="outline" size="sm" className="text-xs" onClick={handleExport} disabled={!gameState}>
+                <Download className="h-3 w-3 mr-1" /> {t('save.export')}
+              </Button>
+              <Button variant="outline" size="sm" className="text-xs" onClick={() => fileInputRef.current?.click()}>
+                <Upload className="h-3 w-3 mr-1" /> {t('save.import')}
+              </Button>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json,application/json"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleImportFile(file);
+                e.target.value = '';
+              }}
+            />
+            {saveStatus && <p className="text-[0.625rem] text-muted-foreground mt-2">{saveStatus}</p>}
           </div>
         </motion.div>
       )}
@@ -2088,9 +2336,12 @@ function EventModal() {
     }
   };
 
+  const sevColor = event.severity === 'crisis' ? '#dc2626' : event.severity === 'major' ? '#ea580c' : event.severity === 'moderate' ? '#ca8a04' : '#16a34a';
+
   return (
     <Dialog open={!!showEventModal} onOpenChange={(open) => { if (!open) { setShowEventModal(null); setSelectedChoice(null); } }}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg zim-card-in">
+        <div className="absolute left-0 top-0 right-0 h-1.5 rounded-t-lg" style={{ backgroundColor: sevColor }} />
         <DialogHeader>
           <div className="flex items-center gap-2">
             <Badge variant={event.severity === 'crisis' ? 'destructive' : event.severity === 'major' ? 'default' : 'secondary'}>
@@ -2105,29 +2356,44 @@ function EventModal() {
         </DialogHeader>
 
         <div className="space-y-3 py-2">
-          {event.choices!.map((choice) => (
-            <button
-              key={choice.id}
-              onClick={() => setSelectedChoice(choice.id)}
-              disabled={expired}
-              className={`w-full text-left rounded-lg border p-4 transition-all ${
-                selectedChoice === choice.id
-                  ? 'border-amber-500 bg-amber-500/10 ring-1 ring-amber-500'
-                  : 'border-border bg-card hover:border-amber-500/50'
-              } ${expired ? 'opacity-60 cursor-not-allowed hover:border-border' : ''}`}
-            >
-              <h4 className="text-sm font-bold mb-1">{choice.text}</h4>
-              <p className="text-xs text-muted-foreground">{choice.shortDescription}</p>
-              <div className="flex gap-3 mt-2">
-                <span className={`text-[0.625rem] ${choice.popularityImpact > 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  Popularity: {choice.popularityImpact > 0 ? '+' : ''}{choice.popularityImpact}
-                </span>
-                <span className={`text-[0.625rem] ${choice.politicalRisk > 0 ? 'text-green-500' : choice.politicalRisk < 0 ? 'text-red-500' : 'text-muted-foreground'}`}>
-                  Influence: {choice.politicalRisk > 0 ? '+' : ''}{choice.politicalRisk}
-                </span>
-              </div>
-            </button>
-          ))}
+          {event.choices!.map((choice) => {
+            const nextTemplate = choice.nextEventId ? EVENT_TEMPLATES.find(x => x.id === choice.nextEventId) : undefined;
+            const ministerEffect = choice.effects.find(e => e.target.startsWith('minister:'));
+            const ministerPortfolio = ministerEffect ? ministerEffect.target.slice('minister:'.length).split('.')[0] : null;
+            return (
+              <button
+                key={choice.id}
+                onClick={() => setSelectedChoice(choice.id)}
+                disabled={expired}
+                className={`w-full text-left rounded-lg border p-4 transition-all ${
+                  selectedChoice === choice.id
+                    ? 'border-amber-500 bg-amber-500/10 ring-1 ring-amber-500'
+                    : 'border-border bg-card hover:border-amber-500/50'
+                } ${expired ? 'opacity-60 cursor-not-allowed hover:border-border' : ''}`}
+              >
+                <h4 className="text-sm font-bold mb-1">{choice.text}</h4>
+                <p className="text-xs text-muted-foreground">{choice.shortDescription}</p>
+                <div className="flex gap-3 mt-2 flex-wrap">
+                  <span className={`text-[0.625rem] ${choice.popularityImpact > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                    Popularity: {choice.popularityImpact > 0 ? '+' : ''}{choice.popularityImpact}
+                  </span>
+                  <span className={`text-[0.625rem] ${choice.politicalRisk > 0 ? 'text-green-500' : choice.politicalRisk < 0 ? 'text-red-500' : 'text-muted-foreground'}`}>
+                    Influence: {choice.politicalRisk > 0 ? '+' : ''}{choice.politicalRisk}
+                  </span>
+                  {ministerEffect && ministerPortfolio && (
+                    <span className="text-[0.625rem] text-sky-600">
+                      {ministerPortfolio} Ministry: {ministerEffect.operation === 'subtract' ? '-' : '+'}{ministerEffect.value}
+                    </span>
+                  )}
+                </div>
+                {nextTemplate && (
+                  <p className="text-[0.625rem] text-amber-600 mt-2 flex items-center gap-1">
+                    <Flame className="h-3 w-3" /> {t('events.followUp')}: {nextTemplate.title}
+                  </p>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {expired && (
@@ -2140,6 +2406,101 @@ function EventModal() {
         <DialogFooter>
           <Button onClick={handleResolve} disabled={!selectedChoice || expired} className="bg-amber-600 hover:bg-amber-700">
             {t('events.confirmDecision')}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
+// END-OF-TURN REPORT DIALOG
+// ═══════════════════════════════════════════════════════
+
+function DeltaStat({ label, value, suffix = '', invert = false }: { label: string; value: number; suffix?: string; invert?: boolean }) {
+  const positive = value > 0;
+  const good = invert ? !positive : positive;
+  return (
+    <div className="bg-card border border-border/50 rounded-lg p-3">
+      <p className="text-[0.625rem] text-muted-foreground">{label}</p>
+      <p className={`text-sm font-bold ${value === 0 ? 'text-muted-foreground' : good ? 'text-green-600' : 'text-red-500'}`}>
+        {value > 0 ? '+' : ''}{value}{suffix}
+      </p>
+    </div>
+  );
+}
+
+function TurnReportDialog() {
+  const { turnReport, dismissTurnReport } = useGameStore();
+  const { t } = useTranslation();
+  if (!turnReport) return null;
+
+  const r = turnReport;
+
+  return (
+    <Dialog open={!!turnReport} onOpenChange={(open) => { if (!open) dismissTurnReport(); }}>
+      <DialogContent className="sm:max-w-lg zim-card-in">
+        <DialogHeader>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className="text-[0.625rem]">{MONTH_NAMES[r.month - 1]} {r.year}</Badge>
+            <Badge variant="secondary" className="text-[0.625rem]">{t('history.turn', { turn: r.turn })}</Badge>
+          </div>
+          <DialogTitle className="text-lg flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-amber-500" /> {t('report.title')}
+          </DialogTitle>
+          <DialogDescription className="text-sm">{t('report.subtitle')}</DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-2">
+          <div className="grid grid-cols-3 gap-2">
+            <DeltaStat label={t('report.popularity')} value={r.popularityDelta} suffix="%" />
+            <DeltaStat label={t('report.legitimacy')} value={r.legitimacyDelta} suffix="%" />
+            <DeltaStat label={t('report.satisfaction')} value={r.satisfactionDelta} suffix="%" />
+            <DeltaStat label={t('report.gdpGrowth')} value={r.gdpGrowth} suffix="%" />
+            <DeltaStat label={t('report.inflation')} value={r.inflationDelta} suffix="%" invert />
+            <DeltaStat label={t('report.debtToGdp')} value={r.debtToGdp} suffix="%" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div className="bg-card border border-border/50 rounded-lg p-3 text-center">
+              <p className="text-[0.625rem] text-muted-foreground">{t('report.unemployment')}</p>
+              <p className="text-sm font-bold">{r.unemploymentRate.toFixed(1)}%</p>
+            </div>
+            <div className="bg-card border border-border/50 rounded-lg p-3 text-center">
+              <p className="text-[0.625rem] text-muted-foreground">{t('report.eventsResolved')}</p>
+              <p className={`text-sm font-bold ${r.eventsResolved > 0 ? 'text-green-600' : 'text-muted-foreground'}`}>{r.eventsResolved}</p>
+            </div>
+            <div className="bg-card border border-border/50 rounded-lg p-3 text-center">
+              <p className="text-[0.625rem] text-muted-foreground">{t('report.eventsExpired')}</p>
+              <p className={`text-sm font-bold ${r.eventsExpired > 0 ? 'text-red-500' : 'text-muted-foreground'}`}>{r.eventsExpired}</p>
+            </div>
+            <div className="bg-card border border-border/50 rounded-lg p-3 text-center">
+              <p className="text-[0.625rem] text-muted-foreground">{t('report.promisesFulfilled')} / {t('report.promisesBroken')}</p>
+              <p className="text-sm font-bold">
+                <span className="text-green-600">{r.promisesFulfilled}</span>
+                <span className="text-muted-foreground"> / </span>
+                <span className="text-red-500">{r.promisesBroken}</span>
+              </p>
+            </div>
+          </div>
+
+          {r.titlesAwarded.length > 0 && (
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+              <p className="text-xs font-bold text-amber-600 mb-1 flex items-center gap-1">
+                <Crown className="h-3 w-3" /> {t('report.titlesEarned')}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {r.titlesAwarded.map((key) => (
+                  <Badge key={key} variant="secondary" className="text-[0.5625rem]">{t(`title.${key}`)}</Badge>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button onClick={dismissTurnReport} className="bg-amber-600 hover:bg-amber-700">
+            {t('report.dismiss')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -2348,8 +2709,33 @@ function MinisterReplacementDialog() {
 // ═══════════════════════════════════════════════════════
 
 function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
-  const { fontSize, setFontSize, darkMode, setDarkMode, language, setLanguage } = useGameStore();
+  const { fontSize, setFontSize, darkMode, setDarkMode, language, setLanguage, exportSave, importSave, gameState } = useGameStore();
   const { t } = useTranslation();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [saveStatus, setSaveStatus] = useState<string | null>(null);
+
+  const handleExport = () => {
+    const data = exportSave();
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mgza-save-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const ok = importSave(String(reader.result));
+      setSaveStatus(ok ? t('save.imported') : t('save.failed'));
+      if (ok) onOpenChange(false);
+    };
+    reader.readAsText(file);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -2435,6 +2821,39 @@ function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Save / Load */}
+          <div className="p-3 rounded-lg border border-border bg-card">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex items-center justify-center w-8 h-8 rounded-md bg-amber-500/15 text-amber-500">
+                <Download className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">{t('save.title')}</p>
+                <p className="text-[0.625rem] text-muted-foreground">{t('save.desc')}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="outline" size="sm" className="text-xs" onClick={handleExport} disabled={!gameState}>
+                <Download className="h-3 w-3 mr-1" /> {t('save.export')}
+              </Button>
+              <Button variant="outline" size="sm" className="text-xs" onClick={() => fileInputRef.current?.click()}>
+                <Upload className="h-3 w-3 mr-1" /> {t('save.import')}
+              </Button>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json,application/json"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleImportFile(file);
+                e.target.value = '';
+              }}
+            />
+            {saveStatus && <p className="text-[0.625rem] text-muted-foreground mt-2">{saveStatus}</p>}
           </div>
         </div>
         <DialogFooter>
@@ -2651,6 +3070,7 @@ export default function GamePage() {
     { id: 'events' as GameScreen, label: t('nav.events'), icon: <AlertTriangle className="h-4 w-4" /> },
     { id: 'news' as GameScreen, label: t('nav.news'), icon: <Newspaper className="h-4 w-4" /> },
     { id: 'elections' as GameScreen, label: t('nav.elections'), icon: <Vote className="h-4 w-4" /> },
+    { id: 'history' as GameScreen, label: t('nav.history'), icon: <ScrollText className="h-4 w-4" /> },
     { id: 'leaderboard' as GameScreen, label: t('nav.leaderboard'), icon: <Trophy className="h-4 w-4" /> },
   ];
 
@@ -2705,6 +3125,10 @@ export default function GamePage() {
   }
 
   const { player, economic, energy, citizenSatisfaction } = gameState || {};
+
+  // Public mood label
+  const mood = gameState ? getPublicMood(gameState) : null;
+  const moodColor = mood?.key === 'euphoric' ? '#16a34a' : mood?.key === 'optimistic' ? '#65a30d' : mood?.key === 'content' ? '#ca8a04' : mood?.key === 'restless' ? '#ea580c' : '#dc2626';
 
   // Compute next election countdown
   const nextElection = gameState?.elections?.filter(e => !e.isOver)[0];
@@ -2792,10 +3216,18 @@ export default function GamePage() {
 
             <Separator orientation="vertical" className="h-5 hidden lg:block" />
 
+            {/* Public Mood */}
+            {mood && (
+              <Badge variant="outline" className="text-[0.625rem] gap-1 border-border hidden sm:inline-flex" title={t('mood.tooltip')}>
+                <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: moodColor }} />
+                {t(`mood.${mood.key}`)}
+              </Badge>
+            )}
+
             {/* Event Alert */}
-            {gameState && gameState.events.filter(e => !e.resolved).length > 0 && (
+            {gameState && gameState.events.filter(e => !e.resolved && !(e.deadline && Date.now() >= e.deadline)).length > 0 && (
               <Button variant="destructive" size="sm" className="text-[0.625rem] h-9 sm:h-7 px-2 animate-pulse" onClick={() => setScreen('events')}>
-                <AlertTriangle className="h-3 w-3 mr-1" /> {gameState.events.filter(e => !e.resolved).length}
+                <AlertTriangle className="h-3 w-3 mr-1" /> {gameState.events.filter(e => !e.resolved && !(e.deadline && Date.now() >= e.deadline)).length}
               </Button>
             )}
 
@@ -2894,9 +3326,9 @@ export default function GamePage() {
                       {item.icon}
                     </span>
                     <span>{item.label}</span>
-                    {item.id === 'events' && gameState && gameState.events.filter(e => !e.resolved).length > 0 && (
+                    {item.id === 'events' && gameState && gameState.events.filter(e => !e.resolved && !(e.deadline && Date.now() >= e.deadline)).length > 0 && (
                       <span className="ml-auto bg-red-500 text-white text-[0.5625rem] rounded-full w-4 h-4 flex items-center justify-center animate-pulse">
-                        {gameState.events.filter(e => !e.resolved).length}
+                        {gameState.events.filter(e => !e.resolved && !(e.deadline && Date.now() >= e.deadline)).length}
                       </span>
                     )}
                   </button>
@@ -2951,6 +3383,7 @@ export default function GamePage() {
                 {currentScreen === 'events' && <EventsScreen />}
                 {currentScreen === 'news' && <NewsScreen />}
                 {currentScreen === 'elections' && <ElectionsScreen />}
+                {currentScreen === 'history' && <HistoryScreen />}
                 {currentScreen === 'leaderboard' && <LeaderboardScreen />}
               </motion.div>
             </AnimatePresence>
@@ -2992,7 +3425,7 @@ export default function GamePage() {
         <div className="px-4 py-3">
           <div className="flex items-center justify-between text-[0.625rem] text-muted-foreground max-w-7xl mx-auto">
             <span className="flex items-center gap-1">
-              <Gamepad2 className="h-3 w-3 text-amber-500" /> Make Great Zimbabwe Again | v1.7
+              <Gamepad2 className="h-3 w-3 text-amber-500" /> Make Great Zimbabwe Again | v1.8
             </span>
             <span>{MONTH_NAMES[(player?.month || 1) - 1]} {player?.year || 2025} | Turn {(player?.turn || 1)} | {(citizenSatisfaction?.overall || 0).toFixed(0)}% Satisfaction</span>
           </div>
@@ -3003,6 +3436,7 @@ export default function GamePage() {
       <EventModal />
       <ElectionResultDialog />
       <MinisterReplacementDialog />
+      <TurnReportDialog />
       <NewGameDialog open={showNewGameDialog} onOpenChange={setShowNewGameDialog} />
       <SettingsDialog open={showSettings} onOpenChange={setShowSettings} />
     </div>

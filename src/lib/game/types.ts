@@ -30,6 +30,7 @@ export interface PlayerState {
   promises: Promise[];
   fulfilledPromises: string[];
   brokenPromises: string[];
+  titles: string[];
 }
 
 export interface Promise {
@@ -360,6 +361,7 @@ export interface GameEvent {
   choiceMade?: string;
   deadline?: number;
   penaltyApplied?: boolean;
+  templateId?: string;
 }
 
 export interface EventChoice {
@@ -369,14 +371,43 @@ export interface EventChoice {
   effects: EventEffect[];
   politicalRisk: number;
   popularityImpact: number;
+  setFlags?: string[];
+  clearFlags?: string[];
+  nextEventId?: string;
+  consequenceDelay?: number; // turns before the next event fires
 }
 
 export interface EventEffect {
   target: string;
-  operation: 'add' | 'subtract' | 'multiply' | 'set';
+  operation: 'add' | 'subtract' | 'multiply' | 'set' | 'setFlag' | 'clearFlag';
   value: number;
   duration: number; // turns, 0 = permanent
 }
+
+export interface PendingConsequence {
+  id: string;
+  fireTurn: number;
+  templateId: string;
+  setFlags: string[];
+  clearFlags: string[];
+}
+
+export interface ArchivedEvent {
+  id: string;
+  templateId?: string;
+  title: string;
+  category: EventCategory;
+  severity: EventSeverity;
+  turn: number;
+  month: number;
+  year: number;
+  choiceText?: string;
+  outcome: 'resolved' | 'expired';
+  popularityImpact?: number;
+  politicalRisk?: number;
+}
+
+export type PublicMood = 'euphoric' | 'optimistic' | 'content' | 'restless' | 'defiant';
 
 export interface NewsArticle {
   id: string;
@@ -518,6 +549,11 @@ export interface GameState {
   corruption: CorruptionIndex;
   corruptionCases: CorruptionCase[];
   events: GameEvent[];
+  eventArchive: ArchivedEvent[];
+  flags: string[];
+  pendingConsequences: PendingConsequence[];
+  rumors: string[];
+  titleProgress: Record<string, number>;
   newsHistory: NewsArticle[];
   budget: Budget;
   elections: Election[];

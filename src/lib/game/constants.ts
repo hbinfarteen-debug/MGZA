@@ -468,12 +468,12 @@ export const SEASON_FROM_MONTH: Record<number, string> = {
 // ═══════════════════════════════════════════════════════
 
 export const EVENT_DECISION_SECONDS = 45;
-
 export const EVENT_TIMEOUT_PENALTY = {
   popularity: 5,
   legitimacy: 3,
   governance: 5,
 };
+export const TITLE_TURNS_REQUIRED = 3;
 
 // ═══════════════════════════════════════════════════════
 // GAME COLORS / THEMING
@@ -612,6 +612,7 @@ export function createInitialGameState(difficulty: 'easy' | 'normal' | 'hard' = 
       promises: [],
       fulfilledPromises: [],
       brokenPromises: [],
+      titles: [],
     },
     national: { ...INITIAL_NATIONAL },
     economic: {
@@ -634,6 +635,11 @@ export function createInitialGameState(difficulty: 'easy' | 'normal' | 'hard' = 
     corruption: { ...INITIAL_CORRUPTION, nationalLevel: INITIAL_CORRUPTION.nationalLevel * diffMult },
     corruptionCases: [],
     events: [],
+    eventArchive: [],
+    flags: [],
+    pendingConsequences: [],
+    rumors: [],
+    titleProgress: {},
     newsHistory: [],
     budget: createInitialBudget(),
     elections: [createInitialElection()],

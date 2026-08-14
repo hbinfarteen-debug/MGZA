@@ -5,8 +5,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { GameState, InfrastructureProject, GameEvent, BudgetItem, Minister, HistoricalDataPoint } from '@/lib/game/types';
-import { createInitialGameState, EVENT_DECISION_SECONDS, EVENT_TIMEOUT_PENALTY } from '@/lib/game/constants';
-import { simulateTurn, generateAvailableProjects, getHistoricalDataPoint } from '@/lib/game/engine';
+import { createInitialGameState, EVENT_DECISION_SECONDS, EVENT_TIMEOUT_PENALTY, TITLE_TURNS_REQUIRED } from '@/lib/game/constants';
+import { simulateTurn, generateAvailableProjects, getHistoricalDataPoint, TITLE_RULES } from '@/lib/game/engine';
 import type { Language } from '@/lib/i18n';
 
 export type GameScreen =
@@ -23,6 +23,7 @@ export type GameScreen =
   | 'corruption'
   | 'news'
   | 'elections'
+  | 'history'
   | 'leaderboard'
   | 'game_over';
 
@@ -72,6 +73,9 @@ interface GameStore {
   enableTips: boolean;
   showReplacementDialog: ReplacementDialogState | null;
   showElectionResult: ElectionResultData | null;
+  turnReport: TurnReport | null;
+  turnEventsResolved: number;
+  turnEventsExpired: number;
   fontSize: FontSize;
   darkMode: boolean;
   language: Language;
@@ -99,6 +103,27 @@ interface GameStore {
   setFontSize: (size: FontSize) => void;
   setDarkMode: (dark: boolean) => void;
   setLanguage: (lang: Language) => void;
+  exportSave: () => string;
+  importSave: (json: string) => boolean;
+  dismissTurnReport: () => void;
+}
+
+export interface TurnReport {
+  turn: number;
+  month: number;
+  year: number;
+  popularityDelta: number;
+  legitimacyDelta: number;
+  inflationDelta: number;
+  gdpGrowth: number;
+  satisfactionDelta: number;
+  unemploymentRate: number;
+  debtToGdp: number;
+  eventsResolved: number;
+  eventsExpired: number;
+  promisesFulfilled: number;
+  promisesBroken: number;
+  titlesAwarded: string[];
 }
 
 export const useGameStore = create<GameStore>()(
@@ -115,6 +140,9 @@ export const useGameStore = create<GameStore>()(
       enableTips: true,
       showReplacementDialog: null,
       showElectionResult: null,
+      turnReport: null,
+      turnEventsResolved: 0,
+      turnEventsExpired: 0,
       fontSize: 'medium' as FontSize,
       darkMode: false,
       language: 'en' as Language,
@@ -140,6 +168,8 @@ export const useGameStore = create<GameStore>()(
 
         set({ isProcessingTurn: true });
 
+        const prev = JSON.parse(JSON.stringify(gameState)) as GameState;
+
         // Simulate the turn
         const newState = simulateTurn(gameState);
         const historyPoint = getHistoricalDataPoint(newState);
@@ -150,11 +180,17 @@ export const useGameStore = create<GameStore>()(
           availableProjects = [...availableProjects, ...generateAvailableProjects(newState)].slice(0, 15);
         }
 
+        // Give every surfaced event a decision deadline so none linger forever:
+        // expired events are archived and leave the active list.
+        const now = Date.now();
+        for (const ev of newState.events) {
+          if (!ev.resolved && !ev.deadline) {
+            ev.deadline = now + EVENT_DECISION_SECONDS * 1000;
+          }
+        }
+
         // Check for unresolved events that need attention
         const unresolvedEvent = newState.events.find(e => !e.resolved && e.choices && e.choices.length > 0);
-        if (unresolvedEvent && !unresolvedEvent.deadline) {
-          unresolvedEvent.deadline = Date.now() + EVENT_DECISION_SECONDS * 1000;
-        }
 
         // Check if an election just concluded this turn
         const finishedElection = newState.elections.find(e => e.isOver && !gameState.elections.find(ge => ge.id === e.id && ge.isOver));
@@ -175,6 +211,45 @@ export const useGameStore = create<GameStore>()(
           };
         }
 
+        // Award titles as milestones: a rule must hold for TITLE_TURNS_REQUIRED
+        // consecutive turns before the title is earned (and it is earned only once).
+        const titlesAwarded: string[] = [];
+        const titleProgress = { ...newState.titleProgress };
+        for (const rule of TITLE_RULES) {
+          const owned = newState.player.titles.includes(rule.key);
+          if (owned) { delete titleProgress[rule.key]; continue; }
+          const met = rule.check(newState);
+          titleProgress[rule.key] = met ? (titleProgress[rule.key] ?? 0) + 1 : 0;
+          if (titleProgress[rule.key] >= TITLE_TURNS_REQUIRED) {
+            newState.player.titles = [...newState.player.titles, rule.key];
+            titlesAwarded.push(rule.key);
+            delete titleProgress[rule.key];
+          }
+        }
+        newState.titleProgress = titleProgress;
+        if (titlesAwarded.length > 0) {
+          newState.gameLog.push(`Titles earned: ${titlesAwarded.join(', ')}`);
+        }
+
+        // Build the end-of-turn report
+        const turnReport: TurnReport = {
+          turn: newState.player.turn,
+          month: newState.player.month,
+          year: newState.player.year,
+          popularityDelta: Math.round((newState.player.popularity - prev.player.popularity) * 10) / 10,
+          legitimacyDelta: Math.round((newState.player.legitimacy - prev.player.legitimacy) * 10) / 10,
+          inflationDelta: Math.round((newState.economic.inflation - prev.economic.inflation) * 10) / 10,
+          gdpGrowth: Math.round(newState.economic.gdpGrowth * 10) / 10,
+          satisfactionDelta: Math.round((newState.citizenSatisfaction.overall - prev.citizenSatisfaction.overall) * 10) / 10,
+          unemploymentRate: Math.round(newState.economic.unemploymentRate * 10) / 10,
+          debtToGdp: Math.round(newState.economic.debtToGdp * 10) / 10,
+          eventsResolved: get().turnEventsResolved,
+          eventsExpired: get().turnEventsExpired,
+          promisesFulfilled: newState.player.fulfilledPromises.length - prev.player.fulfilledPromises.length,
+          promisesBroken: newState.player.brokenPromises.length - prev.player.brokenPromises.length,
+          titlesAwarded,
+        };
+
         set({
           gameState: newState,
           historicalData: [...get().historicalData, historyPoint],
@@ -182,6 +257,9 @@ export const useGameStore = create<GameStore>()(
           isProcessingTurn: false,
           showEventModal: unresolvedEvent || null,
           showElectionResult,
+          turnReport,
+          turnEventsResolved: 0,
+          turnEventsExpired: 0,
         });
       },
 
@@ -206,13 +284,47 @@ export const useGameStore = create<GameStore>()(
           applyEffect(newState, effect.target, effect.operation, effect.value);
         }
 
+        // Apply flag changes from the choice
+        for (const f of choice.setFlags ?? []) {
+          if (!newState.flags.includes(f)) newState.flags.push(f);
+        }
+        for (const f of choice.clearFlags ?? []) {
+          newState.flags = newState.flags.filter(x => x !== f);
+        }
+
+        // Schedule a follow-up (cascading crisis) if the choice triggers one
+        if (choice.nextEventId) {
+          newState.pendingConsequences = [...newState.pendingConsequences, {
+            id: `con_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 7)}`,
+            fireTurn: newState.player.turn + (choice.consequenceDelay ?? 1),
+            templateId: choice.nextEventId,
+            setFlags: [],
+            clearFlags: [],
+          }];
+          newState.gameLog.push(`A consequence of "${event.title}" is brewing for turn ${newState.player.turn + (choice.consequenceDelay ?? 1)}.`);
+        }
+
         event.resolved = true;
         event.choiceMade = choiceId;
         newState.player.popularity = Math.max(0, Math.min(100, newState.player.popularity + choice.popularityImpact));
         newState.player.politicalInfluence = Math.max(0, Math.min(100, newState.player.politicalInfluence + choice.politicalRisk));
         newState.gameLog.push(`Decision: ${event.title} — Chose: "${choice.text}"`);
+        newState.eventArchive = [...newState.eventArchive, {
+          id: event.id,
+          templateId: event.templateId,
+          title: event.title,
+          category: event.category,
+          severity: event.severity,
+          turn: event.turn,
+          month: event.month,
+          year: event.year,
+          choiceText: choice.text,
+          outcome: 'resolved' as const,
+          popularityImpact: choice.popularityImpact,
+          politicalRisk: choice.politicalRisk,
+        }].slice(-200);
 
-        set({ gameState: newState, showEventModal: null });
+        set({ gameState: newState, showEventModal: null, turnEventsResolved: get().turnEventsResolved + 1 });
       },
 
       approveProject: (projectId) => {
@@ -347,24 +459,40 @@ export const useGameStore = create<GameStore>()(
 
         const now = Date.now();
         const newState = JSON.parse(JSON.stringify(gameState)) as GameState;
-        let changed = false;
+        let expiredCount = 0;
 
         for (const event of newState.events) {
           if (event.resolved || !event.deadline || event.penaltyApplied) continue;
           if (now < event.deadline) continue;
 
           event.penaltyApplied = true;
-          changed = true;
+          expiredCount++;
           newState.player.popularity = Math.max(0, newState.player.popularity - EVENT_TIMEOUT_PENALTY.popularity);
           newState.player.legitimacy = Math.max(0, newState.player.legitimacy - EVENT_TIMEOUT_PENALTY.legitimacy);
           newState.citizenSatisfaction.governance = Math.max(0, newState.citizenSatisfaction.governance - EVENT_TIMEOUT_PENALTY.governance);
           newState.gameLog.push(`Indecision penalty: People lose confidence (-${EVENT_TIMEOUT_PENALTY.popularity} popularity, -${EVENT_TIMEOUT_PENALTY.legitimacy} legitimacy, -${EVENT_TIMEOUT_PENALTY.governance} governance) for failing to address "${event.title}" promptly.`);
+          newState.eventArchive = [...newState.eventArchive, {
+            id: event.id,
+            templateId: event.templateId,
+            title: event.title,
+            category: event.category,
+            severity: event.severity,
+            turn: event.turn,
+            month: event.month,
+            year: event.year,
+            outcome: 'expired' as const,
+          }].slice(-200);
         }
 
-        if (changed) set({ gameState: newState });
+        // Expired events leave the active list: they only live on in the archive
+        newState.events = newState.events.filter(e => !(e.deadline && Date.now() >= e.deadline && !e.resolved));
+
+        if (expiredCount > 0) {
+          set({ gameState: newState, turnEventsExpired: get().turnEventsExpired + expiredCount });
+        }
       },
       dismissEvent: () => set({ showEventModal: null }),
-      resetGame: () => set({ gameState: null, currentScreen: 'start', historicalData: [], availableProjects: [] }),
+      resetGame: () => set({ gameState: null, currentScreen: 'start', historicalData: [], availableProjects: [], turnReport: null, turnEventsResolved: 0, turnEventsExpired: 0 }),
       setShowNewGameDialog: (show) => set({ showNewGameDialog: show }),
       setEnableTips: (enable) => set({ enableTips: enable }),
       setShowReplacementDialog: (state) => set({ showReplacementDialog: state }),
@@ -372,6 +500,49 @@ export const useGameStore = create<GameStore>()(
       setFontSize: (size) => set({ fontSize: size }),
       setDarkMode: (dark) => set({ darkMode: dark }),
       setLanguage: (lang) => set({ language: lang }),
+      exportSave: () => {
+        const s = get();
+        return JSON.stringify({
+          app: 'mgza',
+          version: 1,
+          savedAt: new Date().toISOString(),
+          state: {
+            gameState: s.gameState,
+            historicalData: s.historicalData,
+            availableProjects: s.availableProjects,
+            enableTips: s.enableTips,
+            fontSize: s.fontSize,
+            darkMode: s.darkMode,
+            language: s.language,
+          },
+        });
+      },
+      importSave: (json) => {
+        try {
+          const parsed = JSON.parse(json);
+          if (parsed?.app !== 'mgza' || !parsed?.state?.gameState) return false;
+          const gs = parsed.state.gameState;
+          if (!gs?.player || !gs?.economic || !Array.isArray(gs?.events)) return false;
+          if (!Array.isArray(gs.flags)) gs.flags = [];
+          if (!Array.isArray(gs.pendingConsequences)) gs.pendingConsequences = [];
+          if (!Array.isArray(gs.rumors)) gs.rumors = [];
+          if (!Array.isArray(gs.eventArchive)) gs.eventArchive = [];
+          if (!Array.isArray(gs.player.titles)) gs.player.titles = [];
+          set({
+            gameState: gs,
+            historicalData: parsed.state.historicalData ?? [],
+            availableProjects: parsed.state.availableProjects ?? [],
+            currentScreen: 'dashboard',
+            turnReport: null,
+            turnEventsResolved: 0,
+            turnEventsExpired: 0,
+          });
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      dismissTurnReport: () => set({ turnReport: null }),
     }),
     {
       name: 'mgza-game-store',
@@ -391,6 +562,31 @@ export const useGameStore = create<GameStore>()(
 // Helper to apply event effects to game state
 function applyEffect(state: GameState, target: string, operation: string, value: number): void {
   const parts = target.split('.');
+
+  // Flag operations
+  if (operation === 'setFlag') {
+    if (!state.flags.includes(target)) state.flags.push(target);
+    return;
+  }
+  if (operation === 'clearFlag') {
+    state.flags = state.flags.filter(f => f !== target);
+    return;
+  }
+
+  // Minister targeting: target like 'minister:Finance.popularity'
+  if (target.startsWith('minister:')) {
+    const rest = target.slice('minister:'.length);
+    const [portfolio, field] = rest.split('.');
+    const minister = state.ministers.find(m => m.portfolio === portfolio && m.isActive);
+    if (minister && field && (minister as any)[field] !== undefined) {
+      const current = (minister as any)[field];
+      if (operation === 'add') (minister as any)[field] = Math.max(0, Math.min(100, current + value));
+      else if (operation === 'subtract') (minister as any)[field] = Math.max(0, Math.min(100, current - value));
+      else if (operation === 'set') (minister as any)[field] = Math.max(0, Math.min(100, value));
+    }
+    return;
+  }
+
   const setNested = (obj: any, path: string[], val: number) => {
     const key = path[0];
     if (path.length === 1) {
