@@ -1694,8 +1694,8 @@ function ElectionsScreen() {
       )}
 
       <div className="bg-card border border-border rounded-lg p-6">
-        <h3 className="text-lg font-bold uppercase tracking-wider mb-4">Campaign Status</h3>
-        <p className="text-sm text-muted-foreground mb-4">
+        <h3 className="text-lg font-bold uppercase tracking-wider mb-1">Campaign Status</h3>
+        <p className="text-sm text-muted-foreground mb-5">
           {election.isOver ? (election.playerWon ? 'Congratulations on your victory! A new election cycle has begun.' : 'The election has been decided. Your time in office is over.') :
            turnsUntilElection > 24 ? 'The next election is still far away. Focus on governance to build popularity.' :
            turnsUntilElection > 12 ? 'Election season approaches. Start planning your campaign strategy.' :
@@ -1704,45 +1704,79 @@ function ElectionsScreen() {
            'The election is THIS MONTH. Make every decision count!'}
         </p>
 
-        {/* Polls Chart */}
-        <div className="h-40 flex items-end gap-2 mb-4">
-          {election.polls.slice(-20).map((poll, i) => (
-            <div key={i} className="flex-1 flex flex-col gap-0.5">
-              <div className="flex gap-0.5 items-end h-32">
-                <div className="flex-1 bg-amber-500 rounded-t" style={{ height: `${poll.playerPercent}%` }} />
-                <div className="flex-1 bg-red-500 rounded-t" style={{ height: `${poll.opponentPercent}%` }} />
-              </div>
-              <span className="text-[0.5625rem] text-center text-muted-foreground">T{poll.turn}</span>
+        {/* Legend — above the polls chart */}
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+          <p className="text-[0.625rem] font-bold uppercase tracking-wider text-muted-foreground">Polling History</p>
+          <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-[0.6875rem] font-semibold">
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm bg-amber-500 shrink-0" />
+              <span className="text-foreground">{gameState.player.partyName}</span>
+              <span className="text-amber-500 font-bold">({t('election.legendYou')})</span>
             </div>
-          ))}
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm bg-red-500 shrink-0" />
+              <span className="text-muted-foreground">{t('politics.opposition')}</span>
+            </div>
+          </div>
         </div>
 
-        {/* Polls Legend */}
-        <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mb-6 text-[0.6875rem] font-semibold border-b border-border/40 pb-3">
-          <div className="flex items-center gap-1.5">
-            <div className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" />
-            <span className="text-foreground">{gameState.player.partyName} ({t('election.legendYou')})</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" />
-            <span className="text-muted-foreground">{t('politics.opposition')}</span>
-          </div>
+        {/* Polls Chart */}
+        <div className="h-40 flex items-end gap-2 mb-2">
+          {election.polls.slice(-20).map((poll, i, arr) => {
+            const isLatest = i === arr.length - 1;
+            return (
+              <div key={i} className="flex-1 flex flex-col gap-0.5 relative">
+                {isLatest && (
+                  <div className="absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap">
+                    <span className="text-[0.5rem] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/30 rounded px-1 py-0.5">
+                      {poll.playerPercent.toFixed(0)}%
+                    </span>
+                  </div>
+                )}
+                <div className="flex gap-0.5 items-end h-32">
+                  <div className="flex-1 bg-amber-500 rounded-t" style={{ height: `${poll.playerPercent}%` }} />
+                  <div className="flex-1 bg-red-500 rounded-t" style={{ height: `${poll.opponentPercent}%` }} />
+                </div>
+                <span className="text-[0.5625rem] text-center text-muted-foreground">T{poll.turn}</span>
+              </div>
+            );
+          })}
+        </div>
+        <div className="flex items-center justify-between text-[0.5625rem] text-muted-foreground mb-6 border-b border-border/40 pb-3">
+          <span>← Earlier</span>
+          <span className="text-amber-500 font-semibold">Latest →</span>
         </div>
 
         {/* Historical Results */}
         {election.historicalResults && (
           <div>
-            <h4 className="text-sm font-bold mb-2">Historical Election Results</h4>
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-sm font-bold">Historical Election Results</h4>
+              <div className="flex gap-3 text-[0.625rem] font-semibold">
+                <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-sm bg-amber-500" />{t('election.legendYou')}</span>
+                <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-sm bg-red-500" />{t('politics.opposition')}</span>
+              </div>
+            </div>
             <div className="space-y-2">
               {election.historicalResults.map((result, i) => (
                 <div key={i} className="flex items-center gap-3">
-                  <span className="text-xs w-12">{result.year}</span>
-                  <div className="flex-1 flex h-4 rounded overflow-hidden">
-                    <div className="bg-amber-500 flex items-center justify-center" style={{ width: `${result.playerParty}%` }}>
-                      <span className="text-[0.5625rem] font-bold whitespace-nowrap">{result.playerParty}% {t('election.inBarYou')}</span>
+                  <span className="text-xs w-12 shrink-0">{result.year}</span>
+                  <div className="flex-1 flex h-5 rounded overflow-hidden text-[0.5625rem] font-bold">
+                    <div
+                      className="bg-amber-500 flex items-center justify-center overflow-hidden min-w-0"
+                      style={{ width: `${result.playerParty}%` }}
+                    >
+                      {result.playerParty >= 20 && (
+                        <span className="whitespace-nowrap px-1">{result.playerParty}% {t('election.inBarYou')}</span>
+                      )}
                     </div>
-                    <div className="bg-red-500 flex items-center justify-center" style={{ width: `${result.opposition}%` }}>
-                      <span className="text-[0.5625rem] font-bold">{result.opposition}%</span>
+                    <div
+                      className="bg-red-500 flex items-center justify-center overflow-hidden min-w-0"
+                      style={{ width: `${result.opposition}%` }}
+                    >
+                      {result.opposition >= 15 && (
+                        <span className="whitespace-nowrap px-1">{result.opposition}%</span>
+                      )}
                     </div>
                   </div>
                 </div>
