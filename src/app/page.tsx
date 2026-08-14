@@ -2100,7 +2100,7 @@ function StartScreen() {
             <div className="relative mt-2 mb-4 px-8 py-3 inline-block">
               <span className="zim-proverb-quote absolute left-2 top-0 text-3xl font-serif">"</span>
               <p className="zim-hero-proverb text-xs italic font-medium relative z-10">
-                Ivhu risina mutsindo hairevi: A tree without roots cannot stand
+                {t('start.proverb')}
               </p>
               <span className="zim-proverb-quote absolute right-2 bottom-0 text-3xl font-serif leading-none">"</span>
             </div>
