@@ -1,89 +1,27 @@
 // ═══════════════════════════════════════════════════════
-// MAKE GREAT ZIMBABWE AGAIN - Leaderboard SQLite store
-// Uses bun:sqlite (the bun dev/prod runtime). Loaded lazily
-// to avoid bundler/runtime resolution conflicts.
-// File lives in db/leaderboard.db next to the app data.
+// MAKE GREAT ZIMBABWE AGAIN - Leaderboard Supabase store
+// Replaces the old bun:sqlite store (db/leaderboard.db).
+// Uses @supabase/supabase-js with the anon publishable key;
+// RLS policies in supabase/schema.sql allow public reads and
+// inserts, so the app's API routes can read/write directly.
 // ═══════════════════════════════════════════════════════
 
-import path from 'node:path';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-const DB_PATH =
-  process.env.LEADERBOARD_DB_PATH ||
-  path.join(process.cwd(), 'db', 'leaderboard.db');
+let client: SupabaseClient | null = null;
 
-type SqlStatement = {
-  run(...params: (string | number)[]): unknown;
-  all(...params: (string | number)[]): Record<string, any>[];
-  get(...params: (string | number)[]): Record<string, any> | undefined;
-};
+function getClient(): SupabaseClient {
+  if (client) return client;
 
-type SqlDb = {
-  exec(sql: string): void;
-  prepare(sql: string): SqlStatement;
-};
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_ANON_KEY;
 
-interface BunSqliteModule {
-  Database: new (path: string) => {
-    exec(sql: string): void;
-    prepare(sql: string): SqlStatement;
-  };
-}
-
-let db: SqlDb | null = null;
-
-function getDb(): SqlDb {
-  if (db) return db;
-
-  // Deliberately opaque: keep 'bun:sqlite' out of the bundler's
-  // static import graph; evaluate it from the runtime instead.
-  const driverPath = ['bun', 'sqlite'].join(':');
-  const driverModule = moduleRequire(driverPath) as BunSqliteModule;
-
-  if (!driverModule || !driverModule.Database) {
-    throw new Error('bun:sqlite driver unavailable');
+  if (!url || !key) {
+    throw new Error('Supabase not configured: SUPABASE_URL and SUPABASE_ANON_KEY required');
   }
 
-  const Database = driverModule.Database;
-  db = new Database(DB_PATH);
-
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS leaderboard_entries (
-      id TEXT PRIMARY KEY,
-      player_name TEXT NOT NULL,
-      score REAL NOT NULL,
-      popularity REAL NOT NULL,
-      satisfaction REAL NOT NULL,
-      legitimacy REAL NOT NULL,
-      gdp REAL NOT NULL,
-      years_in_office REAL NOT NULL,
-      turns_survived INTEGER NOT NULL,
-      population INTEGER NOT NULL,
-      difficulty TEXT NOT NULL,
-      created_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS leaderboard_snapshots (
-      difficulty TEXT PRIMARY KEY,
-      entries_json TEXT NOT NULL,
-      last_updated_at TEXT NOT NULL
-    );
-  `);
-
-  return db;
-}
-
-function moduleRequire(specifier: string): unknown {
-  const req = getRuntimeRequire();
-  return req(specifier);
-}
-
-function getRuntimeRequire(): (specifier: string) => unknown {
-  // Turbopack compiles CJS-ish output where `require` remains
-  // usable at runtime; fall back to globalThis-based loading.
-  const globalAny = globalThis as any;
-  if (typeof globalAny.require === 'function') return globalAny.require;
-  const req = eval('require');
-  if (typeof req === 'function') return req;
-  throw new Error('No require available');
+  client = createClient(url, key);
+  return client;
 }
 
 export interface LeaderboardRow {
@@ -107,85 +45,118 @@ export interface SnapshotRow {
   lastUpdatedAt: string;
 }
 
-export function insertEntry(entry: Omit<LeaderboardRow, 'id' | 'createdAt'> & { id?: string }): LeaderboardRow {
-  const handle = getDb();
+interface EntryInsert {
+  id?: string;
+  playerName: string;
+  score: number;
+  popularity: number;
+  satisfaction: number;
+  legitimacy: number;
+  gdp: number;
+  yearsInOffice: number;
+  turnsSurvived: number;
+  population: number;
+  difficulty: string;
+}
+
+export async function insertEntry(entry: EntryInsert): Promise<LeaderboardRow> {
+  const supabase = getClient();
   const id = entry.id || `lb_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 9)}`;
   const createdAt = new Date().toISOString();
 
-  handle
-    .prepare(
-      `INSERT INTO leaderboard_entries
-        (id, player_name, score, popularity, satisfaction, legitimacy, gdp, years_in_office, turns_survived, population, difficulty, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    )
-    .run(
+  const { error } = await supabase
+    .from('leaderboard_entries')
+    .insert({
       id,
-      entry.playerName,
-      entry.score,
-      entry.popularity,
-      entry.satisfaction,
-      entry.legitimacy,
-      entry.gdp,
-      entry.yearsInOffice,
-      entry.turnsSurvived,
-      entry.population,
-      entry.difficulty,
-      createdAt
-    );
+      player_name: entry.playerName,
+      score: entry.score,
+      popularity: entry.popularity,
+      satisfaction: entry.satisfaction,
+      legitimacy: entry.legitimacy,
+      gdp: entry.gdp,
+      years_in_office: entry.yearsInOffice,
+      turns_survived: entry.turnsSurvived,
+      population: entry.population,
+      difficulty: entry.difficulty,
+      created_at: createdAt,
+    });
+
+  if (error) {
+    throw new Error(`Supabase insert failed: ${error.message}`);
+  }
 
   return { ...entry, id, createdAt } as LeaderboardRow;
 }
 
-export function getEntries(difficulty: string, limit = 50): LeaderboardRow[] {
-  const handle = getDb();
-  const rows = handle
-    .prepare(
-      `SELECT id, player_name, score, popularity, satisfaction, legitimacy, gdp, years_in_office, turns_survived, population, difficulty, created_at
-       FROM leaderboard_entries
-       WHERE difficulty = ?
-       ORDER BY score DESC, created_at ASC
-       LIMIT ?`
-    )
-    .all(difficulty, limit);
+export async function getEntries(difficulty: string, limit = 50): Promise<LeaderboardRow[]> {
+  const supabase = getClient();
 
-  return rows.map(mapRow);
+  const { data, error } = await supabase
+    .from('leaderboard_entries')
+    .select('*')
+    .eq('difficulty', difficulty)
+    .order('score', { ascending: false })
+    .order('created_at', { ascending: true })
+    .limit(limit);
+
+  if (error) {
+    throw new Error(`Supabase select failed: ${error.message}`);
+  }
+
+  return (data || []).map(mapRow);
 }
 
-export function countHigherScorers(difficulty: string, score: number, createdAt: string): number {
-  const handle = getDb();
-  const row = handle
-    .prepare(
-      `SELECT COUNT(*) AS c
-       FROM leaderboard_entries
-       WHERE difficulty = ? AND (score > ? OR (score = ? AND created_at < ?))`
-    )
-    .get(difficulty, score, score, createdAt);
-  return Number(row?.c || 0);
+export async function countHigherScorers(difficulty: string, score: number, createdAt: string): Promise<number> {
+  const supabase = getClient();
+
+  const { count, error } = await supabase
+    .from('leaderboard_entries')
+    .select('*', { count: 'exact', head: true })
+    .eq('difficulty', difficulty)
+    .or(`score.gt.${score},and(score.eq.${score},created_at.lt.${createdAt})`);
+
+  if (error) {
+    throw new Error(`Supabase count failed: ${error.message}`);
+  }
+
+  return count || 0;
 }
 
-export function getSnapshot(difficulty: string): SnapshotRow | null {
-  const handle = getDb();
-  const row = handle
-    .prepare('SELECT difficulty, entries_json, last_updated_at FROM leaderboard_snapshots WHERE difficulty = ?')
-    .get(difficulty);
-  return row
+export async function getSnapshot(difficulty: string): Promise<SnapshotRow | null> {
+  const supabase = getClient();
+
+  const { data, error } = await supabase
+    .from('leaderboard_snapshots')
+    .select('*')
+    .eq('difficulty', difficulty)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Supabase snapshot select failed: ${error.message}`);
+  }
+
+  return data
     ? {
         difficulty,
-        entriesJson: String(row.entries_json),
-        lastUpdatedAt: String(row.last_updated_at),
+        entriesJson: String(data.entries_json),
+        lastUpdatedAt: String(data.last_updated_at),
       }
     : null;
 }
 
-export function upsertSnapshot(difficulty: string, entriesJson: string, lastUpdatedAt: string): void {
-  const handle = getDb();
-  handle
-    .prepare(
-      `INSERT INTO leaderboard_snapshots (difficulty, entries_json, last_updated_at)
-       VALUES (?, ?, ?)
-       ON CONFLICT(difficulty) DO UPDATE SET entries_json = excluded.entries_json, last_updated_at = excluded.last_updated_at`
-    )
-    .run(difficulty, entriesJson, lastUpdatedAt);
+export async function upsertSnapshot(difficulty: string, entriesJson: string, lastUpdatedAt: string): Promise<void> {
+  const supabase = getClient();
+
+  const { error } = await supabase
+    .from('leaderboard_snapshots')
+    .upsert(
+      { difficulty, entries_json: entriesJson, last_updated_at: lastUpdatedAt },
+      { onConflict: 'difficulty' }
+    );
+
+  if (error) {
+    throw new Error(`Supabase snapshot upsert failed: ${error.message}`);
+  }
 }
 
 function mapRow(row: Record<string, any>): LeaderboardRow {

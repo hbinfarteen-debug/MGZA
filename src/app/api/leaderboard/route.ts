@@ -16,7 +16,7 @@ export async function GET(request: Request) {
   }
 
   const now = new Date();
-  const snapshot = getSnapshot(difficulty);
+  const snapshot = await getSnapshot(difficulty);
 
   if (snapshot && now.getTime() - new Date(snapshot.lastUpdatedAt).getTime() < SNAPSHOT_TTL_MS) {
     return NextResponse.json({
@@ -28,10 +28,10 @@ export async function GET(request: Request) {
     });
   }
 
-  const entries = getEntries(difficulty, SNAPSHOT_LIMIT);
+  const entries = await getEntries(difficulty, SNAPSHOT_LIMIT);
   const entriesJson = JSON.stringify(entries);
 
-  upsertSnapshot(difficulty, entriesJson, now.toISOString());
+  await upsertSnapshot(difficulty, entriesJson, now.toISOString());
 
   return NextResponse.json({
     difficulty,

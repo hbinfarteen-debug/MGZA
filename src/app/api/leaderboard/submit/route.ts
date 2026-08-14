@@ -36,7 +36,7 @@ export async function POST(request: Request) {
       parsed[key] = Number.isFinite(value) ? Math.round(value * 10) / 10 : 0;
     }
 
-    const entry = insertEntry({
+    const entry = await insertEntry({
       playerName: cleanName,
       difficulty,
       score: parsed.score,
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
       population: Math.round(Number(body.population) || 0),
     });
 
-    const rank = countHigherScorers(difficulty, entry.score, entry.createdAt) + 1;
+    const rank = (await countHigherScorers(difficulty, entry.score, entry.createdAt)) + 1;
 
     return NextResponse.json({ entry: entry.id, rank });
   } catch (err) {

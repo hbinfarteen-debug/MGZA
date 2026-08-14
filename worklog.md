@@ -264,6 +264,26 @@ Stage Summary:
 - Event card pool complete and verified end to end
 
 ---
+Task ID: 13
+Agent: main
+Task: Migrate leaderboard from SQLite to Supabase
+
+Work Log:
+- Installed @supabase/supabase-js (2.112.3); added SUPABASE_URL (https://epcbliaeovtdtjmsdyhk.supabase.co) + SUPABASE_ANON_KEY (sb_publishable_...) to .env
+- Wrote supabase/schema.sql: leaderboard_entries + leaderboard_snapshots tables (mirror old SQLite schema), score index, RLS policies allowing anon read/insert/upsert (public leaderboard, no auth); re-runnable via drop policy if exists
+- Rewrote src/lib/leaderboard-db.ts: swapped bun:sqlite driver for createClient(...) singleton; kept the exact exported interface (insertEntry/getEntries/countHigherScorers/getSnapshot/upsertSnapshot + row types) so API routes only needed awaits
+- Updated GET /api/leaderboard and POST /api/leaderboard/submit to await the now-async store calls; 24h snapshot caching behavior unchanged
+- Verified end-to-end: GET returns empty board + snapshot timestamps, POST inserted entry with rank 1, direct PostgREST read confirms row columns; anon key correctly blocked DELETE (no RLS delete policy)
+- ESLint clean; tsc errors in submit route (fields tuple typing) are pre-existing and build-ignored
+- Bumped version from v1.5 to v1.6 in footer and all 3 language translations; updated AGENTS.md leaderboard section
+
+Stage Summary:
+- Leaderboard now lives in the Supabase project; API contract unchanged
+- Tables + RLS are created by running supabase/schema.sql in the Supabase SQL Editor
+- One test row (Test Comrade, normal, 87.5) remains in leaderboard_entries, to be deleted in the Table Editor
+- Version: v1.6
+
+---
 Task ID: 12
 Agent: main
 Task: Convert start-screen hero from dark-institutional to clean light theme
