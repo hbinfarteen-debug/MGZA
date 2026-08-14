@@ -5,7 +5,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { GameState, InfrastructureProject, GameEvent, BudgetItem, Minister, HistoricalDataPoint } from '@/lib/game/types';
-import { createInitialGameState, EVENT_DECISION_SECONDS, EVENT_TIMEOUT_PENALTY, TITLE_TURNS_REQUIRED } from '@/lib/game/constants';
+import { createInitialGameState, EVENT_DECISION_SECONDS, EVENT_TIMEOUT_PENALTY, TITLE_TURNS_REQUIRED, MONTH_NAMES } from '@/lib/game/constants';
 import { simulateTurn, generateAvailableProjects, getHistoricalDataPoint, TITLE_RULES } from '@/lib/game/engine';
 import type { Language } from '@/lib/i18n';
 
@@ -73,7 +73,6 @@ interface GameStore {
   enableTips: boolean;
   showReplacementDialog: ReplacementDialogState | null;
   showElectionResult: ElectionResultData | null;
-  turnReport: TurnReport | null;
   turnEventsResolved: number;
   turnEventsExpired: number;
   fontSize: FontSize;
@@ -105,25 +104,6 @@ interface GameStore {
   setLanguage: (lang: Language) => void;
   exportSave: () => string;
   importSave: (json: string) => boolean;
-  dismissTurnReport: () => void;
-}
-
-export interface TurnReport {
-  turn: number;
-  month: number;
-  year: number;
-  popularityDelta: number;
-  legitimacyDelta: number;
-  inflationDelta: number;
-  gdpGrowth: number;
-  satisfactionDelta: number;
-  unemploymentRate: number;
-  debtToGdp: number;
-  eventsResolved: number;
-  eventsExpired: number;
-  promisesFulfilled: number;
-  promisesBroken: number;
-  titlesAwarded: string[];
 }
 
 export const useGameStore = create<GameStore>()(
@@ -140,7 +120,6 @@ export const useGameStore = create<GameStore>()(
       enableTips: true,
       showReplacementDialog: null,
       showElectionResult: null,
-      turnReport: null,
       turnEventsResolved: 0,
       turnEventsExpired: 0,
       fontSize: 'medium' as FontSize,
@@ -231,24 +210,24 @@ export const useGameStore = create<GameStore>()(
           newState.gameLog.push(`Titles earned: ${titlesAwarded.join(', ')}`);
         }
 
-        // Build the end-of-turn report
-        const turnReport: TurnReport = {
-          turn: newState.player.turn,
-          month: newState.player.month,
-          year: newState.player.year,
-          popularityDelta: Math.round((newState.player.popularity - prev.player.popularity) * 10) / 10,
-          legitimacyDelta: Math.round((newState.player.legitimacy - prev.player.legitimacy) * 10) / 10,
-          inflationDelta: Math.round((newState.economic.inflation - prev.economic.inflation) * 10) / 10,
-          gdpGrowth: Math.round(newState.economic.gdpGrowth * 10) / 10,
-          satisfactionDelta: Math.round((newState.citizenSatisfaction.overall - prev.citizenSatisfaction.overall) * 10) / 10,
-          unemploymentRate: Math.round(newState.economic.unemploymentRate * 10) / 10,
-          debtToGdp: Math.round(newState.economic.debtToGdp * 10) / 10,
-          eventsResolved: get().turnEventsResolved,
-          eventsExpired: get().turnEventsExpired,
-          promisesFulfilled: newState.player.fulfilledPromises.length - prev.player.fulfilledPromises.length,
-          promisesBroken: newState.player.brokenPromises.length - prev.player.brokenPromises.length,
-          titlesAwarded,
-        };
+        // Build the end-of-turn report as a game log entry
+        const fmtDelta = (v: number) => `${v > 0 ? '+' : ''}${v}%`;
+        const reportParts = [
+          `${MONTH_NAMES[newState.player.month - 1]} ${newState.player.year}: Turn ${newState.player.turn} report`,
+          `Popularity ${fmtDelta(Math.round((newState.player.popularity - prev.player.popularity) * 10) / 10)}`,
+          `Legitimacy ${fmtDelta(Math.round((newState.player.legitimacy - prev.player.legitimacy) * 10) / 10)}`,
+          `Satisfaction ${fmtDelta(Math.round((newState.citizenSatisfaction.overall - prev.citizenSatisfaction.overall) * 10) / 10)}`,
+          `GDP growth ${fmtDelta(Math.round(newState.economic.gdpGrowth * 10) / 10)}`,
+          `Inflation ${fmtDelta(Math.round((newState.economic.inflation - prev.economic.inflation) * 10) / 10)}`,
+          `Debt/GDP ${Math.round(newState.economic.debtToGdp * 10) / 10}%`,
+          `Unemployment ${Math.round(newState.economic.unemploymentRate * 10) / 10}%`,
+          `Events: ${get().turnEventsResolved} resolved, ${get().turnEventsExpired} expired`,
+          `Promises: ${newState.player.fulfilledPromises.length - prev.player.fulfilledPromises.length} kept, ${newState.player.brokenPromises.length - prev.player.brokenPromises.length} broken`,
+        ];
+        if (titlesAwarded.length > 0) {
+          reportParts.push(`Titles earned: ${titlesAwarded.join(', ')}`);
+        }
+        newState.gameLog.push(reportParts.join(' | '));
 
         set({
           gameState: newState,
@@ -257,7 +236,6 @@ export const useGameStore = create<GameStore>()(
           isProcessingTurn: false,
           showEventModal: unresolvedEvent || null,
           showElectionResult,
-          turnReport,
           turnEventsResolved: 0,
           turnEventsExpired: 0,
         });
@@ -492,7 +470,7 @@ export const useGameStore = create<GameStore>()(
         }
       },
       dismissEvent: () => set({ showEventModal: null }),
-      resetGame: () => set({ gameState: null, currentScreen: 'start', historicalData: [], availableProjects: [], turnReport: null, turnEventsResolved: 0, turnEventsExpired: 0 }),
+      resetGame: () => set({ gameState: null, currentScreen: 'start', historicalData: [], availableProjects: [], turnEventsResolved: 0, turnEventsExpired: 0 }),
       setShowNewGameDialog: (show) => set({ showNewGameDialog: show }),
       setEnableTips: (enable) => set({ enableTips: enable }),
       setShowReplacementDialog: (state) => set({ showReplacementDialog: state }),
@@ -533,7 +511,6 @@ export const useGameStore = create<GameStore>()(
             historicalData: parsed.state.historicalData ?? [],
             availableProjects: parsed.state.availableProjects ?? [],
             currentScreen: 'dashboard',
-            turnReport: null,
             turnEventsResolved: 0,
             turnEventsExpired: 0,
           });
@@ -542,7 +519,6 @@ export const useGameStore = create<GameStore>()(
           return false;
         }
       },
-      dismissTurnReport: () => set({ turnReport: null }),
     }),
     {
       name: 'mgza-game-store',

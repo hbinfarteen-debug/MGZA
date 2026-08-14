@@ -2414,101 +2414,6 @@ function EventModal() {
 }
 
 // ═══════════════════════════════════════════════════════
-// END-OF-TURN REPORT DIALOG
-// ═══════════════════════════════════════════════════════
-
-function DeltaStat({ label, value, suffix = '', invert = false }: { label: string; value: number; suffix?: string; invert?: boolean }) {
-  const positive = value > 0;
-  const good = invert ? !positive : positive;
-  return (
-    <div className="bg-card border border-border/50 rounded-lg p-3">
-      <p className="text-[0.625rem] text-muted-foreground">{label}</p>
-      <p className={`text-sm font-bold ${value === 0 ? 'text-muted-foreground' : good ? 'text-green-600' : 'text-red-500'}`}>
-        {value > 0 ? '+' : ''}{value}{suffix}
-      </p>
-    </div>
-  );
-}
-
-function TurnReportDialog() {
-  const { turnReport, dismissTurnReport } = useGameStore();
-  const { t } = useTranslation();
-  if (!turnReport) return null;
-
-  const r = turnReport;
-
-  return (
-    <Dialog open={!!turnReport} onOpenChange={(open) => { if (!open) dismissTurnReport(); }}>
-      <DialogContent className="sm:max-w-lg zim-card-in">
-        <DialogHeader>
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="text-[0.625rem]">{MONTH_NAMES[r.month - 1]} {r.year}</Badge>
-            <Badge variant="secondary" className="text-[0.625rem]">{t('history.turn', { turn: r.turn })}</Badge>
-          </div>
-          <DialogTitle className="text-lg flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-amber-500" /> {t('report.title')}
-          </DialogTitle>
-          <DialogDescription className="text-sm">{t('report.subtitle')}</DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 py-2">
-          <div className="grid grid-cols-3 gap-2">
-            <DeltaStat label={t('report.popularity')} value={r.popularityDelta} suffix="%" />
-            <DeltaStat label={t('report.legitimacy')} value={r.legitimacyDelta} suffix="%" />
-            <DeltaStat label={t('report.satisfaction')} value={r.satisfactionDelta} suffix="%" />
-            <DeltaStat label={t('report.gdpGrowth')} value={r.gdpGrowth} suffix="%" />
-            <DeltaStat label={t('report.inflation')} value={r.inflationDelta} suffix="%" invert />
-            <DeltaStat label={t('report.debtToGdp')} value={r.debtToGdp} suffix="%" />
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div className="bg-card border border-border/50 rounded-lg p-3 text-center">
-              <p className="text-[0.625rem] text-muted-foreground">{t('report.unemployment')}</p>
-              <p className="text-sm font-bold">{r.unemploymentRate.toFixed(1)}%</p>
-            </div>
-            <div className="bg-card border border-border/50 rounded-lg p-3 text-center">
-              <p className="text-[0.625rem] text-muted-foreground">{t('report.eventsResolved')}</p>
-              <p className={`text-sm font-bold ${r.eventsResolved > 0 ? 'text-green-600' : 'text-muted-foreground'}`}>{r.eventsResolved}</p>
-            </div>
-            <div className="bg-card border border-border/50 rounded-lg p-3 text-center">
-              <p className="text-[0.625rem] text-muted-foreground">{t('report.eventsExpired')}</p>
-              <p className={`text-sm font-bold ${r.eventsExpired > 0 ? 'text-red-500' : 'text-muted-foreground'}`}>{r.eventsExpired}</p>
-            </div>
-            <div className="bg-card border border-border/50 rounded-lg p-3 text-center">
-              <p className="text-[0.625rem] text-muted-foreground">{t('report.promisesFulfilled')} / {t('report.promisesBroken')}</p>
-              <p className="text-sm font-bold">
-                <span className="text-green-600">{r.promisesFulfilled}</span>
-                <span className="text-muted-foreground"> / </span>
-                <span className="text-red-500">{r.promisesBroken}</span>
-              </p>
-            </div>
-          </div>
-
-          {r.titlesAwarded.length > 0 && (
-            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
-              <p className="text-xs font-bold text-amber-600 mb-1 flex items-center gap-1">
-                <Crown className="h-3 w-3" /> {t('report.titlesEarned')}
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {r.titlesAwarded.map((key) => (
-                  <Badge key={key} variant="secondary" className="text-[0.5625rem]">{t(`title.${key}`)}</Badge>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        <DialogFooter>
-          <Button onClick={dismissTurnReport} className="bg-amber-600 hover:bg-amber-700">
-            {t('report.dismiss')}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// ═══════════════════════════════════════════════════════
 // ELECTION RESULT DIALOG
 // ═══════════════════════════════════════════════════════
 
@@ -3436,7 +3341,6 @@ export default function GamePage() {
       <EventModal />
       <ElectionResultDialog />
       <MinisterReplacementDialog />
-      <TurnReportDialog />
       <NewGameDialog open={showNewGameDialog} onOpenChange={setShowNewGameDialog} />
       <SettingsDialog open={showSettings} onOpenChange={setShowSettings} />
     </div>
