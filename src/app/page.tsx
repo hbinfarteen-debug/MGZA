@@ -3473,11 +3473,11 @@ export default function GamePage() {
         {/* Sidebar Navigation */}
         <aside className={`
           fixed lg:static inset-y-0 left-0 z-40 w-56 bg-card border-r border-border
-          transform transition-transform lg:translate-x-0
+          transform transition-transform lg:translate-x-0 overflow-hidden
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
           lg:w-48 xl:w-56
         `}>
-          <div className="flex flex-col h-full">
+          <div className="flex flex-col h-full overflow-hidden">
             <div className="lg:hidden flex items-center justify-between p-3 border-b border-border">
               <span className="text-sm font-bold">{t('common.settings')}</span>
               <Button variant="ghost" size="sm" className="p-0 h-6 w-6" onClick={() => setSidebarOpen(false)}>
@@ -3503,7 +3503,7 @@ export default function GamePage() {
               </div>
             )}
 
-            <ScrollArea className="flex-1">
+            <ScrollArea className="flex-1 min-h-0">
               <nav className="p-2 space-y-0.5">
                 {NAV_ITEMS.map((item) => (
                   <button
