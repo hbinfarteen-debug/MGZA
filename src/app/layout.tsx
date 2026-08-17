@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   keywords: ["strategy game", "political simulation", "zimbabwe", "governance", "indie game"],
   authors: [{ name: "MGZA Studios" }],
   icons: {
-    icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
+    icon: "/favicon.svg",
   },
   openGraph: {
     title: "Make Great Zimbabwe Again",
