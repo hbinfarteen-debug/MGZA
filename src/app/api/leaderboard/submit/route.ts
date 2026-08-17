@@ -49,7 +49,14 @@ export async function POST(request: Request) {
       population: Math.round(Number(body.population) || 0),
     });
 
-    const rank = (await countHigherScorers(difficulty, entry.score, entry.createdAt)) + 1;
+    const rank = (await countHigherScorers(
+      difficulty,
+      entry.yearsInOffice,
+      entry.popularity,
+      entry.satisfaction,
+      entry.gdp,
+      entry.createdAt
+    )) + 1;
 
     return NextResponse.json({ entry: entry.id, rank });
   } catch (err) {

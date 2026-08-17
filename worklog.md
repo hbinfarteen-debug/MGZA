@@ -424,3 +424,18 @@ Work Log:
 Stage Summary:
 - Game is now thumb-friendly on iPhones/Androids (bottom tab nav, tappable hints, tap-to-view province details, bigger touch targets) while the desktop view is unchanged
 - Version: v1.12
+
+---
+Task ID: 20
+Agent: main
+Task: Settings tips toggle, leaderboard re-ranking, about developer link (v1.12)
+
+Work Log:
+- Tips toggle: moved out of the sidebar drawer footer (which could clip on short mobile screens) into the Settings dialog as a proper row with Lightbulb icon + description; added common.tipsDesc to en/sn/nd; removed now-unused enableTips/setEnableTips from the main component store destructure
+- Leaderboard re-ranking: getEntries now orders by years_in_office DESC, then popularity DESC, satisfaction DESC, gdp DESC, then created_at ASC (was score DESC) so the longest-serving presidency ranks first and popularity/satisfaction/gdp act as tiebreakers; countHigherScorers rewritten to mirror that lexicographic tiebreak chain via a Supabase or() with nested and() groups (signature now takes yearsInOffice/popularity/satisfaction/gdp/createdAt); submit route passes the new fields; Score column kept as an informational stat row per user
+- Settings dialog: added an About the Developer row at the bottom with an ExternalLink icon button that opens https://barryportfolio-two.vercel.app/ in a new tab (target=_blank, rel=noopener noreferrer); added common.aboutDeveloper + common.aboutDeveloperDesc to en/sn/nd
+- NOTE: the 24h leaderboard snapshot caches old ordering; existing snapshot serves stale order until it expires or leaderboard_snapshots is cleared (DELETE FROM leaderboard_snapshots) in Supabase
+
+Stage Summary:
+- Tips reachable via Settings on mobile; leaderboard rewards longevity; developer portfolio linked from Settings
+- Version: v1.12

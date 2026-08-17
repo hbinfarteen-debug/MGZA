@@ -40,6 +40,8 @@ const en: Record<string, string> = {
 
   // COMMON
   'common.settings': 'Settings',
+  'common.aboutDeveloper': 'About the Developer',
+  'common.aboutDeveloperDesc': 'Visit the portfolio of the developer who made this game',
   'common.darkMode': 'Dark Mode',
   'common.darkModeDesc': 'Switch between light and dark theme',
   'common.textSize': 'Text Size',
@@ -525,6 +527,8 @@ const sn: Record<string, string> = {
 
   // COMMON
   'common.settings': 'Gadziriso',
+  'common.aboutDeveloper': 'Nezve Muvaki',
+  'common.aboutDeveloperDesc': 'Enda kumuvaki akagadzira mutambo uyu',
   'common.darkMode': 'Rima Rima',
   'common.darkModeDesc': 'Shanduka pakati pemazambiri nemazambiri',
   'common.textSize': 'Saizi Ye Mazwi',
@@ -1010,6 +1014,8 @@ const nd: Record<string, string> = {
 
   // COMMON
   'common.settings': 'Amasethingi',
+  'common.aboutDeveloper': 'Ngokunje Kwomsunguli',
+  'common.aboutDeveloperDesc': 'Vakashela iphothifoliyo yomsunguli owenza lomdlalo',
   'common.darkMode': 'Ubumnyama',
   'common.darkModeDesc': 'Tshintsha phakathi kwamabala amnyama namnyama',
   'common.textSize': 'Ubungako Bezinkumba',

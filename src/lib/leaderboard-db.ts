@@ -95,7 +95,10 @@ export async function getEntries(difficulty: string, limit = 50): Promise<Leader
     .from('leaderboard_entries')
     .select('*')
     .eq('difficulty', difficulty)
-    .order('score', { ascending: false })
+    .order('years_in_office', { ascending: false })
+    .order('popularity', { ascending: false })
+    .order('satisfaction', { ascending: false })
+    .order('gdp', { ascending: false })
     .order('created_at', { ascending: true })
     .limit(limit);
 
@@ -106,14 +109,29 @@ export async function getEntries(difficulty: string, limit = 50): Promise<Leader
   return (data || []).map(mapRow);
 }
 
-export async function countHigherScorers(difficulty: string, score: number, createdAt: string): Promise<number> {
+export async function countHigherScorers(
+  difficulty: string,
+  yearsInOffice: number,
+  popularity: number,
+  satisfaction: number,
+  gdp: number,
+  createdAt: string
+): Promise<number> {
   const supabase = getClient();
+
+  const or = [
+    `years_in_office.gt.${yearsInOffice}`,
+    `and(years_in_office.eq.${yearsInOffice},popularity.gt.${popularity})`,
+    `and(years_in_office.eq.${yearsInOffice},popularity.eq.${popularity},satisfaction.gt.${satisfaction})`,
+    `and(years_in_office.eq.${yearsInOffice},popularity.eq.${popularity},satisfaction.eq.${satisfaction},gdp.gt.${gdp})`,
+    `and(years_in_office.eq.${yearsInOffice},popularity.eq.${popularity},satisfaction.eq.${satisfaction},gdp.eq.${gdp},created_at.lt.${createdAt})`,
+  ].join(',');
 
   const { count, error } = await supabase
     .from('leaderboard_entries')
     .select('*', { count: 'exact', head: true })
     .eq('difficulty', difficulty)
-    .or(`score.gt.${score},and(score.eq.${score},created_at.lt.${createdAt})`);
+    .or(or);
 
   if (error) {
     throw new Error(`Supabase count failed: ${error.message}`);

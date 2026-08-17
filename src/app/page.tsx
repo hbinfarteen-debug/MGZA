@@ -25,7 +25,7 @@ import {
   Users, Zap, Droplets, ShieldAlert, Vote, ChevronRight, Play,
   Skull, Settings, Clock, TrendingUp, AlertTriangle, Flame,
   ChevronLeft, Menu, Gamepad2, X, Heart, Star, Trophy, Check, Lightbulb, Info,
-  Sun, Moon, Type, Globe, RefreshCw, Crown, ScrollText, Download, Upload,
+  Sun, Moon, Type, Globe, RefreshCw, Crown, ScrollText, Download, Upload, ExternalLink,
 } from 'lucide-react';
 import { MONTH_NAMES, EVENT_DECISION_SECONDS, EVENT_TIMEOUT_PENALTY } from '@/lib/game/constants';
 import type { GameEvent } from '@/lib/game/types';
@@ -3021,6 +3021,28 @@ function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
               }}
             />
             {saveStatus && <p className="text-[0.625rem] text-muted-foreground mt-2">{saveStatus}</p>}
+          </div>
+
+          {/* About the Developer */}
+          <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-card">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-8 h-8 rounded-md bg-amber-500/15 text-amber-500">
+                <Info className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">{t('common.aboutDeveloper')}</p>
+                <p className="text-[0.625rem] text-muted-foreground">{t('common.aboutDeveloperDesc')}</p>
+              </div>
+            </div>
+            <a
+              href="https://barryportfolio-two.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={t('common.aboutDeveloper')}
+              className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-border text-amber-600 hover:border-amber-500/50 hover:bg-amber-500/10 transition-all shrink-0"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
           </div>
         </div>
         <DialogFooter>
