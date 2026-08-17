@@ -897,7 +897,7 @@ function BudgetScreen() {
                   step={10}
                   value={localBudget[item.category] || 0}
                   onChange={(e) => setLocalBudget(prev => ({ ...prev, [item.category]: Number(e.target.value) }))}
-                  className="w-full h-2 bg-muted rounded-full appearance-none cursor-pointer accent-amber-500"
+                  className="w-full h-2 bg-muted rounded-full appearance-none cursor-pointer accent-amber-500 touch-pan-y"
                 />
               </div>
               <div className="flex items-center gap-3 text-[0.625rem] text-muted-foreground">
@@ -3551,7 +3551,7 @@ export default function GamePage() {
         )}
 
         {/* Main Content */}
-        <main className="flex-1 overflow-auto">
+        <main className={`flex-1 ${sidebarOpen ? 'overflow-hidden' : 'overflow-auto'}`}>
           <div className="p-4 md:p-6 pb-24 lg:pb-6 max-w-7xl mx-auto">
             <AnimatePresence mode="wait">
               <motion.div
