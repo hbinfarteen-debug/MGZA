@@ -10,22 +10,26 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const difficulty = searchParams.get('difficulty') || 'normal';
+  const refresh = searchParams.get('refresh') === '1';
 
   if (!DIFFICULTIES.includes(difficulty)) {
     return NextResponse.json({ error: 'Invalid difficulty' }, { status: 400 });
   }
 
   const now = new Date();
-  const snapshot = await getSnapshot(difficulty);
 
-  if (snapshot && now.getTime() - new Date(snapshot.lastUpdatedAt).getTime() < SNAPSHOT_TTL_MS) {
-    return NextResponse.json({
-      difficulty,
-      entries: JSON.parse(snapshot.entriesJson),
-      lastUpdatedAt: snapshot.lastUpdatedAt,
-      nextUpdateAt: new Date(new Date(snapshot.lastUpdatedAt).getTime() + SNAPSHOT_TTL_MS).toISOString(),
-      cached: true,
-    });
+  if (!refresh) {
+    const snapshot = await getSnapshot(difficulty);
+
+    if (snapshot && now.getTime() - new Date(snapshot.lastUpdatedAt).getTime() < SNAPSHOT_TTL_MS) {
+      return NextResponse.json({
+        difficulty,
+        entries: JSON.parse(snapshot.entriesJson),
+        lastUpdatedAt: snapshot.lastUpdatedAt,
+        nextUpdateAt: new Date(new Date(snapshot.lastUpdatedAt).getTime() + SNAPSHOT_TTL_MS).toISOString(),
+        cached: true,
+      });
+    }
   }
 
   const entries = await getEntries(difficulty, SNAPSHOT_LIMIT);

@@ -66,10 +66,10 @@ function LeaderboardScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const loadBoard = useCallback(async (difficulty: LeaderboardDifficulty) => {
+  const loadBoard = useCallback(async (difficulty: LeaderboardDifficulty, force = false) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/leaderboard?difficulty=${difficulty}`);
+      const res = await fetch(`/api/leaderboard?difficulty=${difficulty}${force ? '&refresh=1' : ''}`);
       if (!res.ok) throw new Error('leaderboard fetch failed');
       const data = await res.json();
       setEntries(data.entries || []);
@@ -89,7 +89,7 @@ function LeaderboardScreen() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await loadBoard(difficulty);
+    await loadBoard(difficulty, true);
     setRefreshing(false);
   };
 
@@ -157,11 +157,10 @@ function LeaderboardScreen() {
                 <tr className="bg-muted/50 text-left text-muted-foreground">
                   <th className="px-3 py-2 font-semibold">{t('leaderboard.rank')}</th>
                   <th className="px-3 py-2 font-semibold">{t('leaderboard.playerName')}</th>
-                  <th className="px-3 py-2 font-semibold text-right">{t('leaderboard.score')}</th>
-                  <th className="px-3 py-2 font-semibold hidden sm:table-cell text-right">{t('leaderboard.popularity')}</th>
-                  <th className="px-3 py-2 font-semibold hidden sm:table-cell text-right">{t('leaderboard.satisfaction')}</th>
-                  <th className="px-3 py-2 font-semibold hidden md:table-cell text-right">{t('leaderboard.gdp')}</th>
-                  <th className="px-3 py-2 font-semibold hidden md:table-cell text-right">{t('leaderboard.years')}</th>
+                  <th className="px-3 py-2 font-semibold text-right">{t('leaderboard.years')}</th>
+                  <th className="px-3 py-2 font-semibold text-right">{t('leaderboard.gdp')}</th>
+                  <th className="px-3 py-2 font-semibold text-right">{t('leaderboard.popularity')}</th>
+                  <th className="px-3 py-2 font-semibold text-right">{t('leaderboard.satisfaction')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -176,11 +175,10 @@ function LeaderboardScreen() {
                           {isMe && <Badge variant="secondary" className="text-[0.5625rem] bg-amber-500/20 text-amber-600 border border-amber-500/30">YOU</Badge>}
                         </div>
                       </td>
-                      <td className="px-3 py-2 text-right font-bold">{entry.score.toFixed(1)}</td>
-                      <td className="px-3 py-2 hidden sm:table-cell text-right">{entry.popularity.toFixed(0)}%</td>
-                      <td className="px-3 py-2 hidden sm:table-cell text-right">{entry.satisfaction.toFixed(0)}%</td>
-                      <td className="px-3 py-2 hidden md:table-cell text-right">ZiG {entry.gdp.toFixed(1)}B</td>
-                      <td className="px-3 py-2 hidden md:table-cell text-right">{entry.yearsInOffice.toFixed(1)}</td>
+                      <td className="px-3 py-2 text-right font-bold">{entry.yearsInOffice.toFixed(1)}</td>
+                      <td className="px-3 py-2 text-right">ZiG {entry.gdp.toFixed(1)}B</td>
+                      <td className="px-3 py-2 text-right">{entry.popularity.toFixed(0)}%</td>
+                      <td className="px-3 py-2 text-right">{entry.satisfaction.toFixed(0)}%</td>
                     </tr>
                   );
                 })}
