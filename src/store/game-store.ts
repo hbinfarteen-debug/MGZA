@@ -78,9 +78,11 @@ interface GameStore {
   fontSize: FontSize;
   darkMode: boolean;
   language: Language;
+  tutorialSeen: boolean;
+  showTutorial: boolean;
 
   // Actions
-  startNewGame: (name: string, partyName: string, difficulty: 'easy' | 'normal' | 'hard') => void;
+  startNewGame: (name: string, partyName: string, difficulty: 'easy' | 'normal' | 'hard', initialRate?: number) => void;
   endTurn: () => void;
   setScreen: (screen: GameScreen) => void;
   resolveEvent: (eventId: string, choiceId: string) => void;
@@ -102,6 +104,8 @@ interface GameStore {
   setFontSize: (size: FontSize) => void;
   setDarkMode: (dark: boolean) => void;
   setLanguage: (lang: Language) => void;
+  setTutorialSeen: (seen: boolean) => void;
+  setShowTutorial: (show: boolean) => void;
   exportSave: () => string;
   importSave: (json: string) => boolean;
 }
@@ -125,12 +129,19 @@ export const useGameStore = create<GameStore>()(
       fontSize: 'medium' as FontSize,
       darkMode: false,
       language: 'en' as Language,
+      tutorialSeen: false,
+      showTutorial: false,
 
-      startNewGame: (name, partyName, difficulty) => {
+      startNewGame: (name, partyName, difficulty, initialRate) => {
         const state = createInitialGameState(difficulty);
         state.player.name = name || 'Comrade Leader';
         state.player.partyName = partyName || 'Zimbabwe Peoples Party';
         state.runId = `run_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 9)}`;
+        if (initialRate && initialRate > 0) {
+          state.economic.exchangeRate = initialRate;
+          const premium = (initialRate / (initialRate * 0.7 + 100)) * 100;
+          state.economic.blackMarketPremium = Math.max(5, Math.min(200, premium));
+        }
         state.availableProjects = generateAvailableProjects(state);
         set({
           gameState: state,
@@ -138,6 +149,7 @@ export const useGameStore = create<GameStore>()(
           historicalData: [getHistoricalDataPoint(state)],
           availableProjects: generateAvailableProjects(state),
           showNewGameDialog: false,
+          showTutorial: !get().tutorialSeen,
         });
       },
 
@@ -478,6 +490,8 @@ export const useGameStore = create<GameStore>()(
       setFontSize: (size) => set({ fontSize: size }),
       setDarkMode: (dark) => set({ darkMode: dark }),
       setLanguage: (lang) => set({ language: lang }),
+      setTutorialSeen: (seen) => set({ tutorialSeen: seen }),
+      setShowTutorial: (show) => set({ showTutorial: show }),
       exportSave: () => {
         const s = get();
         return JSON.stringify({
@@ -530,6 +544,7 @@ export const useGameStore = create<GameStore>()(
         fontSize: state.fontSize,
         darkMode: state.darkMode,
         language: state.language,
+        tutorialSeen: state.tutorialSeen,
       }),
     }
   )

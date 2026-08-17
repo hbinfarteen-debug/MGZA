@@ -47,6 +47,7 @@ const en: Record<string, string> = {
   'common.close': 'Close',
   'common.gameLog': 'Game Log',
   'common.tips': 'Tips',
+  'common.tipsDesc': 'Show strategy tips when tapping or hovering over game elements',
   'common.newGame': 'New Game',
   'common.language': 'Language',
   'common.languageDesc': 'Choose your preferred language',
@@ -69,7 +70,7 @@ const en: Record<string, string> = {
   'start.winElectionsDesc': "Secure the people's mandate",
   'start.description': 'Take office as President and govern through 44 turns to survive re-election. Navigate corruption, manage infrastructure, balance budgets, and make impossible decisions that shape the future of millions. There are no perfect choices, only trade-offs.',
   'start.startNewGame': 'Start New Game',
-  'start.footer': 'v1.9 | Made with ❤️ for Zimbabwe',
+  'start.footer': 'v1.12 | Made with ❤️ for Zimbabwe',
 
   // NEW GAME DIALOG
   'newGame.title': 'Start New Game',
@@ -85,6 +86,30 @@ const en: Record<string, string> = {
   'newGame.enableTips': 'Enable Hover Tips',
   'newGame.tipsDesc': 'Show strategy tips when hovering over game elements',
   'newGame.beginJourney': 'Begin Your Journey',
+
+  // TUTORIAL
+  'tutorial.title': 'How to Rule Zimbabwe',
+  'tutorial.subtitle': 'A short briefing before you take office.',
+  'tutorial.progress': 'Step {current} of {total}',
+  'tutorial.skip': 'Skip Tutorial',
+  'tutorial.back': 'Back',
+  'tutorial.next': 'Next',
+  'tutorial.start': 'Start Playing',
+  'tutorial.replay': 'How to Play',
+  'tutorial.replayDesc': 'Re-open the beginner tutorial',
+  'tutorial.open': 'Tutorial',
+  'tutorial.step1.title': 'Welcome, Comrade Leader',
+  'tutorial.step1.body': 'Your goal is to govern Zimbabwe for 44 turns and survive re-election. Every month you make decisions that shape the economy, the people, and your own survival. There are no perfect choices, only trade-offs.',
+  'tutorial.step2.title': 'The Dashboard',
+  'tutorial.step2.body': 'Four numbers guide you: Popularity, GDP growth, Inflation, and Citizen Satisfaction. Watch them closely. Low popularity risks a coup or losing office. High inflation and debt can sink the economy. The news, events, and projects panels show what needs your attention.',
+  'tutorial.step3.title': 'The Turn Loop',
+  'tutorial.step3.body': 'The game advances one month at a time. Review your budget and resolve any events first, then press End Turn. Each turn runs the economy, population, infrastructure, energy, water, and corruption. Unresolved events carry a real penalty, so act promptly.',
+  'tutorial.step4.title': 'The Budget',
+  'tutorial.step4.body': 'You allocate revenue across sectors like health, education, water, and energy. Fund the essentials, watch your deficit, and avoid starving any one sector. A small deficit is fine, but persistent overspending spirals into a debt crisis.',
+  'tutorial.step5.title': 'Govern Your Nation',
+  'tutorial.step5.body': 'Approve infrastructure projects to boost growth. Keep an eye on your ministers, firing the corrupt or incompetent. Handle crises quickly, manage the cabinet, and keep factions satisfied. Corruption and neglect are silent enemies.',
+  'tutorial.step6.title': 'Elections & Victory',
+  'tutorial.step6.body': 'Your popularity, satisfaction, and legitimacy decide elections. Win and your mandate is renewed. Lose and your presidency ends. You can review this tutorial any time from the Start screen or Settings. Now take office and make Zimbabwe great again.',
 
   // GAME OVER
   'gameOver.title': 'GAME OVER',
@@ -158,6 +183,8 @@ const en: Record<string, string> = {
   'dash.noEvents': 'No active events this month.',
   'dash.activeProjects': 'Active Projects',
   'dash.noProjects': 'No active projects. Visit Infrastructure to start new projects.',
+  'dash.rbzRate': 'Official RBZ rate today',
+  'dash.rbzRateFallback': 'estimate',
 
   // BUDGET
   'budget.revenue': 'Revenue',
@@ -505,6 +532,7 @@ const sn: Record<string, string> = {
   'common.close': 'Vhara',
   'common.gameLog': 'Tshekwende Ramutambo',
   'common.tips': 'Rupfuro',
+  'common.tipsDesc': 'Ratidza mazano ekufambisa apo unobaya kana kushovha pamusoro pezvinhu zvemutambo',
   'common.newGame': 'Mutambo Mutsva',
   'common.language': 'Mutauri',
   'common.languageDesc': 'Sara mutauri unoda kushandisa',
@@ -527,7 +555,7 @@ const sn: Record<string, string> = {
   'start.winElectionsDesc': 'Tora ruvambo rwevanhu',
   'start.description': 'Tora hofisi sePresident uye tungamira kwemaitiro 44 kuti urarame kusarudzwa zvakare. Rwadza urombo, tarisa mabasa okuvaka, simbisa bhajeti, uye gadza sarudzo dzisingawoneki dzinoumba ramangwana remamiriyoni. Hakuna sarudzo yakakwana, kuchingwa chete.',
   'start.startNewGame': 'Tanga Mutambo Mutsva',
-  'start.footer': 'v1.9 | Yakagadzirwa ne ❤️ yeZimbabwe',
+  'start.footer': 'v1.12 | Yakagadzirwa ne ❤️ yeZimbabwe',
 
   // NEW GAME DIALOG
   'newGame.title': 'Tanga Mutambo Mutsva',
@@ -543,6 +571,30 @@ const sn: Record<string, string> = {
   'newGame.enableTips': 'Rupfuro Patsvu',
   'newGame.tipsDesc': 'Ratidza rongenyedzo kana uchiita hover pamativi emutambo',
   'newGame.beginJourney': 'Tanga Rwendo Rako',
+
+  // TUTORIAL - Shona
+  'tutorial.title': 'Maitiro Ekutonga Zimbabwe',
+  'tutorial.subtitle': 'Muchidimbu kudzidzisa usati watanga hofisi.',
+  'tutorial.progress': 'Nhanho {current} ye {total}',
+  'tutorial.skip': 'Sika Tutorial',
+  'tutorial.back': 'Kudzoka',
+  'tutorial.next': 'Zvinotevera',
+  'tutorial.start': 'Tanga Kutamba',
+  'tutorial.replay': 'Maitiro Ekutamba',
+  'tutorial.replayDesc': 'Vhurazve tutorial yevatanga',
+  'tutorial.open': 'Tutorial',
+  'tutorial.step1.title': 'Tinokugamuchirai, Mutungamiri',
+  'tutorial.step1.body': 'Chinangwa chako ndechekutonga Zimbabwe kwemaitiro 44 uye urarame kusarudzwa zvakare. Mwedzi wose unogadza sarudzo dzine mauto kune sango, vanhu, uye kupona kwako. Hapana sarudzo yakakwana, kuchingwa chete.',
+  'tutorial.step2.title': 'Bhorde',
+  'tutorial.step2.body': 'Matanhatu anokutungamira: Ruzivo, Kukura kweGDP, Inflation, neKufara kweVanhu. Tarisa nokutarira. Ruzivo rwakaderera runoita ngozi yekuroverwa kana kurasikirwa nehofisi. Inflation yakakora nechikwerere zvinogona kunyudza sango. Nhetembo, zviitiko, uye mabasa anoratidza zviri kuda kutariswa.',
+  'tutorial.step3.title': 'Muitiro WeTurn',
+  'tutorial.step3.body': 'Mutambo unofamba mwedzi mumwe pamwe. Tarisa bhajeti yako ugadzirise zviitiko, uye wobva wadzvanya End Turn. Turn imwe nerimwe rinotamba sango, huwandu, mabasa, magetsi, mvura, neUrombo. Zviitiko zvisina kugadziriswa zvine chirango, saka ita zvokukurumidza.',
+  'tutorial.step4.title': 'Bhajeti',
+  'tutorial.step4.body': 'Unogovera mari mune matanho akaita sehutano, dzidzo, mvura, nemagetsi. Simbisa zvinodikanwa, tarisa chikwerere, uye usasiyise mutanho. Chikwerere chishoma chakakwana, asi kushandisa mari pasi kunowedzera matambudziko.',
+  'tutorial.step5.title': 'Tonga Nyika Yako',
+  'tutorial.step5.body': 'Tendesa mabasa okuvaka kuti uwedzere kukura. Tarisa mapadza ako, undirase vanouromba kana vasina kuziva. Gadzirisa matambudziko, tonga cabinet, uye gara matongerwo ari kufara. Urombo nekusasiyira zvinhu zvinouraya chinyararire.',
+  'tutorial.step6.title': 'Makhoti & Kukunda',
+  'tutorial.step6.body': 'Ruzivo, kufara, nekurruamiswa kwako kunotara makhoti. Kukunda kunowedzera ruvambo rwako. Kukundwa kunopedza upfumo hwako. Unogona kuona tutorial ino nguva yose kubva kuStart screen kana Settings. Zvino tora hofisi ugadze Zimbabwe yakagadziriswa zvakare.',
 
   // GAME OVER
   'gameOver.title': 'MUTAMBO WAPARARA',
@@ -616,6 +668,8 @@ const sn: Record<string, string> = {
   'dash.noEvents': 'Hapana zviitiko nguva ino.',
   'dash.activeProjects': 'Mabasa Ariko',
   'dash.noProjects': 'Hapana mabasa ariko. Enda kuInfrastructure kuti utange mabasa matsva.',
+  'dash.rbzRate': 'Chiyero cheRBZ chanhasi',
+  'dash.rbzRateFallback': 'kufungidzira',
 
   // BUDGET
   'budget.revenue': 'Mari Yauya',
@@ -963,6 +1017,7 @@ const nd: Record<string, string> = {
   'common.close': 'Vala',
   'common.gameLog': 'Irezhwe ephuzile',
   'common.tips': 'Inkombiso',
+  'common.tipsDesc': 'Khombisa amacebiso wokucindezela noma ukugqamisa izinto zomdlalo',
   'common.newGame': 'Umdlalo Omusha',
   'common.language': 'Ulimi',
   'common.languageDesc': 'Khetha ulimi oluthandayo',
@@ -985,7 +1040,7 @@ const nd: Record<string, string> = {
   'start.winElectionsDesc': 'Thola umvuzo walabo',
   'start.description': 'Thatha isihlalo njengoMongameli ubuse izikhathi ezingama-44 ukuze usinde ekukhetheni kabusha. Qala ukubamba ubuthi, phatha imisebenzi yokwakha, qondisa ibhajethi, wenze izinqumo ezinzima ezishintsha ikusasa lezigidi. Akukho nqopho elifanele, kunokukhetha okunye.',
   'start.startNewGame': 'Qala Umdlalo Omusha',
-  'start.footer': 'v1.9 | Yakhiwe nge ❤️ yeZimbabwe',
+  'start.footer': 'v1.12 | Yakhiwe nge ❤️ yeZimbabwe',
 
   // NEW GAME DIALOG
   'newGame.title': 'Qala Umdlalo Omusha',
@@ -1001,6 +1056,30 @@ const nd: Record<string, string> = {
   'newGame.enableTips': 'Vumela Inkombiso',
   'newGame.tipsDesc': 'Bonisa inqanaba xa ukufuna umsebenzi womdlalo',
   'newGame.beginJourney': 'Qala Umendo Wakho',
+
+  // TUTORIAL - Ndebele
+  'tutorial.title': 'Ukwenza Njani Ukubusa iZimbabwe',
+  'tutorial.subtitle': 'Isifundo esifushane ngaphambi kokuthatha izikhundla.',
+  'tutorial.progress': 'Isinyathelo {current} se {total}',
+  'tutorial.skip': 'Yeqa Isifundo',
+  'tutorial.back': 'Emuva',
+  'tutorial.next': 'Okulandelayo',
+  'tutorial.start': 'Qala Ukudlala',
+  'tutorial.replay': 'Ukwenza Njani Ukudlala',
+  'tutorial.replayDesc': 'Vula futhi isifundo sabaqalayo',
+  'tutorial.open': 'Isifundo',
+  'tutorial.step1.title': 'Wamukelekile, Mkholwane',
+  'tutorial.step1.body': 'Umgomo wakho ukubusa iZimbabwe izikhathi ezingu 44 futhi usinde ekukhethweni kabusha. Inyanga ngalinye wenza izinqumo ezilolonga umnotho, abantu, nokuphila kwakho. Akukho zinqumo ezifezekile, kukhona nje ukukhetha.',
+  'tutorial.step2.title': 'Ibhodi',
+  'tutorial.step2.body': 'Izibalo ezine zikuhola: Ukuvuma, ukukhula kweGDP, ukwehla kwemali, nokwaneliseka kwabantu. Zibheke ngokusondele. Ukuvuma okuphansi kuletha ingozi yokugwedluka noma ukulahlekelwa isikhundla. Ukwehla kwemali kanye nekweletu kungamanzisa umnotho. Izindaba, izehlakalo, namaphrojekthi kubonisa okudinga ukunakwa.',
+  'tutorial.step3.title': 'Umjikelezo Wethemu',
+  'tutorial.step3.body': 'Umdlalo uqhubela inyanga eyodwa ngasikhathi. Bheka ibhajethi yakho uxazulule izehlakalo kuqala, bese ucindezela End Turn. Ithemu ngalinye ligijima umnotho, inani labantu, ingqalasizinda, amandla, amanzi, nenkohlakalo. Izehlakalo ezingaxazululiwe ziletha isijeziso, ngakho enza ngokushesha.',
+  'tutorial.step4.title': 'IBhajethi',
+  'tutorial.step4.body': 'Wabela imali emikhakheni efana nezempilo, imfundo, amanzi, namandla. Xhasa izinto ezibalulekile, bheka icala, ungasuki mkhakha. Icala elincane likahle, kodwa ukusebenzisa ngokweqile kungenisa emabhayeni enkohlakalo.',
+  'tutorial.step5.title': 'Busa Izwe Lakho',
+  'tutorial.step5.body': 'Vumela amaphrojekthi engqalasizinda ukuze ukukhula kukhule. Bheka ongqongqoshe bakho, uxoshe abanenkohlakalo noma abangenalwazi. Xazulula izingqinamba, usebenze nekhabethe, futhi ugcwalise amaqembu. Inkohlakalo nokunganaki yizitha ezithulayo.',
+  'tutorial.step6.title': 'Ukhetho & Ukuwina',
+  'tutorial.step6.body': 'Ukuvuma kwakho, ukwaneliseka, nokuba semthethweni kuhlola ukhetho. Ukuwina kuvuselela isivumo sakho. Ukuhlulwa kuphelisa ubuholi bakho. Ungabuye ubone lesi isifundo noma nini kusukela kwiStart screen noma kwiSettings. Manje thatha izikhundla wenze iZimbabwe ibe khudlwana futhi.',
 
   // GAME OVER
   'gameOver.title': 'Umdlalo Uphelelwe',
@@ -1074,6 +1153,8 @@ const nd: Record<string, string> = {
   'dash.noEvents': 'Akukho micimbi kuleli nyanga.',
   'dash.activeProjects': 'Imisebenzi Ezenza',
   'dash.noProjects': 'Akukho misebenzi. Yiye kwi-Infrastructure ukuze qale imisebenzi entsha.',
+  'dash.rbzRate': 'Isilinganiselo seRBZ namuhla',
+  'dash.rbzRateFallback': 'ilinganiso',
 
   // BUDGET
   'budget.revenue': 'Imali Eyiyo',

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useGameStore, type GameScreen, type FontSize } from '@/store/game-store';
 import { useTheme } from 'next-themes';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -508,26 +509,36 @@ const FONT_SIZE_MAP: Record<FontSize, string> = {
 const TipHoverContext = React.createContext<{
   hoveredTipId: string | null;
   setHoveredTipId: (id: string | null) => void;
-}>({ hoveredTipId: null, setHoveredTipId: () => {} });
+  isTouch: boolean;
+}>({ hoveredTipId: null, setHoveredTipId: () => {}, isTouch: false });
 
 function HoverTip({ tipId, children, screenId }: { tipId: string; children: React.ReactNode; screenId?: GameScreen }) {
   const { enableTips, currentScreen } = useGameStore();
   const gameTip = GAME_TIPS[tipId];
   const isActive = enableTips && gameTip && (!gameTip.screen || gameTip.screen === screenId || gameTip.screen === currentScreen);
-  const { setHoveredTipId } = React.useContext(TipHoverContext);
+  const { setHoveredTipId, isTouch } = React.useContext(TipHoverContext);
 
   const handleEnter = useCallback(() => {
-    if (!isActive) return;
+    if (!isActive || isTouch) return;
     setHoveredTipId(tipId);
-  }, [isActive, tipId, setHoveredTipId]);
+  }, [isActive, isTouch, tipId, setHoveredTipId]);
 
-  const handleLeave = useCallback(() => setHoveredTipId(null), [setHoveredTipId]);
+  const handleLeave = useCallback(() => {
+    if (isTouch) return;
+    setHoveredTipId(null);
+  }, [isTouch, setHoveredTipId]);
+
+  const handleTap = useCallback(() => {
+    if (!isActive || !isTouch) return;
+    setHoveredTipId((prev) => (prev === tipId ? null : tipId));
+  }, [isActive, isTouch, tipId, setHoveredTipId]);
 
   return (
     <div
       className="contents"
       onMouseEnter={handleEnter}
       onMouseLeave={handleLeave}
+      onClick={handleTap}
     >
       {children}
     </div>
@@ -541,11 +552,11 @@ function HoverTip({ tipId, children, screenId }: { tipId: string; children: Reac
 function HoverTipCard() {
   const { enableTips } = useGameStore();
   const { getTip } = useTranslation();
-  const { hoveredTipId } = React.useContext(TipHoverContext);
+  const { hoveredTipId, isTouch } = React.useContext(TipHoverContext);
   const gameTip = hoveredTipId ? GAME_TIPS[hoveredTipId] : null;
   const tip = gameTip ? getTip(hoveredTipId) : null;
 
-  if (!enableTips || !tip) return null;
+  if (!enableTips || !tip || isTouch) return null;
 
   return (
     <AnimatePresence mode="wait">
@@ -577,6 +588,85 @@ function HoverTipCard() {
   );
 }
 
+// Mobile floating tip card — shows the pinned tip above the bottom tab bar on touch devices
+function MobileTipCard() {
+  const { enableTips } = useGameStore();
+  const { getTip } = useTranslation();
+  const { hoveredTipId, isTouch } = React.useContext(TipHoverContext);
+  const gameTip = hoveredTipId ? GAME_TIPS[hoveredTipId] : null;
+  const tip = gameTip ? getTip(hoveredTipId) : null;
+
+  if (!enableTips || !tip || !isTouch) return null;
+
+  return (
+    <div className="fixed inset-x-0 bottom-[calc(60px+env(safe-area-inset-bottom))] z-30 px-4 lg:hidden pointer-events-none">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={hoveredTipId}
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 16 }}
+          transition={{ duration: 0.15 }}
+          className="pointer-events-auto bg-popover border border-border rounded-xl shadow-2xl p-3 text-left"
+        >
+          <div className="flex items-center gap-2 mb-1.5">
+            <div className="flex items-center justify-center w-5 h-5 rounded-md bg-amber-500/15 text-amber-500 shrink-0">
+              <Lightbulb className="h-3 w-3" />
+            </div>
+            <h4 className="text-xs font-bold text-foreground">{tip.title}</h4>
+          </div>
+          <p className="text-[0.625rem] text-muted-foreground leading-relaxed mb-1.5">{tip.description}</p>
+          <div className="border-t border-border/50 pt-1.5">
+            <div className="flex items-start gap-1">
+              <Info className="h-2.5 w-2.5 text-amber-500 mt-0.5 shrink-0" />
+              <p className="text-[0.625rem] text-amber-600 font-medium leading-relaxed">{tip.strategy}</p>
+            </div>
+          </div>
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function LiveRbzRate() {
+  const { t } = useTranslation();
+  const [rate, setRate] = useState<number | null>(null);
+  const [fallback, setFallback] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
+        const res = await fetch('/api/rbz-rate', { signal: controller.signal });
+        clearTimeout(timeout);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) {
+          setRate(typeof data?.rate === 'number' ? data.rate : null);
+          setFallback(!!data?.fallback);
+        }
+      } catch {
+        if (!cancelled) setRate(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  if (rate === null) return null;
+
+  return (
+    <div className="flex justify-end">
+      <Badge variant="outline" className="text-[0.625rem] gap-1 border-green-600/30 bg-green-600/5 text-foreground/80">
+        <span className="h-1.5 w-1.5 rounded-full bg-green-600" />
+        {t('dash.rbzRate')}: {rate.toFixed(2)} ZiG/USD
+        {fallback && <span className="text-muted-foreground">({t('dash.rbzRateFallback')})</span>}
+      </Badge>
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════
 // DASHBOARD
 // ═══════════════════════════════════════════════════════
@@ -594,6 +684,7 @@ function DashboardScreen() {
 
   return (
     <div className="space-y-6">
+      <LiveRbzRate />
       {/* Player Status Bar */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <HoverTip tipId="popularity"><div><AnimatedStatCard label={t('dash.popularity')} value={`${player.popularity.toFixed(0)}%`} numericValue={player.popularity} icon={<Heart className="h-4 w-4" />} color={player.popularity > 50 ? 'text-green-500' : player.popularity > 30 ? 'text-yellow-500' : 'text-red-500'} index={0} /></div></HoverTip>
@@ -819,20 +910,24 @@ function BudgetScreen() {
         })}
       </div></HoverTip>
 
-      {/* Floating Allocate Button */}
-      <div className="sticky bottom-4 flex justify-end">
-        <HoverTip tipId="allocate_button" screenId="budget">
-          <motion.div
-            whileHover={{ scale: 1.05, boxShadow: '0 0 20px rgba(217, 119, 6, 0.4)' }}
-            whileTap={{ scale: 0.95 }}
-            className="inline-block"
-          >
-            <Button onClick={handleAllocate} size="sm" className="bg-amber-600 hover:bg-amber-700 shadow-lg shadow-amber-600/20">
-              <Check className="h-4 w-4 mr-1" /> Allocate Budget
-            </Button>
-          </motion.div>
-        </HoverTip>
-      </div>
+      {/* Floating Allocate Button (portal to body so fixed escapes the animated screen container) */}
+      {typeof document !== 'undefined' &&
+        createPortal(
+          <div className="fixed right-4 bottom-[calc(76px+env(safe-area-inset-bottom))] z-40 lg:right-6 lg:bottom-6">
+            <HoverTip tipId="allocate_button" screenId="budget">
+              <motion.div
+                whileHover={{ scale: 1.05, boxShadow: '0 0 20px rgba(217, 119, 6, 0.4)' }}
+                whileTap={{ scale: 0.95 }}
+                className="inline-block"
+              >
+                <Button onClick={handleAllocate} size="sm" className="bg-amber-600 hover:bg-amber-700 shadow-lg shadow-amber-600/20">
+                  <Check className="h-4 w-4 mr-1" /> Allocate Budget
+                </Button>
+              </motion.div>
+            </HoverTip>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
@@ -1041,7 +1136,7 @@ function MinistersScreen() {
                   <h4 className="text-sm font-bold">{minister.name}</h4>
                   <Badge variant="secondary" className="text-[0.625rem] mt-1">{minister.portfolio}</Badge>
                 </div>
-                <HoverTip tipId="fire_minister" screenId="ministers"><Button size="sm" variant="destructive" className="text-[0.625rem] px-2 py-0 h-6" onClick={() => fireMinister(minister.id)}>
+                <HoverTip tipId="fire_minister" screenId="ministers"><Button size="sm" variant="destructive" className="text-[0.625rem] px-2 py-0 h-9" onClick={() => fireMinister(minister.id)}>
                   Fire
                 </Button></HoverTip>
               </div>
@@ -1943,7 +2038,7 @@ function GameOverScreen() {
 // ═══════════════════════════════════════════════════════
 
 function StartScreen() {
-  const { startNewGame, setShowNewGameDialog, fontSize, darkMode, setDarkMode, setFontSize, language, setLanguage, exportSave, importSave, gameState } = useGameStore();
+  const { startNewGame, setShowNewGameDialog, setShowTutorial, fontSize, darkMode, setDarkMode, setFontSize, language, setLanguage, exportSave, importSave, gameState } = useGameStore();
   const { t } = useTranslation();
   const { setTheme } = useTheme();
   const [showStartSettings, setShowStartSettings] = useState(false);
@@ -2207,6 +2302,12 @@ function StartScreen() {
             </Button>
           </motion.div>
 
+          <div className="mt-3 flex items-center justify-center gap-2">
+            <Button variant="outline" size="sm" className="zim-hero-card text-xs text-muted-foreground" onClick={() => setShowTutorial(true)}>
+              <Crown className="h-3.5 w-3.5 mr-1" /> {t('tutorial.open')}
+            </Button>
+          </div>
+
           <p className="zim-hero-footer mt-6">
             {t('start.footer')}
           </p>
@@ -2226,9 +2327,24 @@ function NewGameDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o
   const [name, setName] = useState('Comrade Leader');
   const [partyName, setPartyName] = useState('Zimbabwe Peoples Party');
   const [difficulty, setDifficulty] = useState<'easy' | 'normal' | 'hard'>('normal');
+  const [starting, setStarting] = useState(false);
 
-  const handleStart = () => {
-    startNewGame(name, partyName, difficulty);
+  const handleStart = async () => {
+    setStarting(true);
+    let rate: number | undefined;
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 4000);
+      const res = await fetch('/api/rbz-rate', { signal: controller.signal });
+      clearTimeout(timeout);
+      if (res.ok) {
+        const data = await res.json();
+        if (typeof data?.rate === 'number' && data.rate > 0) rate = data.rate;
+      }
+    } catch {
+      rate = undefined;
+    }
+    startNewGame(name, partyName, difficulty, rate);
   };
 
   return (
@@ -2280,9 +2396,89 @@ function NewGameDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o
           </div>
         </div>
         <DialogFooter>
-          <Button onClick={handleStart} className="bg-amber-600 hover:bg-amber-700">
-            <Play className="h-4 w-4 mr-2" /> {t('newGame.beginJourney')}
+          <Button onClick={handleStart} disabled={starting} className="bg-amber-600 hover:bg-amber-700">
+            <Play className="h-4 w-4 mr-2" /> {starting ? '...' : t('newGame.beginJourney')}
           </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
+// TUTORIAL — step-through onboarding shown before play on
+// first run; skippable and replayable via Start / Settings.
+// ═══════════════════════════════════════════════════════
+
+function TutorialDialog() {
+  const { showTutorial, setShowTutorial, setTutorialSeen } = useGameStore();
+  const { t } = useTranslation();
+  const [step, setStep] = useState(0);
+
+  const steps = [
+    { icon: <Crown className="h-5 w-5" />, key: 'welcome', accent: '#4A9D3F' },
+    { icon: <LayoutDashboard className="h-5 w-5" />, key: 'dashboard', accent: '#E8A93C' },
+    { icon: <ChevronRight className="h-5 w-5" />, key: 'turn', accent: '#3D7A32' },
+    { icon: <DollarSign className="h-5 w-5" />, key: 'budget', accent: '#DE2010' },
+    { icon: <Users className="h-5 w-5" />, key: 'govern', accent: '#4A9D3F' },
+    { icon: <Vote className="h-5 w-5" />, key: 'elections', accent: '#E8A93C' },
+  ];
+
+  const last = step === steps.length - 1;
+  const current = steps[step];
+
+  const close = () => {
+    setTutorialSeen(true);
+    setShowTutorial(false);
+  };
+
+  const next = () => {
+    if (last) { close(); return; }
+    setStep(step + 1);
+  };
+
+  return (
+    <Dialog open={showTutorial} onOpenChange={(o) => { if (!o) close(); }}>
+      <DialogContent className="sm:max-w-lg zim-hero-light zim-modal">
+        <DialogHeader>
+          <DialogTitle>{t('tutorial.title')}</DialogTitle>
+          <DialogDescription>{t('tutorial.subtitle')}</DialogDescription>
+        </DialogHeader>
+
+        <div className="py-4">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center justify-center w-11 h-11 rounded-xl shrink-0" style={{ backgroundColor: `${current.accent}18`, color: current.accent }}>
+              {current.icon}
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-base font-black">{t(`tutorial.step${step + 1}.title`)}</h3>
+              <p className="text-[0.625rem] text-muted-foreground">{t('tutorial.progress', { current: step + 1, total: steps.length })}</p>
+            </div>
+          </div>
+
+          <p className="text-sm leading-relaxed text-foreground/90">{t(`tutorial.step${step + 1}.body`)}</p>
+
+          <div className="mt-4 flex items-center gap-2">
+            {steps.map((s, i) => (
+              <div key={i} className="flex-1 h-1 rounded-full" style={{ backgroundColor: i <= step ? s.accent : 'var(--border)' }} />
+            ))}
+          </div>
+        </div>
+
+        <DialogFooter className="flex items-center justify-between gap-2">
+          <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={close}>
+            {t('tutorial.skip')}
+          </Button>
+          <div className="flex items-center gap-2">
+            {step > 0 && (
+              <Button variant="outline" size="sm" className="text-xs" onClick={() => setStep(step - 1)}>
+                {t('tutorial.back')}
+              </Button>
+            )}
+            <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-xs" onClick={next}>
+              {last ? <><Check className="h-3.5 w-3.5 mr-1" /> {t('tutorial.start')}</> : t('tutorial.next')}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -2622,7 +2818,7 @@ function MinisterReplacementDialog() {
                 </span>
               </div>
               <p className="text-xs text-muted-foreground mb-2">{candidate.description}</p>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <MiniStat label="Competence" value={candidate.competence} />
                 <MiniStat label="Loyalty" value={candidate.loyalty} />
                 <MiniStat label="Corruption" value={candidate.corruption} inverted />
@@ -2650,7 +2846,7 @@ function MinisterReplacementDialog() {
 // ═══════════════════════════════════════════════════════
 
 function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
-  const { fontSize, setFontSize, darkMode, setDarkMode, language, setLanguage, exportSave, importSave, gameState } = useGameStore();
+  const { fontSize, setFontSize, darkMode, setDarkMode, language, setLanguage, exportSave, importSave, gameState, setShowTutorial, enableTips, setEnableTips } = useGameStore();
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
@@ -2731,6 +2927,20 @@ function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
             <Switch checked={darkMode} onCheckedChange={setDarkMode} />
           </div>
 
+          {/* Tips Toggle */}
+          <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-card">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-8 h-8 rounded-md bg-amber-500/15 text-amber-500">
+                <Lightbulb className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">{t('common.tips')}</p>
+                <p className="text-[0.625rem] text-muted-foreground">{t('common.tipsDesc')}</p>
+              </div>
+            </div>
+            <Switch checked={enableTips} onCheckedChange={setEnableTips} />
+          </div>
+
           {/* Text Size */}
           <div className="p-3 rounded-lg border border-border bg-card">
             <div className="flex items-center gap-3 mb-3">
@@ -2762,6 +2972,22 @@ function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Tutorial */}
+          <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-card">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-8 h-8 rounded-md bg-amber-500/15 text-amber-500">
+                <Crown className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">{t('tutorial.replay')}</p>
+                <p className="text-[0.625rem] text-muted-foreground">{t('tutorial.replayDesc')}</p>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" className="text-xs" onClick={() => { onOpenChange(false); setShowTutorial(true); }}>
+              {t('tutorial.open')}
+            </Button>
           </div>
 
           {/* Save / Load */}
@@ -2991,13 +3217,18 @@ function TrendCard({ title, data, color, formatValue }: { title: string; data: {
 // ═══════════════════════════════════════════════════════
 
 export default function GamePage() {
-  const { gameState, currentScreen, setScreen, endTurn, isProcessingTurn, showNewGameDialog, setShowNewGameDialog, resetGame, enableTips, setEnableTips, fontSize, darkMode, setDarkMode } = useGameStore();
+  const { gameState, currentScreen, setScreen, endTurn, isProcessingTurn, showNewGameDialog, setShowNewGameDialog, resetGame, fontSize, darkMode, setDarkMode } = useGameStore();
   const { t } = useTranslation();
   const { setTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showLog, setShowLog] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [hoveredTipId, setHoveredTipId] = useState<string | null>(null);
+  const [isTouch, setIsTouch] = useState(false);
+
+  useEffect(() => {
+    setIsTouch(window.matchMedia?.('(hover: none)').matches ?? false);
+  }, []);
   const mountedRef = useRef(false);
 
   const NAV_ITEMS = [
@@ -3050,6 +3281,7 @@ export default function GamePage() {
       <div className="min-h-screen bg-background flex flex-col zim-hero-light">
         <StartScreen />
         <NewGameDialog open={showNewGameDialog} onOpenChange={setShowNewGameDialog} />
+        <TutorialDialog />
       </div>
     );
   }
@@ -3128,13 +3360,13 @@ export default function GamePage() {
   );
 
   return (
-    <TipHoverContext.Provider value={{ hoveredTipId, setHoveredTipId }}>
+    <TipHoverContext.Provider value={{ hoveredTipId, setHoveredTipId, isTouch }}>
     <div className="min-h-screen bg-background flex flex-col">
       {/* Top Header */}
-      <header className="sticky top-0 z-50 bg-card/95 backdrop-blur border-b border-border px-3 py-2">
+      <header className="sticky top-0 z-50 bg-card/95 backdrop-blur border-b border-border px-3 pt-[calc(0.5rem+env(safe-area-inset-top))] pb-2">
         <div className="flex items-center justify-between gap-1.5 sm:gap-2 flex-wrap">
           <div className="flex items-center gap-2 min-w-0">
-            <Button variant="ghost" size="sm" className="lg:hidden p-0 h-9 w-9 sm:h-8 sm:w-8 shrink-0" onClick={() => setSidebarOpen(!sidebarOpen)}>
+            <Button variant="ghost" size="sm" className="lg:hidden p-0 h-11 w-11 sm:h-8 sm:w-8 shrink-0" onClick={() => setSidebarOpen(!sidebarOpen)}>
               <Menu className="h-4 w-4" />
             </Button>
             <div className="flex items-center gap-1.5 sm:gap-2 group cursor-default shrink-0">
@@ -3168,18 +3400,18 @@ export default function GamePage() {
 
             {/* Event Alert */}
             {gameState && gameState.events.filter(e => !e.resolved && !(e.deadline && Date.now() >= e.deadline)).length > 0 && (
-              <Button variant="destructive" size="sm" className="text-[0.625rem] h-9 sm:h-7 px-2 animate-pulse" onClick={() => setScreen('events')}>
+              <Button variant="destructive" size="sm" className="text-[0.625rem] h-11 sm:h-7 px-2 animate-pulse" onClick={() => setScreen('events')}>
                 <AlertTriangle className="h-3 w-3 mr-1" /> {gameState.events.filter(e => !e.resolved && !(e.deadline && Date.now() >= e.deadline)).length}
               </Button>
             )}
 
             {/* Game Log Toggle */}
-            <Button variant="ghost" size="sm" className="text-[0.625rem] h-9 w-9 sm:h-7 sm:w-7 p-0" onClick={() => setShowLog(!showLog)} title="Game Log">
+            <Button variant="ghost" size="sm" className="text-[0.625rem] h-11 w-11 sm:h-7 sm:w-7 p-0" onClick={() => setShowLog(!showLog)} title="Game Log">
               <Newspaper className="h-3 w-3" />
             </Button>
 
             {/* Settings */}
-            <Button variant="ghost" size="sm" className="text-[0.625rem] h-9 w-9 sm:h-7 sm:w-7 p-0" onClick={() => setShowSettings(true)} title="Settings">
+            <Button variant="ghost" size="sm" className="text-[0.625rem] h-11 w-11 sm:h-7 sm:w-7 p-0" onClick={() => setShowSettings(true)} title="Settings">
               <Settings className="h-3 w-3" />
             </Button>
 
@@ -3195,7 +3427,7 @@ export default function GamePage() {
                   size="sm"
                   onClick={endTurn}
                   disabled={isProcessingTurn}
-                  className="bg-gradient-to-r from-[#E8A817] to-[#D4940A] hover:from-[#D4940A] hover:to-[#E8A817] text-white text-xs font-bold px-2 sm:px-4 h-9 sm:h-8 shadow-md shadow-amber-500/20 border border-amber-500/20 transition-all"
+                  className="bg-gradient-to-r from-[#E8A817] to-[#D4940A] hover:from-[#D4940A] hover:to-[#E8A817] text-white text-xs font-bold px-2 sm:px-4 h-11 sm:h-8 shadow-md shadow-amber-500/20 border border-amber-500/20 transition-all"
                 >
                   <ChevronRight className="h-4 w-4 mr-1" />
                   <span className="hidden sm:inline">{t('nav.endTurn')}</span>
@@ -3281,13 +3513,6 @@ export default function GamePage() {
             </ScrollArea>
 
             <div className="p-3 border-t border-border space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <Lightbulb className="h-3 w-3 text-amber-500" />
-                  <span className="text-[0.625rem] text-muted-foreground">{t('common.tips')}</span>
-                </div>
-                <Switch checked={enableTips} onCheckedChange={setEnableTips} className="scale-75" />
-              </div>
               <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground" onClick={() => setShowSettings(true)}>
                 <Settings className="h-3 w-3 mr-1" /> {t('common.settings')}
               </Button>
@@ -3305,7 +3530,7 @@ export default function GamePage() {
 
         {/* Main Content */}
         <main className="flex-1 overflow-auto">
-          <div className="p-4 md:p-6 max-w-7xl mx-auto">
+          <div className="p-4 md:p-6 pb-24 lg:pb-6 max-w-7xl mx-auto">
             <AnimatePresence mode="wait">
               <motion.div
                 initial={{ opacity: 0, y: 8, scale: 0.99 }}
@@ -3336,7 +3561,7 @@ export default function GamePage() {
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="fixed right-0 top-0 h-full w-72 bg-card border-l border-border z-50 p-4 overflow-auto"
+              className="fixed right-0 top-0 h-full w-[85vw] sm:w-72 bg-card border-l border-border z-50 p-4 overflow-auto"
             >
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-bold">{t('common.gameLog')}</h3>
@@ -3356,6 +3581,36 @@ export default function GamePage() {
         </main>
       </div>
 
+      {/* Mobile Bottom Tab Bar */}
+      <div className="fixed bottom-0 inset-x-0 z-40 lg:hidden bg-card/95 backdrop-blur border-t border-border pb-[env(safe-area-inset-bottom)]">
+        <div className="grid grid-cols-5">
+          {(['dashboard', 'budget', 'infrastructure', 'map', 'leaderboard'] as GameScreen[]).map((id) => {
+            const item = NAV_ITEMS.find((n) => n.id === id);
+            if (!item) return null;
+            const active = currentScreen === id;
+            return (
+              <button
+                key={id}
+                onClick={() => setScreen(id)}
+                aria-current={active ? 'page' : undefined}
+                className={`relative flex flex-col items-center justify-center gap-0.5 py-2.5 cursor-pointer text-[0.6875rem] font-semibold transition-colors ${
+                  active ? 'text-amber-500' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {active && (
+                  <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-amber-500 rounded-full shadow-[0_0_8px_rgba(232,168,23,0.8)]" />
+                )}
+                <span className="h-5 w-5">{item.icon}</span>
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Mobile Tip Card */}
+      <MobileTipCard />
+
       {/* Footer */}
       <footer className="bg-card/95 backdrop-blur mt-auto">
         <div className="w-full flex flex-col">
@@ -3364,10 +3619,10 @@ export default function GamePage() {
           <div className="w-full h-0.5" style={{ backgroundColor: '#CC2936' }} />
           <div className="w-full h-0.5" style={{ backgroundColor: '#000000' }} />
         </div>
-        <div className="px-4 py-3">
-          <div className="flex items-center justify-between text-[0.625rem] text-muted-foreground max-w-7xl mx-auto">
+        <div className="px-4 py-3 pb-20 lg:pb-3">
+          <div className="flex items-center justify-between flex-wrap gap-2 text-[0.625rem] text-muted-foreground max-w-7xl mx-auto">
             <span className="flex items-center gap-1">
-              <Gamepad2 className="h-3 w-3 text-amber-500" /> Make Great Zimbabwe Again | v1.9
+              <Gamepad2 className="h-3 w-3 text-amber-500" /> Make Great Zimbabwe Again | v1.12
             </span>
             <span>{MONTH_NAMES[(player?.month || 1) - 1]} {player?.year || 2025} | Turn {(player?.turn || 1)} | {(citizenSatisfaction?.overall || 0).toFixed(0)}% Satisfaction</span>
           </div>
@@ -3380,6 +3635,7 @@ export default function GamePage() {
       <MinisterReplacementDialog />
       <NewGameDialog open={showNewGameDialog} onOpenChange={setShowNewGameDialog} />
       <SettingsDialog open={showSettings} onOpenChange={setShowSettings} />
+      <TutorialDialog />
     </div>
     </TipHoverContext.Provider>
   );

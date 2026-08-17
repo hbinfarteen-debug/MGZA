@@ -366,3 +366,61 @@ Stage Summary:
 - Map screen now shows a real interactive SVG map of Zimbabwe's 10 provinces colored by 9 metrics
 - Hover tooltips show all 13 live province stats; tap pins a province for the comparison panel
 - Version: v1.9
+
+---
+Task ID: 17
+Agent: main
+Task: In-game tutorial before first play (v1.10)
+
+Work Log:
+- store/game-store.ts: added persisted `tutorialSeen` (localStorage via existing zustand persist, partialize) + non-persisted `showTutorial`; added `setTutorialSeen`/`setShowTutorial`; startNewGame sets `showTutorial: !get().tutorialSeen`
+- page.tsx: new TutorialDialog (6-step skippable step-through modal, styled zim-hero-light) with Skip/Back/Next/Start Playing; rendered on Start screen and main GamePage; Tutorial button added to StartScreen hero + How to Play row in SettingsDialog
+- i18n: tutorial.* keys added in en/sn/nd (no em dashes)
+- Version bumped v1.9 -> v1.10 (footer + 3 translation files)
+- Browser-verified: first-run tutorial shows before play; Skip persists tutorialSeen; second game auto-skips; replay works from Start + in-game Settings
+
+Stage Summary:
+- First-time players get a 6-step onboarding before the game; returning players can skip and replay anytime
+- Version: v1.10
+
+---
+Task ID: 18
+Agent: main
+Task: Anchor new games to live RBZ daily exchange rate (v1.11)
+
+Work Log:
+- New src/app/api/rbz-rate/route.ts: server-side GET fetches https://zimrate.com/api/widget/rates (free, no key), picks first type starting with "official" (actual payload uses official_api/parallel_market/bank), averages buy/sell; 30-min in-memory cache; falls back to 26.37 with fallback:true on any failure so the game always works offline
+- store/game-store.ts: startNewGame(name, party, difficulty, initialRate?) overrides state.economic.exchangeRate and recomputes blackMarketPremium (inline clamp) from the live anchor
+- page.tsx: NewGameDialog.handleStart now async-fetches /api/rbz-rate (4s AbortController timeout) before creating the game (button shows "..." while starting); new LiveRbzRate chip component on DashboardScreen shows "Official RBZ rate today: X.XX ZiG/USD" (with estimate tag on fallback)
+- i18n: dash.rbzRate / dash.rbzRateFallback added in en/sn/nd
+- Version bumped v1.10 -> v1.11 (footer + 3 translation files)
+- Browser-verified: /api/rbz-rate returns live 26.57 (ZimPriceCheck official); new game persisted exchangeRate 26.57; dashboard metric + live chip show 26.57; fallback path returns 26.37 when ZimRate unreachable
+
+Stage Summary:
+- New games now start from the real official RBZ rate and simulate forward; dashboard surfaces the live daily rate
+- Version: v1.11
+
+---
+Task ID: 19
+Agent: main
+Task: Mobile-friendly responsive layout (v1.12)
+
+Work Log:
+- Mobile bottom tab bar: fixed 5-tab bar (Dashboard/Budget/Infrastructure/Map/Leaderboard, lg:hidden) added in page.tsx using the same activeScreen state as the sidebar; drawer still opens the remaining screens (incl. Ministers)
+- Allocate Budget button converted from sticky-in-flow to a fixed floating action button, rendered via a portal to document.body (so position:fixed escapes the animated screen container that otherwise breaks it): right-4 bottom above the tab bar on mobile, lg:right-6 lg:bottom-6 on desktop; stays fixed while scrolling the budget sliders
+- Layout: main content pb-24 lg:pb-6 and footer pb-20 lg:pb-3 so content clears the fixed tab bar (desktop padding unchanged and verified at 24px/12px)
+- Map tooltip (province-map.tsx): added touch detection (matchMedia hover:none); on touch, tapping a province now opens a full-width bottom detail sheet inside the map card (with close button) instead of the hover cursor tooltip; desktop hover tooltip unchanged; shared provinceRows/renderRow helper
+- HoverTips (page.tsx): tips now tappable on touch (tap to pin/unpin); sidebar tip card hidden on touch; new MobileTipCard renders the pinned tip above the tab bar on mobile; desktop hover behavior unchanged
+- Touch targets: header hamburger/log/settings/event/End-Turn buttons and Fire-minister bumped to >=44px on mobile only (sm: overrides keep desktop sizes)
+- Game Log drawer: w-72 -> w-[85vw] sm:w-72 so gameplay stays visible at 375px
+- Minister-replacement dialog stats: grid-cols-4 -> grid-cols-2 sm:grid-cols-4
+- Dialogs (dialog.tsx): DialogContent now max-h-[88dvh] overflow-y-auto so long event modals scroll on short screens
+- Safe area: layout.tsx viewport export adds viewportFit:cover; header top + footer/tab bar use env(safe-area-inset-*) (0 on desktop, so no change)
+- Footer row flex-wrap so the two long spans never collide at 375px
+- Stat values already text-xl (readable); micro-labels left as-is to keep desktop pixel-identical
+- Version bumped v1.11 -> v1.12 (footer + 3 translation files)
+- Browser-verified at 375x667 (mobile/touch): tab bar present with 5 tabs, tab nav switches screens, no horizontal scroll, map tap opens province sheet (fits within card), tapping a stat card pins the tip card, second tap dismisses it; at 1280 desktop: tab bar display:none, padding identical (24px/12px)
+
+Stage Summary:
+- Game is now thumb-friendly on iPhones/Androids (bottom tab nav, tappable hints, tap-to-view province details, bigger touch targets) while the desktop view is unchanged
+- Version: v1.12

@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
+import { X } from 'lucide-react';
 import type { Province } from '@/lib/game/types';
 import { useTranslation } from '@/hooks/useTranslation';
 import { spring } from '@/lib/motion';
@@ -178,11 +179,45 @@ export default function ProvinceMap({ provinces, selectedId, onSelect }: Provinc
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [pinnedId, setPinnedId] = useState<string | null>(() => selectedId);
   const [tip, setTip] = useState<TipPoint | null>(null);
+  const [isTouch, setIsTouch] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setIsTouch(window.matchMedia?.('(hover: none)').matches ?? false);
+  }, []);
 
   const metricDef = METRIC_DEFS.find((m) => m.id === metricId) ?? METRIC_DEFS[0];
   const activeId = hoveredId ?? pinnedId;
   const activeProvince = activeId ? provinces.find((p) => p.id === activeId) : undefined;
+
+  const provinceRows: { key: string; value: string }[] = activeProvince
+    ? [
+        { key: 'map.pop', value: `${(activeProvince.population / 1e6).toFixed(1)}M` },
+        { key: 'map.urban', value: `${activeProvince.urbanization.toFixed(0)}%` },
+        { key: 'map.support', value: `${activeProvince.politicalSupport.toFixed(0)}%` },
+        { key: 'map.happy', value: `${activeProvince.satisfactionIndex.toFixed(0)}%` },
+        { key: 'map.health', value: activeProvince.healthIndex.toFixed(0) },
+        { key: 'map.education', value: activeProvince.educationIndex.toFixed(0) },
+        { key: 'map.infrastructure', value: activeProvince.infrastructureIndex.toFixed(0) },
+        { key: 'map.safety', value: activeProvince.safetyIndex.toFixed(0) },
+        { key: 'map.poverty', value: `${activeProvince.povertyRate.toFixed(0)}%` },
+        { key: 'map.unemployment', value: `${activeProvince.unemploymentRate.toFixed(0)}%` },
+        { key: 'map.agriculture', value: String(activeProvince.agriculturalOutput) },
+        { key: 'map.mining', value: String(activeProvince.miningOutput) },
+      ]
+    : [];
+
+  const renderRow = (row: { key: string; value: string }) => (
+    <div
+      key={row.key}
+      className={`flex items-center justify-between gap-6 ${
+        row.key === metricDef.key ? 'text-amber-400' : 'text-muted-foreground'
+      }`}
+    >
+      <span className="whitespace-nowrap">{t(row.key)}</span>
+      <span className="font-bold tabular-nums text-foreground whitespace-nowrap">{row.value}</span>
+    </div>
+  );
 
   const clampTip = useCallback((e: { clientX: number; clientY: number }): TipPoint => {
     const el = boxRef.current;
@@ -303,32 +338,40 @@ export default function ProvinceMap({ provinces, selectedId, onSelect }: Provinc
                     {t(metricDef.key)}
                   </span>
                 </div>
-                <div className="space-y-1.5 text-xs">
-                  {[
-                    { key: 'map.pop', value: `${(activeProvince.population / 1e6).toFixed(1)}M` },
-                    { key: 'map.urban', value: `${activeProvince.urbanization.toFixed(0)}%` },
-                    { key: 'map.support', value: `${activeProvince.politicalSupport.toFixed(0)}%` },
-                    { key: 'map.happy', value: `${activeProvince.satisfactionIndex.toFixed(0)}%` },
-                    { key: 'map.health', value: activeProvince.healthIndex.toFixed(0) },
-                    { key: 'map.education', value: activeProvince.educationIndex.toFixed(0) },
-                    { key: 'map.infrastructure', value: activeProvince.infrastructureIndex.toFixed(0) },
-                    { key: 'map.safety', value: activeProvince.safetyIndex.toFixed(0) },
-                    { key: 'map.poverty', value: `${activeProvince.povertyRate.toFixed(0)}%` },
-                    { key: 'map.unemployment', value: `${activeProvince.unemploymentRate.toFixed(0)}%` },
-                    { key: 'map.agriculture', value: String(activeProvince.agriculturalOutput) },
-                    { key: 'map.mining', value: String(activeProvince.miningOutput) },
-                  ].map((row) => (
-                    <div
-                      key={row.key}
-                      className={`flex items-center justify-between gap-6 ${
-                        row.key === metricDef.key ? 'text-amber-400' : 'text-muted-foreground'
-                      }`}
+                <div className="space-y-1.5 text-xs">{provinceRows.map(renderRow)}</div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {isTouch && pinnedId && activeProvince && (
+              <motion.div
+                key="province-sheet"
+                initial={{ opacity: 0, y: 40 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 40, transition: { duration: 0.15 } }}
+                transition={spring.entrance()}
+                className="absolute inset-x-0 bottom-0 z-20 max-h-[62%] overflow-y-auto rounded-t-lg border-t border-border bg-card/95 p-4 backdrop-blur shadow-xl"
+              >
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <h4 className="text-sm font-bold">{activeProvince.name}</h4>
+                  <div className="flex items-center gap-2">
+                    <span className="shrink-0 rounded-full bg-amber-500/15 px-2 py-0.5 text-[0.625rem] text-amber-400">
+                      {t(metricDef.key)}
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleBackgroundClick();
+                      }}
+                      aria-label="Close province details"
+                      className="cursor-pointer rounded-md p-1 text-muted-foreground hover:text-foreground"
                     >
-                      <span className="whitespace-nowrap">{t(row.key)}</span>
-                      <span className="font-bold tabular-nums text-foreground whitespace-nowrap">{row.value}</span>
-                    </div>
-                  ))}
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
+                <div className="space-y-1.5 text-xs">{provinceRows.map(renderRow)}</div>
               </motion.div>
             )}
           </AnimatePresence>
