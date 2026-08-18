@@ -1,8 +1,3 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#000000"/>
-  <path d="M6 11h52v13H6z" fill="#006400"/>
-  <path d="M6 24h52v16H6z" fill="#FFD200"/>
-  <path d="M6 40h52v13H6z" fill="#DE2010"/>
-  <polygon fill="#FFD200" stroke="#000000" stroke-width="1"
-    points="32,18 29.06,27.96 19.64,27.98 27.24,33.55 24.36,42.52 32,37 39.64,42.52 36.76,33.55 44.36,27.98 34.94,27.96"/>
+  <text x="50%" y="52%" text-anchor="middle" dominant-baseline="central" font-size="58">🇿🇼</text>
 </svg>
