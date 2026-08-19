@@ -827,6 +827,7 @@ function DashboardScreen() {
 
 function BudgetScreen() {
   const { gameState, updateBudget, allocateBudget } = useGameStore();
+  const dragLock = useRef<{ x: number; y: number; locked: boolean }>({ x: 0, y: 0, locked: false });
   const [localBudget, setLocalBudget] = useState<Record<string, number>>(() => {
     if (!gameState) return {};
     return Object.fromEntries(gameState.budget.items.map(i => [i.category, i.allocated]));
@@ -894,7 +895,17 @@ function BudgetScreen() {
                   max={2000}
                   step={10}
                   value={localBudget[item.category] || 0}
-                  onChange={(e) => setLocalBudget(prev => ({ ...prev, [item.category]: Number(e.target.value) }))}
+                  onPointerDown={(e) => { dragLock.current = { x: e.clientX, y: e.clientY, locked: false }; }}
+                  onPointerMove={(e) => {
+                    if (dragLock.current.locked) return;
+                    const dx = Math.abs(e.clientX - dragLock.current.x);
+                    const dy = Math.abs(e.clientY - dragLock.current.y);
+                    if (dy > dx + 8) dragLock.current.locked = true;
+                  }}
+                  onChange={(e) => {
+                    if (dragLock.current.locked) return;
+                    setLocalBudget(prev => ({ ...prev, [item.category]: Number(e.target.value) }));
+                  }}
                   className="w-full h-2 bg-muted rounded-full appearance-none cursor-pointer accent-amber-500 touch-pan-y"
                 />
               </div>
@@ -2409,7 +2420,7 @@ function NewGameDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o
 // ═══════════════════════════════════════════════════════
 
 function TutorialDialog() {
-  const { showTutorial, setShowTutorial, setTutorialSeen } = useGameStore();
+  const { showTutorial, setShowTutorial, setTutorialSeen, gameState } = useGameStore();
   const { t } = useTranslation();
   const [step, setStep] = useState(0);
 
@@ -2449,7 +2460,9 @@ function TutorialDialog() {
               {current.icon}
             </div>
             <div className="min-w-0">
-              <h3 className="text-base font-black">{t(`tutorial.step${step + 1}.title`)}</h3>
+              <h3 className="text-base font-black">
+                {step === 0 ? t('tutorial.step1.title', { name: gameState?.player?.name || 'Comrade Leader' }) : t(`tutorial.step${step + 1}.title`)}
+              </h3>
               <p className="text-[0.625rem] text-muted-foreground">{t('tutorial.progress', { current: step + 1, total: steps.length })}</p>
             </div>
           </div>
